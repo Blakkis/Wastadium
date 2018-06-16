@@ -1,0 +1,1 @@
+gcc -O3 -shared -o libCextensions.so -fPIC Cextensions.c
