@@ -32,6 +32,31 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
 
         cls.tk_time.set_timer(cls.menu_timer[0], 10)
 
+    
+    @classmethod
+    def ph_flash_effect(cls, surface, pos):
+        """
+            Wiggle surface around (Try it to see the effect)
+
+            surface -> Which surface receives the effect
+
+            return -> Affected surface, position
+
+        """
+        px, py = pos
+        vx, vy = surface.get_size()
+
+        # Wiggle the selected option around
+        surface = cls.tk_rotozoom(surface, 8 * cls.tk_sin(cls.menu_timer[1]()), 
+                                  1.0 + (0.2 * abs(cls.tk_sin(cls.menu_timer[1]()))))
+        
+        # Fix the surface in-place
+        vx = surface.get_width()  - vx
+        vy = surface.get_height() - vy
+        px -= vx / 2; py -= vy / 2
+
+        return surface, px, py
+
 
 
     @classmethod
@@ -260,42 +285,31 @@ class MenuMain(PagesHelp, EventManager):
             
             mx, my = self.tk_mouse_pos()
             
-            for k, v in self.options.iteritems():
-                v = v[0].rs_renderSurface()
-                px = self.tk_res_half[0] - v.get_width()  / 2 
+            for key, surf in self.options.iteritems():
+                surf = surf[0].rs_renderSurface()
+                px = self.tk_res_half[0] - surf.get_width()  / 2 
                 py =  self.gfont_pos[1] + self.gfont.get_height()
                 
                 # Spacing between logo and options 
                 py += 64 * self.menu_scale - self.options_height
                 
                 # Spacing between options text 
-                py += (v.get_height() + 16 * self.menu_scale) * k  
+                py += (surf.get_height() + 16 * self.menu_scale) * key  
                 
-                self.options[k][0].rs_updateRect(px, py)
+                self.options[key][0].rs_updateRect(px, py)
 
-                if self.options[k][0].rs_hover_over((mx, my)):
-                    if self.options_selected != k:
-                           
-                        self.options_selected = k    
-                        
+                if self.options[key][0].rs_hover_over((mx, my)):
+                    if self.options_selected != key:
+                        self.options_selected = key    
                         self.menu_timer[1].reset()
 
                     #if self.tk_mouse_pressed()[0]:
-                    #    self.options[k][1]()
+                    #    self.options[key][1]()
 
-                if k == self.options_selected:
-                    # Highlight the selected option
-                    vx, vy = v.get_size()
-                    
-                    # Wiggle the selected option around
-                    v = self.tk_rotozoom(v, 8 * self.tk_sin(self.menu_timer[1]()), 
-                                         1.0 + (0.2 * abs(self.tk_sin(self.menu_timer[1]()))))
-                    
-                    vx = v.get_width()  - vx
-                    vy = v.get_height() - vy
-                    px -= vx / 2; py -= vy / 2
+                if key == self.options_selected:
+                    surf, px, py = self.ph_flash_effect(surf, (px, py))
 
-                surface.blit(v, (px, py))
+                surface.blit(surf, (px, py))
 
 
             # -- Set everything above this function to be affected by the scanline --
@@ -656,23 +670,58 @@ class MenuIntroOutro(PagesHelp):
 
 class MenuOptions(PagesHelp):
     def __init__(self):
-        self.mo_font = self.tk_font(self.ElementFonts[1], int(24 * self.menu_scale))
-        self.mo_gui_id = -1
+        self.mo_font = self.tk_font(self.ElementFonts[0], int(56 * self.menu_scale))
+        
+        self.mo_options = self.tk_ordereddict()
 
+        self.mo_options[0] = RectSurface(self.mo_font.render("Sound Settings", 1, (0xff, 0x0, 0x0)), snd_hover_over=180)
+        self.mo_options[1] = RectSurface(self.mo_font.render("Controls", 1, (0xff, 0x0, 0x0)), snd_hover_over=180)
+        self.mo_options[2] = RectSurface(self.mo_font.render("Exit", 1, (0xff, 0x0, 0x0)), snd_hover_over=180)
+
+        total_height = sum([h.rs_getSize()[1]for h in self.mo_options.itervalues()]) / 2
+        
+        row = 0
+        for key, value in self.mo_options.iteritems():
+            x = self.tk_res_half[0] - value.rs_getSize()[0] / 2 
+            y = self.tk_res_half[1]
+            y -= total_height 
+
+            value.rs_updateRect(x, y + row)
+            row += value.rs_getSize()[1]        
+
+        self.mo_gui_id = -1
         self.mo_gui_func = {0: self.mo_sound_settings,
                             1: self.mo_userkeys_settings}
 
 
-    def run(self, surface):
+    def run(self, surface, snap_shot=False):
+        
+        back_ground = surface.copy() if snap_shot else None
 
         while 1:
             surface.fill(self.tk_bg_color)
+
+            mx, my = self.tk_mouse_pos()
 
             for event in self.tk_eventDispatch():
                 
                 if event.type == self.tk_event_mouseup:
                     print 'Yeah?'
 
+                if event.type == self.menu_timer[0]: self.menu_timer_add()
+
+            if self.mo_gui_id == -1:
+                for key, value in self.mo_options.iteritems():
+                    surf, pos = value.rs_renderSurface(position=1)
+                     
+                    if value.rs_hover_over((mx, my)):
+                        surf, x, y = self.ph_flash_effect(surf, (pos.x, pos.y))
+                        pos = x, y
+                    
+                    surface.blit(surf, pos)
+
+
+            self.tk_draw_aaline(surface, (0xff, 0x0, 0xff), (0, self.tk_res_half[1]), (self.tk_resolution[0], self.tk_res_half[1]), 1)
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
