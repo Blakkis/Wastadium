@@ -9,7 +9,7 @@ class Model3D(GlobalGameData):
 	# Used mostly as a decoration effect in menus
 
 	def __init__(self, vertices, indices, radius):
-		# Default vertices for reseting the model
+		# Default vertices for resetting the model
 		self._m_vertices_default = vertices
 		
 		# Up-to-date vertices + indexes

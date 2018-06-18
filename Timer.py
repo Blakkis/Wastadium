@@ -1,42 +1,21 @@
 from itertools import cycle
-from pygame.time import get_ticks
+from pygame.time import Clock
 
 
 __all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger')
 
-# Note: Come up with solution to implement the DeltaTimer in the game too
 
 class DeltaTimer(object):
 
-    # Note: *Use pygame's clock.tick and clock.get_fps to calculate framerate
+    _dt_clock = Clock()
 
-    # Replace with any ticks counter
-    dt_ticks = get_ticks
+    @classmethod
+    def dt_tick(cls, limit_fps=0):
+        dt = cls._dt_clock.tick(limit_fps)
+        return dt, dt / float(1000)
 
-    # Store now and after timers to get the final delta
-    dt_suffix_tick = 0
-    dt_prefix_tick = 0
-    
-
-    @classmethod  
-    def dt_tick(cls, d):
-        """
-            Use to calculate delta time between actions 
-            
-            d -> 'now': 'Store tick to prefix', 
-                 'after': 'Store tick to suffix', 
-                 'reset': 'Store suffix to prefix'
-
-            return -> None
-
-        """
-        if d == 'now': cls.dt_prefix_tick = cls.dt_ticks()
-        elif d == 'after': cls.dt_suffix_tick = cls.dt_ticks()
-        elif d == 'reset': cls.dt_prefix_tick = cls.dt_suffix_tick
-
-
-    @classmethod    
-    def dt_getDelta(cls): return cls.dt_suffix_tick - cls.dt_prefix_tick
+    @classmethod
+    def dt_fps(cls): return cls._dt_clock.get_fps() 
 
 
 # --------------------------------

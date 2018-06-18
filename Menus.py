@@ -223,7 +223,7 @@ class MenuMain(PagesHelp, EventManager):
 
         self.scanline = ScanLineGenerator(8, 4)
 
-        self.options_selected = -1  # Keep the last selected option highlighted even if mouse is not hovering on it
+        self.last_select = -1  # Keep the last selected option highlighted even if mouse is not hovering on it
         
         self.options = self.tk_ordereddict()
         self.options[0] = (RectSurface(self.font_48.render("New Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180),  
@@ -299,14 +299,14 @@ class MenuMain(PagesHelp, EventManager):
                 self.options[key][0].rs_updateRect(px, py)
 
                 if self.options[key][0].rs_hover_over((mx, my)):
-                    if self.options_selected != key:
-                        self.options_selected = key    
+                    if self.last_select != key:
+                        self.last_select = key    
                         self.menu_timer[1].reset()
 
                     #if self.tk_mouse_pressed()[0]:
                     #    self.options[key][1]()
 
-                if key == self.options_selected:
+                if key == self.last_select:
                     surf, px, py = self.ph_flash_effect(surf, (px, py))
 
                 surface.blit(surf, (px, py))
@@ -670,15 +670,20 @@ class MenuIntroOutro(PagesHelp):
 
 class MenuOptions(PagesHelp):
     def __init__(self):
-        self.mo_font = self.tk_font(self.ElementFonts[0], int(56 * self.menu_scale))
+        self.mo_font = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
         
         self.mo_options = self.tk_ordereddict()
 
-        self.mo_options[0] = RectSurface(self.mo_font.render("Sound Settings", 1, (0xff, 0x0, 0x0)), snd_hover_over=180)
-        self.mo_options[1] = RectSurface(self.mo_font.render("Controls", 1, (0xff, 0x0, 0x0)), snd_hover_over=180)
-        self.mo_options[2] = RectSurface(self.mo_font.render("Exit", 1, (0xff, 0x0, 0x0)), snd_hover_over=180)
+        self.mo_options[0] = RectSurface(self.mo_font.render("Sound Settings", 1, (0xff, 0x0, 0x0)), 
+                                                             snd_hover_over=180, snd_click=186, func=lambda: 0)
+        
+        self.mo_options[1] = RectSurface(self.mo_font.render("Controls", 1, (0xff, 0x0, 0x0)), 
+                                                             snd_hover_over=180, snd_click=186, func=lambda: 1)
+        
+        self.mo_options[2] = RectSurface(self.mo_font.render("Exit", 1, (0xff, 0x0, 0x0)), 
+                                                             snd_hover_over=180, snd_click=186, func=self.tk_quitgame)
 
-        total_height = sum([h.rs_getSize()[1]for h in self.mo_options.itervalues()]) / 2
+        total_height = sum([h.rs_getSize()[1] + 8 for h in self.mo_options.itervalues()]) / 2
         
         row = 0
         for key, value in self.mo_options.iteritems():
@@ -687,14 +692,15 @@ class MenuOptions(PagesHelp):
             y -= total_height 
 
             value.rs_updateRect(x, y + row)
-            row += value.rs_getSize()[1]        
+            row += value.rs_getSize()[1] + 16         
 
-        self.mo_gui_id = -1
+        self.mo_display_root = -1   # Which menu to display (-1: Root, 0: Volume Control, 1: Controls)
+        self.mo_last_select = -1    # Keep the last selected option highlighted even if mouse is not hovering over it
         self.mo_gui_func = {0: self.mo_sound_settings,
                             1: self.mo_userkeys_settings}
 
 
-    def run(self, surface, snap_shot=False):
+    def run(self, surface, snap_shot=False, enable_quit=True):
         
         back_ground = surface.copy() if snap_shot else None
 
@@ -703,25 +709,43 @@ class MenuOptions(PagesHelp):
 
             mx, my = self.tk_mouse_pos()
 
+            click = 0
             for event in self.tk_eventDispatch():
-                
                 if event.type == self.tk_event_mouseup:
-                    print 'Yeah?'
+                    click = 1
 
-                if event.type == self.menu_timer[0]: self.menu_timer_add()
+                if event.type == self.menu_timer[0]: 
+                    self.menu_timer_add()
 
-            if self.mo_gui_id == -1:
+                elif event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']:
+                        if self.mo_display_root == -1:
+                            return None
+                        else:
+                            self.mo_display_root = -1
+
+            if self.mo_display_root == -1:
                 for key, value in self.mo_options.iteritems():
+                    if not enable_quit:
+                        if key == 2: continue
+
                     surf, pos = value.rs_renderSurface(position=1)
+                    x, y = pos.x, pos.y
                      
                     if value.rs_hover_over((mx, my)):
-                        surf, x, y = self.ph_flash_effect(surf, (pos.x, pos.y))
-                        pos = x, y
+                        if self.mo_last_select != key:
+                            self.mo_last_select = key    
+                            self.menu_timer[1].reset()  # Just to stop snapping of the elements being highlighted
+
+                    if key == self.mo_last_select:
+                        surf, x, y = self.ph_flash_effect(surf, (x, y))
+                        if click: 
+                            self.mo_display_root = value.rs_click()
                     
-                    surface.blit(surf, pos)
+                    surface.blit(surf, (x, y))
 
 
-            self.tk_draw_aaline(surface, (0xff, 0x0, 0xff), (0, self.tk_res_half[1]), (self.tk_resolution[0], self.tk_res_half[1]), 1)
+            #self.tk_draw_aaline(surface, (0xff, 0x0, 0xff), (0, self.tk_res_half[1]), (self.tk_resolution[0], self.tk_res_half[1]), 1)
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 

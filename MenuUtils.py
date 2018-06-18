@@ -6,6 +6,7 @@ from _3d_models import Model3D
 __all__ = ('RectSurface', 'ScanLineGenerator', 'ActiveBackGround')
 
 
+# This should be replaced with pygame.sprite.Sprite
 class RectSurface(SoundMusic):
     def __init__(self, surface, _id='', snd_click=None, snd_hover_over=None, func=None):
         self._rs_id = _id

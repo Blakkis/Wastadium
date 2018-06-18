@@ -184,13 +184,14 @@ class GlobalGameData(object):
 
 
     # Player (Allow for customization) 
-    tk_user = {'up': K_w, 'left':K_a, 'down':K_s, 'right':K_d,
+    tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d,
                'esc': K_ESCAPE}
 
     # Event
     tk_event = pygame.event
     tk_event_quit = QUIT
     tk_event_keydown = KEYDOWN
+    tk_event_keyup = KEYUP
     tk_event_mouseup = MOUSEBUTTONUP
     tk_uEvent = pygame.USEREVENT
     tk_uEventMax = pygame.NUMEVENTS

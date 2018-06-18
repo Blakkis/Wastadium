@@ -12,8 +12,8 @@ from Ui import *
 from Menus import MenuManager
 from PreProcessor import PreProcessor
 from Inventory import Inventory
+from Timer import DeltaTimer
 
-import pygame
 
 # NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
 # ITS EFFECT LAYER THUS DISABLED
@@ -1539,7 +1539,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
 
 
 
-class Main(World):
+class Main(World, DeltaTimer):
     """
         Main stage
 
@@ -1557,7 +1557,6 @@ class Main(World):
         self.set_basic_window_elements(mouse_visibility=False)    
         
         self.screen = self.tk_display.set_mode(self.tk_resolution, 0, 32)
-        self.clock = self.tk_time.Clock()
         
         # Initialize everything 
         World.initVisualsAndExtModules()
@@ -1569,15 +1568,16 @@ class Main(World):
 
 
         
-    def gameLoop(self):
+    def gameloop(self):
         """
-            Main loop
+            Mainloop
 
             return -> None
             
         """
         while 1:
-            self.clock.tick(self.tk_fps)
+            delta, delta_ms = self.dt_tick(self.tk_fps)
+
             self.screen.fill(self.tk_bg_color)
 
             for event in self.tk_eventDispatch():
@@ -1607,12 +1607,12 @@ class Main(World):
 
             self.uioverlay.drawOverlay(self.screen)
 
-            self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.clock.get_fps(), 2)))
+            self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
 
             self.tk_display.flip()
              
 
 if __name__ == '__main__':
     #Enemies.initialize_pathfinder()
-    Main().gameLoop()
+    Main().gameloop()
 
