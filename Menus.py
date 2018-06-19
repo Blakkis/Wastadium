@@ -674,7 +674,7 @@ class MenuOptions(PagesHelp):
         
         self.mo_options = self.tk_ordereddict()
 
-        self.mo_options[0] = RectSurface(self.mo_font.render("Sound Settings", 1, (0xff, 0x0, 0x0)), 
+        self.mo_options[0] = RectSurface(self.mo_font.render("Volume", 1, (0xff, 0x0, 0x0)), 
                                                              snd_hover_over=180, snd_click=186, func=lambda: 0)
         
         self.mo_options[1] = RectSurface(self.mo_font.render("Controls", 1, (0xff, 0x0, 0x0)), 
@@ -682,6 +682,10 @@ class MenuOptions(PagesHelp):
         
         self.mo_options[2] = RectSurface(self.mo_font.render("Exit", 1, (0xff, 0x0, 0x0)), 
                                                              snd_hover_over=180, snd_click=186, func=self.tk_quitgame)
+
+        self.mo_functions = {-1: self.mo_root_settings,
+                              0: self.mo_sound_settings,
+                              1: self.mo_userkeys_settings}
 
         total_height = sum([h.rs_getSize()[1] + 8 for h in self.mo_options.itervalues()]) / 2
         
@@ -694,10 +698,16 @@ class MenuOptions(PagesHelp):
             value.rs_updateRect(x, y + row)
             row += value.rs_getSize()[1] + 16         
 
-        self.mo_display_root = -1   # Which menu to display (-1: Root, 0: Volume Control, 1: Controls)
+        self.mo_display_func = 0    # Which menu to display (-1: Root, 0: Volume Control, 1: Controls)
         self.mo_last_select = -1    # Keep the last selected option highlighted even if mouse is not hovering over it
         self.mo_gui_func = {0: self.mo_sound_settings,
                             1: self.mo_userkeys_settings}
+
+        # ---- Sound variables
+        self.mo_snd_music_radial = RadialSlider(32, (0xff, 0x0, 0x0), 64) 
+        self.mo_snd_effect_radial = RadialSlider(32, (0xff, 0x0, 0x0), 64)
+
+        # ---- Controls variables
 
 
     def run(self, surface, snap_shot=False, enable_quit=True):
@@ -719,31 +729,12 @@ class MenuOptions(PagesHelp):
 
                 elif event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
-                        if self.mo_display_root == -1:
+                        if self.mo_display_func == -1:
                             return None
                         else:
-                            self.mo_display_root = -1
+                            self.mo_display_func = -1
 
-            if self.mo_display_root == -1:
-                for key, value in self.mo_options.iteritems():
-                    if not enable_quit:
-                        if key == 2: continue
-
-                    surf, pos = value.rs_renderSurface(position=1)
-                    x, y = pos.x, pos.y
-                     
-                    if value.rs_hover_over((mx, my)):
-                        if self.mo_last_select != key:
-                            self.mo_last_select = key    
-                            self.menu_timer[1].reset()  # Just to stop snapping of the elements being highlighted
-
-                    if key == self.mo_last_select:
-                        surf, x, y = self.ph_flash_effect(surf, (x, y))
-                        if click: 
-                            self.mo_display_root = value.rs_click()
-                    
-                    surface.blit(surf, (x, y))
-
+            self.mo_functions[self.mo_display_func](surface, mx, my, click, hide_quit=enable_quit)
 
             #self.tk_draw_aaline(surface, (0xff, 0x0, 0xff), (0, self.tk_res_half[1]), (self.tk_resolution[0], self.tk_res_half[1]), 1)
 
@@ -752,19 +743,59 @@ class MenuOptions(PagesHelp):
             self.tk_display.flip()
 
     
-    def mo_sound_settings(self, surface):
+    def mo_root_settings(self, surface, mx, my, click, hide_quit=False):
         """
-            Edit music/effects volumes
+            Display the root settings
+
+            surface -> Active screen surface
+            mx, my -> Mouse position
+            click -> Mouse click bool
+            hide_quit -> Hide the quit option
 
             return -> None
 
         """
-        pass
+        for key, value in self.mo_options.iteritems():
+            if not hide_quit:
+                if key == 2: continue
+
+            surf, pos = value.rs_renderSurface(position=1)
+            x, y = pos.x, pos.y
+             
+            if value.rs_hover_over((mx, my)):
+                if self.mo_last_select != key:
+                    self.mo_last_select = key    
+                    self.menu_timer[1].reset()  # Just to stop snapping of the elements being highlighted
+
+            if key == self.mo_last_select:
+                surf, x, y = self.ph_flash_effect(surf, (x, y))
+                if click: 
+                    self.mo_display_func = value.rs_click()
+            
+            surface.blit(surf, (x, y))
+        
+    
+    def mo_sound_settings(self, surface, mx, my, click, **kw):
+        """
+            Edit music/effects volumes
+
+            surface -> Active screen surface
+            mx, my -> Mouse position
+            click -> Mouse click bool
+
+            return -> None
+
+        """
+        self.mo_snd_effect_radial.rs_render(surface)
 
     
-    def mo_userkeys_settings(self, surface):
+    def mo_userkeys_settings(self, surface, mx, my, click, **kw):
         """
-            TBD
+            Edit player controls
+
+            surface -> Active screen surface
+            mx, my -> Mouse position
+            click -> Mouse click bool
 
             return -> None
 

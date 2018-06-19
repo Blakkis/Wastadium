@@ -174,6 +174,7 @@ class GlobalGameData(object):
     tk_draw_gfx_circle = pygame.gfxdraw.filled_circle
     tk_draw_gfx_rect = pygame.gfxdraw.box
     tk_draw_gfx_aacircle = pygame.gfxdraw.aacircle
+    tk_draw_gfx_aapolygon = pygame.gfxdraw.aapolygon
     tk_quit = pygame.quit
     tk_surface = pygame.Surface
     tk_rect = TkRect
@@ -412,7 +413,7 @@ class GlobalGameData(object):
             r -> radius of the corners
             color -> color of the rect 
             alpha -> alpha level of the rect
-            anti_aliasing -> Add antialiasing to the r_rect NOTE: Keep the dimensions small!
+            anti_aliasing -> Add antialiasing to the r_rect NOTE: Keep the dimensions small! It's unoptimized
 
             return -> Surface
 

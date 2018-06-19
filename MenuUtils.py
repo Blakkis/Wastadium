@@ -3,7 +3,7 @@ from SoundModule import SoundMusic
 from _3d_models import Model3D
 
 
-__all__ = ('RectSurface', 'ScanLineGenerator', 'ActiveBackGround')
+__all__ = ('RectSurface', 'ScanLineGenerator', 'ActiveBackGround', 'RadialSlider')
 
 
 # This should be replaced with pygame.sprite.Sprite
@@ -45,7 +45,7 @@ class RectSurface(SoundMusic):
             self.playSoundEffect(self.rs_snd_click)
 
         if self.rs_function is not None:
-            self.rs_function(*args)
+            return self.rs_function(*args)
 
 
     def rs_getSize(self): return self.rs_surface.get_size()
@@ -54,7 +54,63 @@ class RectSurface(SoundMusic):
 
     @property
     def rs_id(self): return self._rs_id
+
+
+
+class RadialSlider(GlobalGameData):
+    def __init__(self, steps, color, radius):
+        self._rs_steps = steps
+        self._rs_ring_points = {}
+        self._rs_mask = None
+        self._rs_color = color
+        self._rs_radius = radius
+        self._rs_size = radius * 2 + 4
+
+        self._rs_create_radial()
+
     
+    @property
+    def rs_size(self):
+        return self._rs_size
+    
+
+    def _rs_create_radial(self):
+        """
+            Create the radial slider
+
+            return -> None
+
+        """
+        self._rs_mask = self.tk_surface((self._rs_size, self._rs_size), self.tk_srcalpha)
+        half_mask = self._rs_size / 2
+
+        for enum, ring in enumerate((self._rs_radius, self._rs_radius / 2)):
+            steps = []
+            for r in xrange(45, 360 + self._rs_steps, 360 / self._rs_steps):
+                r = self.tk_radians(min(315, r) + 90)
+                x = half_mask + self.tk_cos(r) * ring
+                y = half_mask + self.tk_sin(r) * ring
+                steps.append((x, y))
+
+            # Store points for creating the slider itself
+            self._rs_ring_points[enum] = steps
+
+        self._rs_ring_points[1].reverse()   # Reverse the inner-ring to form continues line
+        
+        self.tk_draw_gfx_aapolygon(self._rs_mask, self._rs_ring_points[0] + self._rs_ring_points[1], self._rs_color)  
+
+    
+    def rs_render(self, surface):
+        """
+            Render the radial slider
+
+            surface -> Active screen surface
+
+            return -> None
+
+        """
+        surface.blit(self._rs_mask, (0, 0))
+
 
 
 class ScanLineGenerator(GlobalGameData):
@@ -90,7 +146,9 @@ class ScanLineGenerator(GlobalGameData):
 
     def slg_scanlineEffect(self, surface):
         """
-            TBD
+            Create the scanline effect
+
+            surface -> Surface which receives the effect
 
             return -> None
 
