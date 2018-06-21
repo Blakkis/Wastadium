@@ -8,7 +8,7 @@ __all__ = ('RectSurface', 'ScanLineGenerator', 'ActiveBackGround', 'RadialSlider
 
 # This should be replaced with pygame.sprite.Sprite
 class RectSurface(SoundMusic):
-    def __init__(self, surface, _id='', snd_click=None, snd_hover_over=None, func=None):
+    def __init__(self, surface, _id=None, snd_click=None, snd_hover_over=None, func=None):
         self._rs_id = _id
         self.rs_surface = surface
         self.rs_rect = self.rs_surface.get_rect()
@@ -58,20 +58,32 @@ class RectSurface(SoundMusic):
 
 
 class RadialSlider(GlobalGameData):
-    def __init__(self, steps, color, radius):
-        self._rs_steps = steps
+    def __init__(self, steps, color, radius, map_value):
+        # Note: Need to rework how the circle is builded to support all ranges of values
+        # Currently 64 is your best bet
+        self._rs_steps = steps    # 64 Currently works nicely  
         self._rs_ring_points = {}
         self._rs_mask = None
         self._rs_color = color
         self._rs_radius = radius
         self._rs_size = radius * 2 + 4
 
+        # Slider values
+        self._rs_map = map_value
+        self._rs_value = 0
+        self._rs_value_max = 0
+
+        # Create the slider mask and steps
         self._rs_create_radial()
 
     
     @property
     def rs_size(self):
         return self._rs_size
+    
+    @property
+    def rs_mask(self):
+        return self._rs_mask
     
 
     def _rs_create_radial(self):
@@ -82,34 +94,70 @@ class RadialSlider(GlobalGameData):
 
         """
         self._rs_mask = self.tk_surface((self._rs_size, self._rs_size), self.tk_srcalpha)
+        copy = self._rs_mask.copy() 
+
         half_mask = self._rs_size / 2
 
         for enum, ring in enumerate((self._rs_radius, self._rs_radius / 2)):
             steps = []
             for r in xrange(45, 360 + self._rs_steps, 360 / self._rs_steps):
-                r = self.tk_radians(min(315, r) + 90)
-                x = half_mask + self.tk_cos(r) * ring
-                y = half_mask + self.tk_sin(r) * ring
+                r = r + 90
+                if r > 360 + 45: continue
+
+                r = self.tk_radians(r)
+                #r = self.tk_radians(min(315, r) + 90)
+                x = half_mask + self.tk_ceil(self.tk_cos(r) * ring)
+                y = half_mask + self.tk_ceil(self.tk_sin(r) * ring)
                 steps.append((x, y))
 
             # Store points for creating the slider itself
             self._rs_ring_points[enum] = steps
 
         self._rs_ring_points[1].reverse()   # Reverse the inner-ring to form continues line
+
+        self.tk_draw_lines(self._rs_mask, self._rs_color, 1, self._rs_ring_points[0] + self._rs_ring_points[1], 3)
+
+        self._rs_mask = self.tk_blur_surface(self._rs_mask)
         
-        self.tk_draw_gfx_aapolygon(self._rs_mask, self._rs_ring_points[0] + self._rs_ring_points[1], self._rs_color)  
+        self._rs_value_max = len(self._rs_ring_points[0]) 
+        self._rs_value = int(self.tk_ceil(self._rs_value_max / float(2)))  
 
     
-    def rs_render(self, surface):
+    def rs_slide(self, sx, sy, pos):
         """
-            Render the radial slider
-
-            surface -> Active screen surface
+            TBD
 
             return -> None
 
         """
-        surface.blit(self._rs_mask, (0, 0))
+        angle = self.tk_degrees(self.tk_atan2(pos[0] - sx, sy - pos[1])) % 360
+        if angle < 180: angle = max(45, angle)
+        else: angle = min(315, angle)
+
+        print angle
+
+
+    
+    def rs_render_slider(self, surface, pos=None):
+        # Note: Pack the mask drawing here too.
+        # Even ifSlider it used the RectSurface as it's base
+        """
+            Render the radial slider
+
+            surface -> Active screen surface
+            pos -> (x, y) position
+
+            return -> None
+
+        """
+        if pos is None: pos = (0, 0) 
+        
+        if self._rs_value > 1:
+            self.tk_draw_polygon(surface, (0xff, 0x40, 0x0), 
+                                 [(x + pos[0], y + pos[1]) for x, y in self._rs_ring_points[0][:self._rs_value] + \
+                                                                       self._rs_ring_points[1][-self._rs_value:]])
+
+
 
 
 

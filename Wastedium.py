@@ -1196,6 +1196,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
 
                             # Calculate distance to each surface normal midpoint (Find the normal we most likely hit)
                             dists = [round(cls.tk_hypot(orx - x, ory - y), 1) for x, y in normals]
+                            
                             # Get the index of the closest surface normal
                             index = dists.index(min(dists))
                         

@@ -703,9 +703,22 @@ class MenuOptions(PagesHelp):
         self.mo_gui_func = {0: self.mo_sound_settings,
                             1: self.mo_userkeys_settings}
 
-        # ---- Sound variables
-        self.mo_snd_music_radial = RadialSlider(32, (0xff, 0x0, 0x0), 64) 
-        self.mo_snd_effect_radial = RadialSlider(32, (0xff, 0x0, 0x0), 64)
+        # ---- Sound variables 
+        self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
+        self.mo_music_volume['mask'] = RectSurface(self.mo_music_volume['radial'].rs_mask, 
+                                                   snd_click=186, _id=0) 
+        self.mo_music_volume['mask'].rs_updateRect(self.tk_res_half[0] - self.mo_music_volume['mask'].rs_getSize()[0] - 128 * self.menu_scale,
+                                                   self.tk_res_half[1] - self.mo_music_volume['mask'].rs_getSize()[1] / 2)
+
+
+        self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
+        self.mo_effect_volume['mask'] = RectSurface(self.mo_effect_volume['radial'].rs_mask, 
+                                                    snd_click=186, _id=1)
+        self.mo_effect_volume['mask'].rs_updateRect(self.tk_res_half[0] + 128 * self.menu_scale,
+                                                    self.tk_res_half[1] - self.mo_effect_volume['mask'].rs_getSize()[1] / 2)
+
+        # Contains current x, y delta and id of the slider being used
+        self.mo_snd_delta_id = None
 
         # ---- Controls variables
 
@@ -721,10 +734,12 @@ class MenuOptions(PagesHelp):
 
             click = 0
             for event in self.tk_eventDispatch():
-                if event.type == self.tk_event_mouseup:
-                    click = 1
+                
+                if event.type == self.tk_event_mousedown:
+                    click = event.button
 
-                if event.type == self.menu_timer[0]: 
+
+                elif event.type == self.menu_timer[0]: 
                     self.menu_timer_add()
 
                 elif event.type == self.tk_event_keyup:
@@ -786,7 +801,25 @@ class MenuOptions(PagesHelp):
             return -> None
 
         """
-        self.mo_snd_effect_radial.rs_render(surface)
+        hold = self.tk_mouse_pressed()[0]
+        if not hold: self.mo_snd_delta_id = None
+
+        #delta = 0, 0
+        #if hold and self.mo_snd_delta_id is not None:
+            #delta =  mx - self.mo_snd_delta_id[0], self.mo_snd_delta_id[1] - my
+        
+        for vol in (self.mo_music_volume, self.mo_effect_volume):
+            surface.blit(*vol['mask'].rs_renderSurface(position=1))
+
+            vol['radial'].rs_render_slider(surface, vol['mask'].rs_getPos('topleft'))
+
+            if click and vol['mask'].rs_hover_over((mx, my)):
+                self.mo_snd_delta_id = mx, my, vol['mask'].rs_id
+
+            if self.mo_snd_delta_id is not None: 
+                if vol['mask'].rs_id == self.mo_snd_delta_id[2]:
+                    vol['radial'].rs_slide(mx, my, vol['mask'].rs_getPos('center'))  
+
 
     
     def mo_userkeys_settings(self, surface, mx, my, click, **kw):

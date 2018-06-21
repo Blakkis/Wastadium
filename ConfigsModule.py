@@ -141,7 +141,7 @@ class GlobalGameData(object):
     tk_ordereddict = collections.OrderedDict
     tk_np_roll = staticmethod(roll)     
     tk_np_copyto = copyto
-    tk_np_sum = staticmethod(_sum)
+    tk_np_sum = staticmethod(_sum) 
     tk_np_dot = dot
     tk_quit_system = exitsystem
     tk_counter = TkCounter
@@ -194,6 +194,7 @@ class GlobalGameData(object):
     tk_event_keydown = KEYDOWN
     tk_event_keyup = KEYUP
     tk_event_mouseup = MOUSEBUTTONUP
+    tk_event_mousedown = MOUSEBUTTONDOWN
     tk_uEvent = pygame.USEREVENT
     tk_uEventMax = pygame.NUMEVENTS
 
@@ -435,33 +436,50 @@ class GlobalGameData(object):
         # Go through each pixel applying the alpha if the pixel alpha is greater than 0
         alpha_surf[alpha_surf > 0] = alpha
 
-        # Note: Optimize this
-        if anti_aliasing:   
-            w, h = surf.get_size()  
-
-            padded = zeros((w + 2, h + 2), dtype=int)
-            padded[1:-1, 1:-1] = alpha_surf     # Add the original array to the middle of the padded array
-
-            no_op = alpha * 9
-            
-            for py in xrange(h):
-                for px in xrange(w):
-                    # Get a sample using 3x3 kernel
-                    sample = padded[px:3 + px, py:3 + py]
-                    
-                    # Only go through pixels which kernel middle alpha value is more than 0
-                    if not sample[1][1]: continue 
-                    
-                    # Calculate the median alpha value from surrounding alpha values
-                    mean = cls.tk_np_sum(sample)
-
-                    # All values are the same within kernel, continue
-                    if mean == no_op: continue
-
-                    alpha_surf[px][py] = mean / 9 if mean else 0 
+        if anti_aliasing: surf = cls.tk_blur_surface(surf, alpha)
 
         return surf
+
     
+    @classmethod
+    def tk_blur_surface(cls, surface, alpha=0):
+        """
+            Apply blur to surface
+
+            surface -> Surface to be blurred
+            alpha -> Alpha level of the surface
+
+            return -> Surface
+
+        """  
+        # Note: Optimize this (Replace with: https://www.pygame.org/docs/tut/SurfarrayIntro.html soften)
+        
+        alpha_surf = cls.tk_surfarray.pixels_alpha(surface) 
+        w, h = surface.get_size()  
+
+        padded = zeros((w + 2, h + 2), dtype=int)
+        padded[1:-1, 1:-1] = alpha_surf     # Add the original array to the middle of the padded array
+
+        no_op = alpha * 9
+        
+        for py in xrange(h):
+            for px in xrange(w):
+                # Get a sample using 3x3 kernel
+                sample = padded[px:3 + px, py:3 + py]
+                
+                # Only go through pixels which kernel middle alpha value is more than 0
+                if not sample[1][1]: continue 
+                
+                # Calculate the median alpha value from surrounding alpha values
+                mean = cls.tk_np_sum(sample)
+
+                # All values are the same within kernel, continue
+                if mean == no_op: continue
+
+                alpha_surf[px][py] = mean / 9 if mean else 0 
+
+        return surface
+
     
     @classmethod
     def tk_gradient_rect(cls, w, h, color, alpha):
