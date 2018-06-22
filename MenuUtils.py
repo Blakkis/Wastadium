@@ -69,9 +69,7 @@ class RadialSlider(GlobalGameData):
         self._rs_size = radius * 2 + 4
 
         # Slider values
-        self._rs_map = map_value
-        self._rs_value = 0
-        self._rs_value_max = 0
+        self._rs_value = {'map': map_value}
 
         # Create the slider mask and steps
         self._rs_create_radial()
@@ -117,10 +115,13 @@ class RadialSlider(GlobalGameData):
 
         self.tk_draw_lines(self._rs_mask, self._rs_color, 1, self._rs_ring_points[0] + self._rs_ring_points[1], 3)
 
-        self._rs_mask = self.tk_blur_surface(self._rs_mask)
+        self._rs_mask = self.tk_blur_surface(self._rs_mask)                 # Blur the mask a little bit(shitty one)
         
-        self._rs_value_max = len(self._rs_ring_points[0]) 
-        self._rs_value = int(self.tk_ceil(self._rs_value_max / float(2)))  
+        # Value for controlling the slider input/output
+        self._rs_value['max'] = len(self._rs_ring_points[0])                        # Max steps on the slider
+        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max'] / float(2))) # Set initial value to center
+        self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']       # Get the range multiplier
+        self._rs_value['adi'] = float(270) / self._rs_value['max']                  # Angle value per step
 
     
     def rs_slide(self, sx, sy, pos):
@@ -131,10 +132,9 @@ class RadialSlider(GlobalGameData):
 
         """
         angle = self.tk_degrees(self.tk_atan2(pos[0] - sx, sy - pos[1])) % 360
-        if angle < 180: angle = max(45, angle)
-        else: angle = min(315, angle)
+        angle = (max(45, angle) if angle < 180 else min(315, angle)) - 45
 
-        print angle
+        self._rs_value['val'] = int(angle / self._rs_value['adi'])
 
 
     
@@ -152,10 +152,10 @@ class RadialSlider(GlobalGameData):
         """
         if pos is None: pos = (0, 0) 
         
-        if self._rs_value > 1:
+        if self._rs_value['val'] > 1:
             self.tk_draw_polygon(surface, (0xff, 0x40, 0x0), 
-                                 [(x + pos[0], y + pos[1]) for x, y in self._rs_ring_points[0][:self._rs_value] + \
-                                                                       self._rs_ring_points[1][-self._rs_value:]])
+                                 [(x + pos[0], y + pos[1]) for x, y in self._rs_ring_points[0][:self._rs_value['val']] + \
+                                                                       self._rs_ring_points[1][-self._rs_value['val']:]])
 
 
 

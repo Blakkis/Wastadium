@@ -266,6 +266,30 @@ class GlobalGameData(object):
 
 
     @classmethod
+    def tk_distortSurface(cls, surface, dist_effect_ids):
+        """
+            Distort target surface with effects
+
+            surface -> Target surface
+            dist_effect_id -> (int) Which effect to apply (Chain multiple effects via bitwise) 
+
+            return -> None
+
+        """
+        surf = cls.tk_surfarray.pixels2d(surface)
+
+        if dist_effect_ids & 1:
+            cls.tk_np_copyto(surf[::2, ::2], cls.tk_np_roll(surf[::2, ::2], 6))
+
+        if dist_effect_ids & 2:
+            print 'Yeah?'
+            cls.tk_np_copyto(surf[::4, ::4], cls.tk_np_roll(surf[::4, ::4], 6)) 
+
+        return surface   
+
+
+
+    @classmethod
     def tk_quitgame(cls):
         """
             Quits the Pygame/System
@@ -273,6 +297,7 @@ class GlobalGameData(object):
             return -> None
 
         """
+        # Add "Are you sure you want to quit" here?
         cls.tk_quit(); cls.tk_quit_system()
 
 

@@ -58,7 +58,6 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
         return surface, px, py
 
 
-
     @classmethod
     def __ph_createBackground(cls):
         """
@@ -705,14 +704,14 @@ class MenuOptions(PagesHelp):
 
         # ---- Sound variables 
         self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
-        self.mo_music_volume['mask'] = RectSurface(self.mo_music_volume['radial'].rs_mask, 
+        self.mo_music_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_music_volume['radial'].rs_mask, 1), 
                                                    snd_click=186, _id=0) 
         self.mo_music_volume['mask'].rs_updateRect(self.tk_res_half[0] - self.mo_music_volume['mask'].rs_getSize()[0] - 128 * self.menu_scale,
                                                    self.tk_res_half[1] - self.mo_music_volume['mask'].rs_getSize()[1] / 2)
 
 
         self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
-        self.mo_effect_volume['mask'] = RectSurface(self.mo_effect_volume['radial'].rs_mask, 
+        self.mo_effect_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_effect_volume['radial'].rs_mask, 1), 
                                                     snd_click=186, _id=1)
         self.mo_effect_volume['mask'].rs_updateRect(self.tk_res_half[0] + 128 * self.menu_scale,
                                                     self.tk_res_half[1] - self.mo_effect_volume['mask'].rs_getSize()[1] / 2)
@@ -804,10 +803,6 @@ class MenuOptions(PagesHelp):
         hold = self.tk_mouse_pressed()[0]
         if not hold: self.mo_snd_delta_id = None
 
-        #delta = 0, 0
-        #if hold and self.mo_snd_delta_id is not None:
-            #delta =  mx - self.mo_snd_delta_id[0], self.mo_snd_delta_id[1] - my
-        
         for vol in (self.mo_music_volume, self.mo_effect_volume):
             surface.blit(*vol['mask'].rs_renderSurface(position=1))
 
