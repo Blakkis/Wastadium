@@ -71,7 +71,7 @@ class GlobalGameData(object):
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 60
+    tk_fps = 8192
     tk_resolution = 1280, 720
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), float(tk_resolution[1]) / float(720))     # Use the smallest as scalar for UI elements
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2
@@ -91,7 +91,7 @@ class GlobalGameData(object):
 
     # Option 
     tk_no_effect_layer = 0      # Partially used. Explain where/why
-    tk_no_shadow_layer = 1
+    tk_no_shadow_layer = 0
     tk_shadow_quality = 1       # 1: High quality (Experimental and Slow)
     tk_no_footsteps = 0
     
@@ -282,8 +282,7 @@ class GlobalGameData(object):
             cls.tk_np_copyto(surf[::2, ::2], cls.tk_np_roll(surf[::2, ::2], 6))
 
         if dist_effect_ids & 2:
-            print 'Yeah?'
-            cls.tk_np_copyto(surf[::4, ::4], cls.tk_np_roll(surf[::4, ::4], 6)) 
+            pass 
 
         return surface   
 

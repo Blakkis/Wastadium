@@ -1480,8 +1480,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         """
             Get all the collisions around the x, y position from the cells
             
-            x -> Origin (Divided by Cellsize)
-            y -> Origin (Divided by Cellsize)
+            x, y -> Spatial index
 
             min, max -> Boundaries around the source (x, y)
             
@@ -1511,8 +1510,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         """
             Get all the living collisions around the x, y position from the cells
             
-            x -> Origin (Divided by Cellsize)
-            y -> Origin (Divided by Cellsize)
+            x, y -> Spatial index
             ignore_id -> This is used by enemies to ignore their own collision
             get_ids -> Get the enemy rect and its id
             surface -> Debug surface
@@ -1521,6 +1519,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
             
         """
         near_collisions = []
+        
         for ry in xrange(y - 1, y + 2):
             if ry < 0 or ry > cls.w_ent_cell_size[1] - 1:
                 continue

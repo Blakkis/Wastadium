@@ -51,7 +51,6 @@ class ed_AutoWallSolver(object):
 
     __aw_deque = deque
 
-    
     @classmethod
     def __aw_segmentOrient(cls, center, grid, wsize):
         """

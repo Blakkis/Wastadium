@@ -583,9 +583,6 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         self.tk_draw_aalines(surface, (0xff, 0x0, 0x80), 0, ((x1, y1 + 16), (x1, y1), (x1 + 16, y1)), 1)
         self.tk_draw_aalines(surface, (0xff, 0x0, 0x80), 0, ((x2, y2 - 16), (x2, y2), (x2 - 16, y2)), 1)
 
-        #self.tk_draw_circle(surface, (0xff, 0xff, 0xff), tl, 2)
-        #self.tk_draw_circle(surface, (0xff, 0xff, 0xff), br, 2)
-
     
     def ms_setupSpecialGadgets(self, bg):
         """
@@ -669,18 +666,19 @@ class MenuIntroOutro(PagesHelp):
 
 class MenuOptions(PagesHelp):
     def __init__(self):
-        self.mo_font = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
+        self.mo_font_1 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
+        self.mo_font_2 = self.tk_font(self.ElementFonts[1], int(32 * self.menu_scale))
         
         self.mo_options = self.tk_ordereddict()
 
-        self.mo_options[0] = RectSurface(self.mo_font.render("Volume", 1, (0xff, 0x0, 0x0)), 
-                                                             snd_hover_over=180, snd_click=186, func=lambda: 0)
+        self.mo_options[0] = RectSurface(self.mo_font_1.render("Volume", 1, (0xff, 0x0, 0x0)), 
+                                                               snd_hover_over=180, snd_click=186, func=lambda: 0)
         
-        self.mo_options[1] = RectSurface(self.mo_font.render("Controls", 1, (0xff, 0x0, 0x0)), 
-                                                             snd_hover_over=180, snd_click=186, func=lambda: 1)
+        self.mo_options[1] = RectSurface(self.mo_font_1.render("Controls", 1, (0xff, 0x0, 0x0)), 
+                                                               snd_hover_over=180, snd_click=186, func=lambda: 1)
         
-        self.mo_options[2] = RectSurface(self.mo_font.render("Exit", 1, (0xff, 0x0, 0x0)), 
-                                                             snd_hover_over=180, snd_click=186, func=self.tk_quitgame)
+        self.mo_options[2] = RectSurface(self.mo_font_1.render("Exit", 1, (0xff, 0x0, 0x0)), 
+                                                               snd_hover_over=180, snd_click=186, func=self.tk_quitgame)
 
         self.mo_functions = {-1: self.mo_root_settings,
                               0: self.mo_sound_settings,
@@ -703,18 +701,27 @@ class MenuOptions(PagesHelp):
                             1: self.mo_userkeys_settings}
 
         # ---- Sound variables 
+        # Note: Move all this in to its own class
         self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
         self.mo_music_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_music_volume['radial'].rs_mask, 1), 
                                                    snd_click=186, _id=0) 
+        
         self.mo_music_volume['mask'].rs_updateRect(self.tk_res_half[0] - self.mo_music_volume['mask'].rs_getSize()[0] - 128 * self.menu_scale,
                                                    self.tk_res_half[1] - self.mo_music_volume['mask'].rs_getSize()[1] / 2)
+        
+        self.mo_music_volume['vol_id'] = self.mo_font_1.render('Music Volume', True, 
+                                                               self.mo_music_volume['radial'].rs_color)
 
 
         self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
         self.mo_effect_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_effect_volume['radial'].rs_mask, 1), 
                                                     snd_click=186, _id=1)
+        
         self.mo_effect_volume['mask'].rs_updateRect(self.tk_res_half[0] + 128 * self.menu_scale,
                                                     self.tk_res_half[1] - self.mo_effect_volume['mask'].rs_getSize()[1] / 2)
+
+        self.mo_effect_volume['vol_id'] = self.mo_font_1.render('Effects Volume', True, 
+                                                                self.mo_music_volume['radial'].rs_color)
 
         # Contains current x, y delta and id of the slider being used
         self.mo_snd_delta_id = None
@@ -723,13 +730,24 @@ class MenuOptions(PagesHelp):
 
 
     def run(self, surface, snap_shot=False, enable_quit=True):
-        
-        back_ground = surface.copy() if snap_shot else None
+        """
+            Run the options menu
+
+            surface -> Active su
+            snap_shot -> Take a snapshot of the surface for background(Used as pause background during game)
+            enable_quit -> Allow quitting during game via menu
+
+            return -> None
+
+        """
+        pause_bg = surface.copy() if snap_shot else None
 
         while 1:
             surface.fill(self.tk_bg_color)
 
             mx, my = self.tk_mouse_pos()
+
+            surface.blit(self.menu_background if pause_bg is None else pause_bg, (0, 0))   
 
             click = 0
             for event in self.tk_eventDispatch():
@@ -750,14 +768,12 @@ class MenuOptions(PagesHelp):
 
             self.mo_functions[self.mo_display_func](surface, mx, my, click, hide_quit=enable_quit)
 
-            #self.tk_draw_aaline(surface, (0xff, 0x0, 0xff), (0, self.tk_res_half[1]), (self.tk_resolution[0], self.tk_res_half[1]), 1)
-
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
             self.tk_display.flip()
 
     
-    def mo_root_settings(self, surface, mx, my, click, hide_quit=False):
+    def mo_root_settings(self, surface, mx, my, click, hide_quit=False, **kw):
         """
             Display the root settings
 
@@ -803,17 +819,26 @@ class MenuOptions(PagesHelp):
         hold = self.tk_mouse_pressed()[0]
         if not hold: self.mo_snd_delta_id = None
 
-        for vol in (self.mo_music_volume, self.mo_effect_volume):
+        for enum, vol in enumerate((self.mo_music_volume, self.mo_effect_volume)):
             surface.blit(*vol['mask'].rs_renderSurface(position=1))
 
-            vol['radial'].rs_render_slider(surface, vol['mask'].rs_getPos('topleft'))
+            value = vol['radial'].rs_render_slider(surface, vol['mask'].rs_getPos('topleft'))
+
+            volume_value = self.mo_font_2.render(str(value) if value else 'OFF', True, vol['radial'].rs_color)
+            surface.blit(volume_value, (vol['mask'].rs_getPos('centerx') - volume_value.get_width() / 2, 
+                                        vol['mask'].rs_getPos('centery') - volume_value.get_height() / 2))
+
+            message = vol['vol_id']
+            surface.blit(message, (vol['mask'].rs_getPos('centerx') - message.get_width() / 2,
+                                   vol['mask'].rs_getPos('bottom'))) 
 
             if click and vol['mask'].rs_hover_over((mx, my)):
                 self.mo_snd_delta_id = mx, my, vol['mask'].rs_id
 
             if self.mo_snd_delta_id is not None: 
                 if vol['mask'].rs_id == self.mo_snd_delta_id[2]:
-                    vol['radial'].rs_slide(mx, my, vol['mask'].rs_getPos('center'))  
+                    vol['radial'].rs_slide(mx, my, vol['mask'].rs_getPos('center'))
+                    self.editVolume(enum, value, self.mo_snd_delta_id[2], play_sound_cue=enum)  
 
 
     
@@ -841,6 +866,12 @@ class MenuReport(PagesHelp):
 
 
     def run(self, surface):
+        """
+            TBD
+
+            return -> None
+
+        """
         while 1:
             surface.fill(self.tk_bg_color)
 

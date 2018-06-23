@@ -10,8 +10,8 @@ class SoundMusic(GlobalGameData):
 	all_music = {}
 
 	# Default volumes for sound and music
-	sm_volumes = {0: 0.5,	# Effects
-				  1: 0.5}	# Music
+	sm_volumes = {0: 0.5,	# Music
+				  1: 0.5}	# Effects
 
 	sm_volume_drop = 0.02
 
@@ -43,31 +43,39 @@ class SoundMusic(GlobalGameData):
 		#cls.tk_mixer_music.set_volume(cls.sm_volumes[1])
 		#cls.tk_mixer_music.play() 
 
+	@classmethod
+	def editVolume(cls, volume_id, volume, edit=False, play_sound_cue=False):
+		"""
+			Edit volume
+
+			volume_id -> 0: Music, 1: Effects
+			volume -> Value between 0.0 -> 1.0
+			edit -> Enable edit (bool)
+			play_sound_cue -> Play a test sound to indicate volume level (Effects only)
+
+			return -> None
+		"""
+		if edit:
+			# Music
+			if volume_id == 0 and volume != cls.sm_volumes[volume_id]:
+				print 'Music!'
+
+			# Effects
+			elif volume_id == 1 and volume != cls.sm_volumes[volume_id]:
+				cls.sm_volumes[volume_id] = volume
+				if play_sound_cue: cls.playSoundEffect(186)
+
 
 	@classmethod
-	def playSoundEffect(cls, _id, dist_mod=None):
+	def playSoundEffect(cls, _id):
 		"""
 			Play sound-effect by id
 
 			_id -> int id of the needed soundeffect (See sounds.cfg for the sounds by id)
-			dist_mod -> Apply distance modifier to adjust the volume to give out impression of sound occuring out in the distance
-						Every 32 of dist_mod drops the sound volume by 'sm_volume_drop'
-						Note:
-							This will modify the sound object
-							so if you are firing a weapon to the wall out far and near, they both play it back
-							at the last given volume mod
-
-
 			return -> None
 
 		"""
-		if dist_mod is not None: 
-			cls.all_sounds[_id].set_volume(max(0, cls.sm_volumes[0] - cls.sm_volume_drop * dist_mod / 32))
-		
-		else:
-			# Sound level of the object needs to be restored to default after mod usage
-			cls.all_sounds[_id].set_volume(cls.sm_volumes[0])
-		
+		cls.all_sounds[_id].set_volume(cls.sm_volumes[1])
 		cls.all_sounds[_id].play()
 
 

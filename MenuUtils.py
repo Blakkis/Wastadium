@@ -82,6 +82,11 @@ class RadialSlider(GlobalGameData):
     @property
     def rs_mask(self):
         return self._rs_mask
+
+    @property
+    def rs_color(self):
+        return self._rs_color
+    
     
 
     def _rs_create_radial(self):
@@ -103,9 +108,8 @@ class RadialSlider(GlobalGameData):
                 if r > 360 + 45: continue
 
                 r = self.tk_radians(r)
-                #r = self.tk_radians(min(315, r) + 90)
-                x = half_mask + self.tk_ceil(self.tk_cos(r) * ring)
-                y = half_mask + self.tk_ceil(self.tk_sin(r) * ring)
+                x = half_mask + self.tk_cos(r) * ring
+                y = half_mask + self.tk_sin(r) * ring
                 steps.append((x, y))
 
             # Store points for creating the slider itself
@@ -122,6 +126,7 @@ class RadialSlider(GlobalGameData):
         self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max'] / float(2))) # Set initial value to center
         self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']       # Get the range multiplier
         self._rs_value['adi'] = float(270) / self._rs_value['max']                  # Angle value per step
+        self._rs_value['dva'] = self._rs_value['mul'] * self._rs_value['val']  
 
     
     def rs_slide(self, sx, sy, pos):
@@ -135,7 +140,7 @@ class RadialSlider(GlobalGameData):
         angle = (max(45, angle) if angle < 180 else min(315, angle)) - 45
 
         self._rs_value['val'] = int(angle / self._rs_value['adi'])
-
+        self._rs_value['dva'] = self._rs_value['mul'] * self._rs_value['val']
 
     
     def rs_render_slider(self, surface, pos=None):
@@ -147,7 +152,7 @@ class RadialSlider(GlobalGameData):
             surface -> Active screen surface
             pos -> (x, y) position
 
-            return -> None
+            return -> Current slider value mapped within-range
 
         """
         if pos is None: pos = (0, 0) 
@@ -156,6 +161,8 @@ class RadialSlider(GlobalGameData):
             self.tk_draw_polygon(surface, (0xff, 0x40, 0x0), 
                                  [(x + pos[0], y + pos[1]) for x, y in self._rs_ring_points[0][:self._rs_value['val']] + \
                                                                        self._rs_ring_points[1][-self._rs_value['val']:]])
+
+        return self.tk_clamp(round(self._rs_value['dva'], 2), 0, self._rs_value['map']) 
 
 
 

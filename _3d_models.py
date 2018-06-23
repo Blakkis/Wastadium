@@ -50,7 +50,7 @@ class Model3D(GlobalGameData):
 
 			color -> Color of the wireframe
 
-			return -> Boundary sphere
+			return -> Boundary sphere (Similar to what Pygame drawing operations returning rect)
 
 		"""
 		

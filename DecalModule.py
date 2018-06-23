@@ -314,7 +314,7 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem):
         self.angler = angle
         self.damp = 0
 
-        # Play a sound que of kicking the gibs
+        # Play a sound of kicking the gibs
         if kick_snd and self.gib_sound is not None: 
             self.playSoundEffect(self.tk_choice(self.gib_sound))
 
