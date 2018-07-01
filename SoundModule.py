@@ -10,7 +10,7 @@ class SoundMusic(GlobalGameData):
 	all_music = {}
 
 	# Default volumes for sound and music
-	sm_volumes = {0: 0.5,	# Music
+	sm_volumes = {0: 0.4,	# Music
 				  1: 0.5}	# Effects
 
 	sm_volume_drop = 0.02
@@ -39,9 +39,9 @@ class SoundMusic(GlobalGameData):
 		for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'music.cfg')):
 			cls.all_music[int(line[0])] = cls.tk_path.join('soundmusic', 'music', line[1])
 
-		#cls.tk_mixer_music.load(cls.all_music[0])
-		#cls.tk_mixer_music.set_volume(cls.sm_volumes[1])
-		#cls.tk_mixer_music.play() 
+		cls.tk_mixer_music.load(cls.all_music[0])
+		cls.tk_mixer_music.set_volume(cls.sm_volumes[0])
+		cls.tk_mixer_music.play(-1) 
 
 	@classmethod
 	def editVolume(cls, volume_id, volume, edit=False, play_sound_cue=False):

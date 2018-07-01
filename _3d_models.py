@@ -75,6 +75,7 @@ class Model3D(GlobalGameData):
 
 	def m_reset(self): self._m_vertices = self._m_vertices_default 	
 	
+	
 	def m_rotate_x(self, d):
 		"""
 			Rotate around X axis

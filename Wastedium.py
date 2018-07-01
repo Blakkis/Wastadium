@@ -57,7 +57,7 @@ class LaserSightModule(uiElements):
             self.l_offsets[k].append(self.tk_hypot(v[0], v[1]))
 
   
-    def cast_lasersight(self, surface, angle, dist, base, sway=False, firing=False):
+    def cast_lasersight(self, surface, angle, dist, base, sway=False, firing=False, delta=0):
         """
             If player has bought the lasersight module
             cast a small laser beam
@@ -75,7 +75,7 @@ class LaserSightModule(uiElements):
         # Only sway the lasersight when moving
         if sway and not firing: 
             angle += 0.04 * self.tk_cos(self.l_sway())
-            self.l_sway += .3
+            self.l_sway += 20 * delta
 
         # Get the lasersight offset
         ofs = base if not sway or firing else self.l_offsets[sway] 
@@ -117,7 +117,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
         self.char_center = self.tk_res_half[0] - 16, self.tk_res_half[1] - 16
         self.char_rect.move_ip(self.char_center)
 
-        self.player_data = {'speed':  3.5,            # Speed
+        self.player_data = {'speed':  180,            # Speed
                             'legs':   'legs_prison',  # Legs str id
                             'torso':  'hero',         # Torso str id 
                             'model':  ''}             # Torso + weapon
@@ -130,13 +130,13 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
 
         # Animation 
         self.hero_load_animation(self.player_data['legs'], self.player_data['model'])
-        self.animation_delay = self.tk_event_trigger(3)    # Delay between each animation frames
+        self.animation_delay = self.tk_trigger_const(.04)    # Delay between each animation frames
 
         # Footsteps 
         self.footstep_id = 0    # Id of the footstep left behind
         self.footstep_cycle = iter(xrange(8, 40))       # First 0 to 7 indexes are data about the footstep and the rest are footstep textures 
-        self.footstep_delay = self.tk_event_trigger(8)  # Frames between each footstep +
-        self.footstep_delay_sound = self.tk_event_trigger(2)    # Frames between each footstep soundeffect 
+        self.footstep_delay = self.tk_trigger_const(.1)  # Frames between each footstep +
+        self.footstep_delay_sound = self.tk_trigger_const(.001)    # Frames between each footstep soundeffects
 
         # Laser cast module (During in-game if player has bought it)
         self.lmodule = LaserSightModule() 
@@ -156,7 +156,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
         wy = -int(World.cell_y - 16) >> 5
         
         if self.tk_boundaryCheck(wx, wy, World.w_map_size):
-            if self.footstep_delay_sound.getReady(): 
+            if self.footstep_delay_sound.isReady(): 
                 # Get the ground material sound effect for walking over it
                 self.playSoundEffect(self.tk_choice(World.w_micro_cells[wy][wx].w_sound_walk)) 
             # Get the id for the bloody foot texture
@@ -209,20 +209,22 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
 
         # Get/Set the weapons firerate from the configs
         firerate = self.all_weapons[self.i_playerStats['weapon']]['w_firerate'] 
-        self.weaponfire_delay = self.tk_event_trigger_cons(firerate)
+        self.weaponfire_delay = self.tk_trigger_hold(firerate)
         
         # Cycle for dual gun usage
         self.weapon_dual_cycle = self.tk_deque((0, 1))
 
         # Length of the fire animation
+        firerate = int(60 * firerate)
         l = [0]
         if firerate > 7: l.extend([1] * 7)      # Cap the fire anim length to 8
         else: l.extend([1] * (firerate - 1))    # Use the firerate - 1 as length
         
         self.fire_anim_len = self.tk_deque(l)
+        self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / len(self.fire_anim_len)) 
 
 
-    def hero_handle(self, surface):
+    def hero_handle(self, surface, delta=0):
         """
             Handle everything related to player 
 
@@ -264,9 +266,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
                 play_fire_frame |= 1
                 
                 if ammo_id != -1: self.i_playerAmmo[ammo_id] -= 1
-
                 self.weapon_dual_cycle.rotate(1)    # Switch hand
-                
                 self.fire_anim_len.rotate(1)        # Begin the fire animation
 
             else:
@@ -282,30 +282,31 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
         keys = self.tk_key_pressed()
         if keys[self.tk_user['up']]:
             dir_frames = 1
-            World.move_map(x, y, obj_col=self.char_rect)
+            World.move_map(x * delta, y * delta, obj_col=self.char_rect)
 
         elif keys[self.tk_user['down']]:
             dir_frames = 5
-            World.move_map(-(x - x / 4), -(y - y / 4), obj_col=self.char_rect)
+            World.move_map(-(x - x / 4) * delta, -(y - y / 4) * delta, obj_col=self.char_rect)
 
         if keys[self.tk_user['right']]:
             dir_frames = 3
-            World.move_map(-(y - y / 4), x - x / 4, obj_col=self.char_rect)
+            World.move_map(-(y - y / 4) * delta, (x - x / 4) * delta, obj_col=self.char_rect)
 
         elif keys[self.tk_user['left']]:
             dir_frames = 7
-            World.move_map(y - y / 4, -(x - x / 4), obj_col=self.char_rect) 
+            World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect) 
 
         # Character is moving. Fetch the next animation frame when ready and check for diagonal movements
         if dir_frames:
 
-            if self.animation_delay.getReady():
+            if self.animation_delay.isReady():
                 # Update the animation index keys for the next frame
                 self.legs_frame_index = self.legs_frame_cycle.next()
                 self.torso_frame_index = self.torso_frame_cycle.next()
 
             # Leave footsteps behind 
-            if self.footstep_delay.getReady(): self.hero_footstep(angle)       
+            if self.footstep_delay.isReady():
+                self.hero_footstep(angle)      
 
             # Diagonal movement
             dir_frames = 2 if keys[self.tk_user['up']]   and keys[self.tk_user['right']] else dir_frames
@@ -338,7 +339,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
                 #action = play_fire_frame & 1
                 
                 action = self.fire_anim_len[0]
-                if self.fire_anim_len[0]: self.fire_anim_len.rotate(1)
+                if self.fire_anim_timer.isReady() and self.fire_anim_len[0]: self.fire_anim_len.rotate(1)
  
                 if mov:
                     # Moving and shooting (Keep the attack posture between executing attack) 
@@ -366,7 +367,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
             self.lmodule.cast_lasersight(surface, angle, 
                                          self.all_weapons[self.i_playerStats['weapon']]['w_range'],
                                          self.torso_textures[self.player_data['model']][0][-1], 
-                                         dir_frames, play_fire_frame)
+                                         dir_frames, play_fire_frame, delta)
 
 
 
@@ -420,7 +421,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         
         # These will get replaced (Currently random cell collision)
         if any((x, y)):
-            self.collision = self.tk_choice((False, False, False, False, False, True, False, False, False, False, False, False))
+            self.collision = self.tk_choice((False, False, False, False, False, False, False, True, False))
             self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if self.collision else False
             if self.collision:
                 self.texture = self.mid_textures[mid_id][6]
@@ -598,7 +599,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         cls.cell_x, cls.cell_y = 0, 0 
 
         player_spawn_pos = 0, 0 # is read from the mapfile
-        cls.w_map_size = 32, 32   # is read from the mapfile
+        cls.w_map_size = 64, 64   # is read from the mapfile
 
         cls.cell_x -= 32 * player_spawn_pos[0]
         cls.cell_y -= 32 * player_spawn_pos[1]
@@ -732,8 +733,9 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         # Time to fill the world with stuff to kill.
         #enemies_locations = [(4, 5, 'rifleman') for _ in xrange(1)] 
 
+        num_of_enemies = 32
         enemies_locations = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
-                              cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(16)]
+                              cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
         cls.w_spawnEnemies(enemies_locations)
         
@@ -988,7 +990,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
 
 
     @classmethod
-    def render_enemies(cls, surface=None):
+    def render_enemies(cls, surface=None, delta=0):
         """
             Render enemies near the player using spatial method
 
@@ -1037,7 +1039,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
                             cls.w_entities_dynamic[old_index[1]][old_index[0]].discard(cls.w_enemies[_id].enemy_id)
                             cls.w_entities_dynamic[new_index[1]][new_index[0]].add(cls.w_enemies[_id].enemy_id)
                             
-                        token = cls.w_enemies[_id].handle_enemy(env_col, ent_col, surface=surface)
+                        token = cls.w_enemies[_id].handle_enemy(env_col, ent_col, surface=surface, delta=delta)
                         
                         # Check if enemy is firing and display the effects and test for hits
                         if token is not None: cls.fire_weapon(*token, surface=surface, ignore_id=_id)
@@ -1575,8 +1577,10 @@ class Main(World, DeltaTimer):
             return -> None
             
         """
+        self.dt_tick() 
+        
         while 1:
-            delta, delta_ms = self.dt_tick(self.tk_fps)
+            dt = self.dt_tick(self.tk_fps)
 
             self.screen.fill(self.tk_bg_color)
 
@@ -1591,13 +1595,13 @@ class Main(World, DeltaTimer):
 
             self.gib_render_all(self.screen, self.cell_x, self.cell_y)
             
-            self.render_enemies(self.screen)
+            self.render_enemies(self.screen, dt)
                 
-            self.hero.hero_handle(self.screen)
+            self.hero.hero_handle(self.screen, dt)
                     
             self.render_effects(self.screen)
 
-            self.render_casings(self.screen)
+            self.render_casings(self.screen, dt)
 
             if not self.tk_no_shadow_layer:
                 self.shadow_map.s_applyShadows(self.cell_x, self.cell_y, self.screen)

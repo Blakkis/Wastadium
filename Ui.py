@@ -61,7 +61,6 @@ class uiOverlay(uiElements, EventManager, Inventory):
 		# Health 
 		self.healthBar = self.tk_surface((96, 28), self.tk_srcalpha)
 		self.heartBeatCycle = self.tk_cycle(self.__heartBeatGenerator(self.i_playerStats['health'][0]))
-		self.heartBeatCycleTimer = self.tk_event_trigger(1)
 
 		self.healthBarCriticalCycle = self.tk_cycle(self.tk_chain(xrange(0, 128, 4), xrange(128, 0, -4)))
 		self.healthBarCritical = self.tk_surface((96, 28), self.tk_srcalpha)

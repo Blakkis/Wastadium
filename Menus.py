@@ -242,8 +242,6 @@ class MenuMain(PagesHelp, EventManager):
         # Update scanline y position
         EventManager.__init__(self)
         self.Event_newEvent(self.scanline.slg_speed, self.scanline.slg_update)
-
-        self.clock = self.tk_time.Clock()
     
     
     def run(self, surface):
@@ -256,7 +254,6 @@ class MenuMain(PagesHelp, EventManager):
 
         """
         while 1:
-            self.clock.tick(8192)
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
 
@@ -317,8 +314,6 @@ class MenuMain(PagesHelp, EventManager):
             surface.blit(self.version_id, (8, self.tk_resolution[1] - (self.version_id.get_height() + 4)))
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
-
-            self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.clock.get_fps(), 2)))
                 
             self.tk_display.flip()  
 
@@ -337,11 +332,14 @@ class MenuShop(PagesHelp, Inventory, EventManager):
     
     def __init__(self):
         self.ms_font_16 = self.tk_font(self.ElementFonts[1], int(16 * self.menu_scale))
+        self.ms_font_height = self.ms_font_16.get_height() 
         
         # Pre-rendered texts (Color/Text doesn't change)
         self.ms_pre_text = {'price': self.ms_font_16.render('Price: ', 1, (0xff, 0x0, 0x0)),
                             'dual_n': self.ms_font_16.render('Dual', 1, (0x80, 0x0, 0x0)),
-                            'dual_y': self.ms_font_16.render('Dual', 1, (0xff, 0x0, 0x0))}
+                            'dual_y': self.ms_font_16.render('Dual', 1, (0xff, 0x0, 0x0)),
+                            'owned_n': self.ms_font_16.render('Owned', 1, (0x80, 0x0, 0x0)),
+                            'owned_y': self.ms_font_16.render('Owned', 1, (0xff, 0x0, 0x0))}
 
         # Provide much nicer background for the icons (32x32, 64x64)
         _64 = int(64 * self.menu_scale) 
@@ -429,7 +427,6 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
                 if event.type == self.tk_event_mouseup: click = 1
 
-
             mx, my = self.tk_mouse_pos()
 
             self.ms_render_weapons(surface, hover=(mx, my), click=click)
@@ -468,15 +465,15 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             surface.blit(*value.rs_renderSurface(position=1))
 
             if key + '-dual' in self.all_weapons: 
-                dual = self.ms_pre_text['dual_n']
-                surface.blit(dual, (value.rs_getPos('right') - dual.get_width(), value.rs_getPos('bottom')))
+                dual_i = self.ms_pre_text['dual_n']
+                surface.blit(dual_i, (value.rs_getPos('right') - dual_i.get_width(), value.rs_getPos('bottom')))
             
             if value.rs_hover_over(kw['hover']):
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
                 
-                surface.blit(self.ms_pre_text['price'], (16, value.rs_getPos('bottom')))
+                surface.blit(self.ms_pre_text['price'], (16, value.rs_getPos('bottom') + self.ms_font_height))
                 price = self.ms_font_16.render('{} cr.'.format(self.all_weapons[key]['w_price']), 1, (0xff, 0x0, 0x80))
-                surface.blit(price, (16 + self.ms_pre_text['price'].get_width(), value.rs_getPos('bottom')))
+                surface.blit(price, (16 + self.ms_pre_text['price'].get_width(), value.rs_getPos('bottom') + self.ms_font_height))
 
                 if kw['click']: value.rs_click()
 
@@ -493,6 +490,9 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
             value.rs_updateRect(16 + (80 * self.menu_scale) * enum, 160 * self.menu_scale)
             surface.blit(*value.rs_renderSurface(position=1))
+
+            ammo_count = self.ms_font_16.render('x{}'.format(self._i_max_ammo), 1, (0xff if self._i_max_ammo else 0x80, 0x0, 0x80))
+            surface.blit(ammo_count, (value.rs_getPos('left'), value.rs_getPos('bottom')))
 
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
@@ -511,6 +511,9 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             value = self.ms_sIcons[key]
             value.rs_updateRect(16 + 80 * enum, 304 * self.menu_scale)
             surface.blit(*value.rs_renderSurface(position=1)) 
+
+            owned_i = self.ms_pre_text['owned_n']
+            surface.blit(owned_i, (value.rs_getPos('right') - owned_i.get_width(), value.rs_getPos('bottom'))) 
 
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)

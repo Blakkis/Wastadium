@@ -2,20 +2,84 @@ from itertools import cycle
 from pygame.time import Clock
 
 
-__all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger')
+__all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger',
+           'MsHoldTrigger', 'MsCountdownTrigger', 'MsDelayTrigger')
 
 
 class DeltaTimer(object):
 
-    _dt_clock = Clock()
+    __dt_clock = Clock()
+
+    dt_deltas = {'delta': 0,
+                 'delta_ms': 0}
 
     @classmethod
     def dt_tick(cls, limit_fps=0):
-        dt = cls._dt_clock.tick(limit_fps)
-        return dt, dt / float(1000)
+        dt = cls.__dt_clock.tick(limit_fps) / float(1000)
+        dt = max(0.002, min(0.016, dt))
+        cls.dt_deltas['delta_ms'] = dt
+        
+        return dt
 
     @classmethod
-    def dt_fps(cls): return cls._dt_clock.get_fps() 
+    def dt_fps(cls): return cls.__dt_clock.get_fps() 
+
+
+
+class MsCountdownTrigger(DeltaTimer):
+    __slots__ = 'ms'
+
+    def __init__(self, ms):
+        self.ms = ms            # Active timer
+
+    def isDone(self):
+        if self.ms <= 0: raise StopIteration
+        self.ms -= self.dt_deltas['delta_ms']
+        
+        return 1
+
+
+
+class MsDelayTrigger(DeltaTimer):
+    __slots__ = 'dms', 'ms'
+
+    def __init__(self, delay_ms):
+        self.dms = delay_ms     # Default timer value
+        self.ms = delay_ms      # Active timer
+
+    def isReady(self):
+        if self.ms <= 0: 
+            self.ms = self.dms
+            return 1
+        self.ms -= self.dt_deltas['delta_ms']
+        return 0
+
+
+
+class MsHoldTrigger(DeltaTimer):
+    def __init__(self, delay_ms, state=1):
+        self.dms = delay_ms     # Default timer value
+        self.ms = delay_ms      # Active timer 
+        self.ready = state      # Boolean state of the timer
+        self.dstate = state     # Default state of the timer
+
+    def isReady(self, release=0):
+        if release and self.ready:
+            state = self.ready
+            self.ready = 0
+            return state
+
+        if self.ready: return 0
+
+        self.ms -= self.dt_deltas['delta_ms']
+        if self.ms <= 0: 
+            self.ready = 1
+            self.ms = self.dms  
+
+    def reset(self):
+        self.ms = self.dms; self.ready = self.dstate
+
+
 
 
 # --------------------------------
@@ -45,12 +109,12 @@ class EventTriggerConstant(object):
             return -> bool
 
         """
-        state = self.ready
-        if release and state:
+        if release and self.ready:
+            state = self.ready
             self.ready = 0 
             return state
          
-        if state: return 0
+        if self.ready: return 0
         
         self.timer += increment
         if self.timer >= self.delay:

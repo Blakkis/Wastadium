@@ -139,15 +139,19 @@ class WeaponCasings(GlobalGameData):
         
         # Frames 
         self.casing_frames = self.tk_cycle(xrange(self.casing_num_of_frames))
-        self.casing_timer = self.tk_event_trigger(self.tk_randrange(4, 8))
-        self.casing_flytime = self.tk_countdown_trigger(self.tk_randrange(80, 90))
+        self.casing_rotation = self.tk_trigger_const(self.tk_uniform(.001, .003))
+        self.casing_index = 0
+
+        self.casing_timer = self.tk_trigger_const(self.tk_uniform(.05, .08))    # 
+        self.casing_flytime = self.tk_trigger_down(self.tk_uniform(1.2, 1.4))   # For how long the case is moving
 
 
     def render_casing_pos(self):
         """
             Return data for rendering the casing
 
-            return ->
+            return -> Surface, Pos, rPos
+
         """
         # Once the casing flytime is done, raise StopIteration Error
         self.casing_flytime.isDone()
@@ -156,7 +160,7 @@ class WeaponCasings(GlobalGameData):
         x = self.casing_x + self.tk_sin(self.casing_angle) * self.casing_dist   
         y = self.casing_y + self.tk_cos(self.casing_angle) * self.casing_dist 
 
-        if self.casing_timer.getReady():
+        if self.casing_timer.isReady():
             # Slowdown the stepping to give the illusion of height for the casings
             self.casing_step -= .5
             self.casing_dist += self.tk_ceil(self.casing_step)
@@ -168,9 +172,12 @@ class WeaponCasings(GlobalGameData):
                 self.casing_dist = 0; self.casing_step = 2
                 
                 # give the casing a small angle offset
-                self.casing_angle = self.tk_uniform(self.casing_angle - 1, self.casing_angle + 1)   
+                self.casing_angle = self.tk_uniform(self.casing_angle - 1, self.casing_angle + 1)
+        
+        if self.casing_rotation.isReady():
+            self.casing_index = self.casing_frames.next()         
 
-        return self.all_casings[self.casing_id][self.casing_frames.next()], (x, y), self.casing_rel   
+        return self.all_casings[self.casing_id][self.casing_index], (x, y), self.casing_rel   
 
     
     @classmethod
@@ -229,7 +236,7 @@ class WeaponCasings(GlobalGameData):
 
 
     @classmethod
-    def render_casings(cls, surface):
+    def render_casings(cls, surface, delta=0):
         """
             Render all casings
             surface -> Surface which to draw on

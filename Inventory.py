@@ -14,6 +14,9 @@ class Inventory(Weapons):
 	# Player Ammunition type/count (MAX: 99999)
 	i_playerAmmo  = {}
 
+	# Max amout of ammo player can hold for each ammo type
+	_i_max_ammo = 99999
+
 	
 	@classmethod
 	def inv_Reset(cls, **kw):
@@ -27,9 +30,9 @@ class Inventory(Weapons):
 		cls.i_playerStats['health'] = [10, 100]
 		cls.i_playerStats['armor']  = [10, 100]
 		cls.i_playerStats['credits'] = 19284
-		cls.i_playerStats['mod_laser'] = 0
+		cls.i_playerStats['mod_laser'] = 1
 
 		for key, value in cls.all_ammo_data.iteritems():
 			# Id = Count
-			cls.i_playerAmmo[key] = 99999
+			cls.i_playerAmmo[key] = cls._i_max_ammo
  	 

@@ -71,7 +71,7 @@ class GlobalGameData(object):
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 8192
+    tk_fps = 60
     tk_resolution = 1280, 720
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), float(tk_resolution[1]) / float(720))     # Use the smallest as scalar for UI elements
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2
@@ -92,7 +92,7 @@ class GlobalGameData(object):
     # Option 
     tk_no_effect_layer = 0      # Partially used. Explain where/why
     tk_no_shadow_layer = 0
-    tk_shadow_quality = 1       # 1: High quality (Experimental and Slow)
+    tk_shadow_quality = 1       # 1: High quality (Experimental and Slow) Actually the entire shadow casting is shit(Needs massive overhaul)
     tk_no_footsteps = 0
     
     # Lightmap 
@@ -131,9 +131,15 @@ class GlobalGameData(object):
     tk_randrange = random.randrange
     tk_uniform = random.uniform
     tk_sample = random.sample
-    tk_event_trigger = EventTrigger
-    tk_countdown_trigger = EventTriggerCountDown
-    tk_event_trigger_cons = EventTriggerConstant
+    
+    #tk_event_trigger = EventTrigger
+    #tk_countdown_trigger = EventTriggerCountDown
+    #tk_event_trigger_cons = EventTriggerConstant
+    
+    tk_trigger_hold = MsHoldTrigger
+    tk_trigger_const = MsDelayTrigger
+    tk_trigger_down = MsCountdownTrigger
+    
     tk_timedelta = timedelta 
     tk_path = os.path
     tk_environ = os.environ
@@ -207,10 +213,10 @@ class GlobalGameData(object):
     tk_audio_channel = 2
 
     # A.I related
-    tk_enemy_turn_speed = .04       # Basic turning speed
+    tk_enemy_turn_speed = 8       # Basic turning speed
     tk_enemy_hearing_dist = 64      # Alert enemy when inside this distance
-    tk_enemy_alarm_state = 250      # How long to hunt player for
-    tk_enemy_waypoint_get = 150     # Delay getting newpoint
+    tk_enemy_alarm_state = 4.1      # How long to hunt player for
+    tk_enemy_waypoint_get = 2.5     # Delay getting newpoint
     tk_enemy_safe_distance = 44     # Distance away from waypoint
 
     # Gib Physics

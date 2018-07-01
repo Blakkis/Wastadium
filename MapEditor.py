@@ -1565,12 +1565,12 @@ class Main(GlobalGameDataEditor, DeltaTimer):
 	
 
 	def mainloop(self):
+		self.dt_tick()
 		while 1:
-			delta, delta_ms = self.dt_tick()
- 
+			dt = self.dt_tick()
 			try:
 				self.base.update()
-				self.pygameWindow.pf_RunPygameLogic(delta)
+				self.pygameWindow.pf_RunPygameLogic(dt)
 			except tk.TclError, Exception:
 				# This is just to suppress the Exceptions when the window is closed
 				break

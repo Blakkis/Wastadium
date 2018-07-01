@@ -1,5 +1,5 @@
 from ConfigsModule import GlobalGameData
-from MessSolver import MessSolver
+#from MessSolver import MessSolver
 
 # Note!
 #   Change this module name to better describe it since it does more than texture loading
@@ -230,7 +230,7 @@ class EffectsLoader(GlobalGameData):
         self.effect_index = 0
         
         # Playbackrate timer
-        self.effect_timer = self.tk_event_trigger(self.all_effects[name][rot][2])
+        self.effect_timer = self.tk_trigger_const(self.all_effects[name][rot][2])
 
         # The last casing pos and img needs to be stored before destroyed
         self.effect_last_frame = None
@@ -244,7 +244,7 @@ class EffectsLoader(GlobalGameData):
 
         """
         # Check if the timer can give out the next frame
-        if self.effect_timer.getReady():
+        if self.effect_timer.isReady():
             self.effect_index = self.effect_gen.next() 
         
         return (self.effect_index, self.effect_size_h, self.effect_pos, 

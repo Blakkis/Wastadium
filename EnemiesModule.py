@@ -65,8 +65,8 @@ class Enemies(TextureLoader, Weapons):
         
         self.enemy_targetPos = 0, 0       # Latest waypoint (x, y) world pos
         
-        self.enemy_targetInterval = self.tk_event_trigger_cons(self.tk_enemy_waypoint_get, state=0)         # Fetch new waypoint delay
-        self.enemy_targetInterval_alarm = self.tk_event_trigger_cons(self.tk_enemy_alarm_state, state=0)    # Alarm state time   
+        self.enemy_targetInterval = self.tk_trigger_hold(self.tk_enemy_waypoint_get, state=0)         # Fetch new waypoint delay
+        self.enemy_targetInterval_alarm = self.tk_trigger_hold(self.tk_enemy_alarm_state, state=0)    # Alarm state time   
 
         # Collision is building small rects on top/down, right/left and centering them on
         # the direction of the moving
@@ -94,7 +94,7 @@ class Enemies(TextureLoader, Weapons):
         
         # Setup enemy firerate
         firerate = self.all_weapons[self.enemy_weapon]['w_firerate']
-        self.enemy_weapon_firerate = self.tk_event_trigger_cons(firerate)
+        self.enemy_weapon_firerate = self.tk_trigger_hold(firerate)
 
         self.enemy_weapon_dual_cycle = self.tk_deque((0, 1))     # Support for dual guns
 
@@ -105,14 +105,16 @@ class Enemies(TextureLoader, Weapons):
                               self.torso_textures[self.enemy_torso][0][4]))
         
         # Delay between different animation frames
-        self.enemy_anim_delay = self.tk_event_trigger(5)    # NOTE: Change this
+        self.enemy_anim_delay = self.tk_trigger_const(.04)    
 
         # Length of the fire animation
+        firerate = int(60 * firerate)
         l = [0]
         if firerate > 7: l.extend([1] * 7)      # Cap the fire anim length to 8
         else: l.extend([1] * (firerate - 1))    # Use the firerate - 1 as length
         
         self.enemy_fire_anim_len = self.tk_deque(l)
+        self.enemy_fire_anim_timer = self.tk_trigger_const(60 / float(1000) / len(self.enemy_fire_anim_len)) 
           
 
     def __repr__(self):
@@ -411,7 +413,7 @@ class Enemies(TextureLoader, Weapons):
         self.enemy_targetAngleDif = diff
 
 
-    def handle_enemy(self, env_cols=None, f_cols=None, surface=None):
+    def handle_enemy(self, env_cols=None, f_cols=None, surface=None, delta=0):
         """
             TBD
 
@@ -459,14 +461,14 @@ class Enemies(TextureLoader, Weapons):
         # Move orientation toward target based on rotationspeed 
         # (Increase the speed when engaging the player)
         if self.enemy_targetAngleDif > 0:
-            self.enemy_targetAngleDif -= self.tk_enemy_turn_speed * \
-                                        (2.5 if self.enemy_state else 1)
+            self.enemy_targetAngleDif -= (self.tk_enemy_turn_speed * \
+                                          (2 if self.enemy_state else 1)) * delta
             # Clamp it, so we wont miss the target
             self.enemy_targetAngleDif = max(0, self.enemy_targetAngleDif)  
         
         else:
-            self.enemy_targetAngleDif += self.tk_enemy_turn_speed * \
-                                        (2.5 if self.enemy_state else 1)
+            self.enemy_targetAngleDif += (self.tk_enemy_turn_speed * \
+                                          (2 if self.enemy_state else 1)) * delta
             # Clamp it, so we wont miss the target
             self.enemy_targetAngleDif = min(0, self.enemy_targetAngleDif)   
         
@@ -484,8 +486,8 @@ class Enemies(TextureLoader, Weapons):
         baseAx, baseAy = self.tk_sin(angle), self.tk_cos(angle) 
 
         # Movement direction and speed (Magnitude)
-        mov_x = baseAx * self.enemy_speed
-        mov_y = baseAy * self.enemy_speed
+        mov_x = baseAx * self.enemy_speed * delta
+        mov_y = baseAy * self.enemy_speed * delta
 
         # Update the enemy rect
         self.enemy_rect.center = cenx, ceny
@@ -510,7 +512,7 @@ class Enemies(TextureLoader, Weapons):
             dir_frames = 9 if not self.enemy_state else 1
 
             # Fetch the next animation frame when ready
-            if self.enemy_anim_delay.getReady():
+            if self.enemy_anim_delay.isReady():
                 self.enemy_legs_frame_index = self.enemy_legs_frame_cycle.next()
                 self.enemy_torso_frame_index = self.enemy_torso_frame_cycle.next() 
 
@@ -555,7 +557,7 @@ class Enemies(TextureLoader, Weapons):
 
 
         action = self.enemy_fire_anim_len[0] 
-        if self.enemy_fire_anim_len[0]: self.enemy_fire_anim_len.rotate(1)  
+        if self.enemy_fire_anim_timer.isReady() and self.enemy_fire_anim_len[0]: self.enemy_fire_anim_len.rotate(1)  
 
 
         # Store the original x, y for attacking to keep the center, so the bodyparts wont mess it 
