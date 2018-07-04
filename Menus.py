@@ -339,7 +339,8 @@ class MenuShop(PagesHelp, Inventory, EventManager):
                             'dual_n': self.ms_font_16.render('Dual', 1, (0x80, 0x0, 0x0)),
                             'dual_y': self.ms_font_16.render('Dual', 1, (0xff, 0x0, 0x0)),
                             'owned_n': self.ms_font_16.render('Owned', 1, (0x80, 0x0, 0x0)),
-                            'owned_y': self.ms_font_16.render('Owned', 1, (0xff, 0x0, 0x0))}
+                            'owned_y': self.ms_font_16.render('Owned', 1, (0xff, 0x0, 0x0)),
+                            'help_1': self.ms_font_16.render('LMB - Buy | RMB - sell', 1, (0xff, 0x0, 0x0))}
 
         # Provide much nicer background for the icons (32x32, 64x64)
         _64 = int(64 * self.menu_scale) 
@@ -566,8 +567,12 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
         surface.blit(credits, (self.ms_creditsIcon.rs_getPos('left') - credits.get_width() - 8,
                                self.ms_creditsIcon.rs_getPos('centery') - credits.get_height() / 2))
+        
+        # Help info
+        surface.blit(self.ms_pre_text['help_1'], (16, self.ms_armorHealthIcon.rs_getPos('top') - \
+                                                      self.ms_pre_text['help_1'].get_height()))
     
-    
+
     def ms_highlight_option(self, x, y, icon_d, surface):
         """
             Highlight icon

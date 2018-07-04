@@ -258,7 +258,7 @@ class Enemies(TextureLoader, Weapons):
 
         # Get all walls within raycast path
         walls = self.ray_cast_get_walls(px, py, dist)
-        for wall in walls: self.tk_draw_rect(surface, (0xff, 0xff, 0x0), wall, 1)
+        #for wall in walls: self.tk_draw_rect(surface, (0xff, 0xff, 0x0), wall, 1)
         
         # rayrect for testing against those walls
         test_rect = self.tk_rect(0, 0, 8, 8)
@@ -328,7 +328,7 @@ class Enemies(TextureLoader, Weapons):
             
             # Check within cone or withing "hearing" distance
             if self.check_fov_angle(rAngle, pAngle, self.enemy_fov[1 + self.enemy_state]) or (dist < self.tk_enemy_hearing_dist):
-                self.tk_draw_circle(surface, (0xff, 0xff, 0x0), self.tk_res_half, 16, 1)
+                #self.tk_draw_circle(surface, (0xff, 0xff, 0x0), self.tk_res_half, 16, 1)
                 
                 # See if the enemy can actually see him
                 if self.ray_cast_pos(ePos, dist, surface):

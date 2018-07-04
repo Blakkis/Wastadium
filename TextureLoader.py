@@ -346,7 +346,6 @@ class EffectsLoader(GlobalGameData):
         # Effect texture path
         effect_path_tex = cls.tk_path.join('textures', 'effects')
 
-
         for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
             

@@ -13,6 +13,7 @@ from Menus import MenuManager
 from PreProcessor import PreProcessor
 from Inventory import Inventory
 from Timer import DeltaTimer
+from GadgetLoader import *
 
 
 # NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
@@ -23,87 +24,6 @@ from Timer import DeltaTimer
 #   Refactor!
 #   Remember keys are global too(eg. K_UP)
 #   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
-
-class LaserSightModule(uiElements):
-    """
-        Cast a lasersight from player position
-        with offsets to keep the laser in left eye
-
-        Note: Only player should have this
-
-    """
-    def __init__(self):
-        # Color of the laser beam
-        self.l_color = 0xff, 0x0, 0x0
-
-        # Provide for the cosine a constant increasing value
-        self.l_sway = self.tk_counter(0)
-
-        # NOTE: Need to change these to use the head base tracking (with these coming from rest of the frames)
-
-        # Generate lasersight base offsets
-        # Keep the lasersight front of the left eye when the head bobbles
-        self.l_offsets = {1: [2,  -16],     
-                          2: [1,  -15],
-                          3: [0,  -9 ],
-                          4: [0,  -4 ],
-                          5: [2,  -4 ],
-                          6: [4,  -4 ],
-                          7: [4,  -9 ],
-                          8: [4,  -15]}
-        for k in self.l_offsets.keys():
-            v = self.l_offsets[k] 
-            self.l_offsets[k].append(self.tk_atan2(v[0], v[1]))
-            self.l_offsets[k].append(self.tk_hypot(v[0], v[1]))
-
-  
-    def cast_lasersight(self, surface, angle, dist, base, sway=False, firing=False, delta=0):
-        """
-            If player has bought the lasersight module
-            cast a small laser beam
-
-            surface -> Surface which receives the beam
-            angle -> view angle (Radians)
-            dist -> Max distance for the laser ray
-            base -> base for the headtracking
-            sway -> Sway the lasersight when moving (for added realism)
-            firing -> Stable the aim when firing (Doesn't sway the lasersight)
-
-            return -> None
-
-        """
-        # Only sway the lasersight when moving
-        if sway and not firing: 
-            angle += 0.04 * self.tk_cos(self.l_sway())
-            self.l_sway += 20 * delta
-
-        # Get the lasersight offset
-        ofs = base if not sway or firing else self.l_offsets[sway] 
-
-        vecx = self.tk_sin(angle)
-        vecy = self.tk_cos(angle)
-
-        # Get all collisions intersecting the ray
-        dist = World.get_ray_env_collisions(self.tk_res_half[0], 
-                                            self.tk_res_half[1], 
-                                            vecx, vecy, dist, 
-                                            ret_first_dist=1)
-
-        # Starting point
-        sx = self.tk_res_half[0] + self.tk_sin(angle - ofs[2]) * ofs[3] 
-        sy = self.tk_res_half[1] + self.tk_cos(angle - ofs[2]) * ofs[3]
-
-        # Endpoint
-        ex = self.tk_res_half[0] - vecx * dist 
-        ey = self.tk_res_half[1] - vecy * dist  
-
-        # Cast the visuals
-        self.tk_draw_aaline(surface, self.l_color, (sx, sy), (ex, ey))
-
-        sight = self.ElementCursors[2]
-
-        surface.blit(sight[0], (ex - sight[1], ey - sight[2]))  
-
 
 
 class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
@@ -139,7 +59,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
         self.footstep_delay_sound = self.tk_trigger_const(.001)    # Frames between each footstep soundeffects
 
         # Laser cast module (During in-game if player has bought it)
-        self.lmodule = LaserSightModule() 
+        self.lmodule = LaserSightModule(World.get_ray_env_collisions) 
 
 
     def hero_footstep(self, angle):
@@ -373,7 +293,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
 
 class World(TextureLoader, EffectsLoader, Inventory, Weapons, 
             WeaponCasings, DecalGibsHandler, MessSolver, 
-            FootSteps, uiElements, SoundMusic):
+            FootSteps, uiElements, SoundMusic, GadgetLoader):
     """
         Setup and handle all world related and external modules loading
 
@@ -514,6 +434,9 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
 
         # 
         cls.Menus = MenuManager()
+
+        #
+        cls.load_gadgets()
         
       
     @classmethod
@@ -521,10 +444,9 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         """
             Move the map to give illusion of player moving
 
-            x -> Horizontal movement
-            y -> Vertical movement
-            obj_col -> Player's hitbox
-            surface -> Main surface for debugging purposes if needed
+            x,y -> Move direction
+            obj_col -> Player hitbox
+            surface -> Active screen surface (For visual debugging)
 
             return -> None
             
@@ -1563,7 +1485,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.Menus.all_menus[5].run(self.screen)
+        self.Menus.all_menus[0].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
@@ -1607,14 +1529,14 @@ class Main(World, DeltaTimer):
                 self.shadow_map.s_applyShadows(self.cell_x, self.cell_y, self.screen)
 
             # Render walls
-            self.render_map(2, self.screen)
+            #self.render_map(2, self.screen)
 
             self.uioverlay.drawOverlay(self.screen)
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
 
             self.tk_display.flip()
-             
+            
 
 if __name__ == '__main__':
     #Enemies.initialize_pathfinder()
