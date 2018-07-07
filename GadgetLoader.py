@@ -3,14 +3,18 @@ from ConfigsModule import GlobalGameData
 
 __all__ = ('GadgetLoader', 'LaserSightModule')
 
+# Note: 
+
 
 class GadgetLoader(GlobalGameData):
-	
+
 	gl_gadgets = {}
 
+	
 	def __init__(self):
 		pass
 
+	
 	@classmethod
 	def load_gadgets(cls):
 		"""
@@ -32,19 +36,16 @@ class GadgetLoader(GlobalGameData):
         				'g_desc': '-'}
         	
         	for line in cls.tk_readFile(cfg, 'r'):
-        		if tex_data == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
+        		if line[0] == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
         		
-        		elif tex_data == 'g_price': tex_data[line[0]] = int(line[1]) 
+        		elif line[0] == 'g_price': tex_data[line[0]] = int(line[1]) 
         		
-        		elif tex_data == 'g_desc': tex_data[line[0]] = line[1].replace('_', ' ') 
+        		elif line[0] == 'g_desc': tex_data[line[0]] = line[1].replace('_', ' ') 
 
         	cls.gl_gadgets[name] = tex_data
 
 
         		
-
-
-
 class LaserSightModule(GlobalGameData):
     """
         Cast a lasersight from player position

@@ -323,9 +323,20 @@ class MenuCampaign(PagesHelp):
     def __init__(self):
         pass
 
+    
     def run(self, surface):
         while 1:
-            pass 
+            surface.fill(self.tk_bg_color)
+            surface.blit(self.menu_background, (0, 0))
+
+            for event in self.tk_eventDispatch():
+                pass
+
+            surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
+
+            self.tk_display.flip() 
+
+
 
 
 class MenuShop(PagesHelp, Inventory, EventManager):
@@ -335,11 +346,15 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         self.ms_font_height = self.ms_font_16.get_height() 
         
         # Pre-rendered texts (Color/Text doesn't change)
-        self.ms_pre_text = {'price': self.ms_font_16.render('Price: ', 1, (0xff, 0x0, 0x0)),
-                            'dual_n': self.ms_font_16.render('Dual', 1, (0x80, 0x0, 0x0)),
-                            'dual_y': self.ms_font_16.render('Dual', 1, (0xff, 0x0, 0x0)),
-                            'owned_n': self.ms_font_16.render('Owned', 1, (0x80, 0x0, 0x0)),
-                            'owned_y': self.ms_font_16.render('Owned', 1, (0xff, 0x0, 0x0)),
+        self.ms_pre_text = {'w_id': self.ms_font_16.render('Id: ',               1, (0xff, 0x0, 0x0)), 
+                            'w_price': self.ms_font_16.render('| Price: ',       1, (0xff, 0x0, 0x0)),
+                            'w_damage': self.ms_font_16.render('| Damage: ',     1, (0xff, 0x0, 0x0)),
+                            'w_range': self.ms_font_16.render('| Range: ',       1, (0xff, 0x0, 0x0)),
+                            'w_firerate': self.ms_font_16.render('| Firerate: ', 1, (0xff, 0x0, 0x0)),
+                            'dual_n': self.ms_font_16.render('Dual',             1, (0x80, 0x0, 0x0)),
+                            'dual_y': self.ms_font_16.render('Dual',             1, (0xff, 0x0, 0x0)),
+                            'owned_n': self.ms_font_16.render('Owned',           1, (0x80, 0x0, 0x0)),
+                            'owned_y': self.ms_font_16.render('Owned',           1, (0xff, 0x0, 0x0)),
                             'help_1': self.ms_font_16.render('LMB - Buy | RMB - sell', 1, (0xff, 0x0, 0x0))}
 
         # Provide much nicer background for the icons (32x32, 64x64)
@@ -430,9 +445,9 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
             mx, my = self.tk_mouse_pos()
 
-            self.ms_render_weapons(surface, hover=(mx, my), click=click)
+            weapon = self.ms_render_weapons(surface, hover=(mx, my), click=click)
             
-            self.ms_render_ammo(surface, hover=(mx, my), click=click)
+            self.ms_render_ammo(surface, hover=(mx, my), click=click, hl_wpn=weapon)
 
             self.ms_render_gadgets(surface, hover=(mx, my), click=click)
 
@@ -455,9 +470,12 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         """
             Render weapons
 
-            return -> None
+            return -> Name of the weapon being highlighted
 
         """
+        # Passed over to ammo rendering for highlighting the correct ammotype
+        hl_weapon = None
+        
         # First 2 (text height) rows are reserved for weapons related text
         for enum, key in enumerate(self.ms_wIcons['weapon_keys']):
             value = self.ms_wIcons[key]
@@ -471,21 +489,87 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             
             if value.rs_hover_over(kw['hover']):
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
-                
-                surface.blit(self.ms_pre_text['price'], (16, value.rs_getPos('bottom') + self.ms_font_height))
-                price = self.ms_font_16.render('{} cr.'.format(self.all_weapons[key]['w_price']), 1, (0xff, 0x0, 0x80))
-                surface.blit(price, (16 + self.ms_pre_text['price'].get_width(), value.rs_getPos('bottom') + self.ms_font_height))
+                self.ms_render_item_stats(surface, 0, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
+                hl_weapon = key
 
                 if kw['click']: value.rs_click()
+
+        return hl_weapon
+
+    
+    def ms_render_item_stats(self, surface, _set, **kw):
+        """
+            Show data about the item being pointed at
+
+            surface -> Active screen surface
+            _set -> Which item set are we talking about
+
+            return -> None
+
+        """
+        px = 16
+        py = kw['py']
+
+        # Render and carry x the length of the surface width
+        render_carry = lambda src, dest, px, py: dest.blit(src, (px, py)).width
+
+        # Weapons
+        if _set == 0:
+            surface.blit(self.ms_pre_text['w_id'], (px, py))
+            px += self.ms_pre_text['w_id'].get_width()
+            
+            w_name = self.ms_font_16.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
+            surface.blit(w_name, (px, py)); px += w_name.get_width() 
+
+            for w in ('w_price', 'w_damage', 'w_range', 'w_firerate'):
+                value = self.all_weapons[kw['key']][w]
+                child = self.ms_font_16.render('{} {} '.format(value, 'cr.' if w == 'w_price' else ''), 1, (0xff, 0x0, 0x80))
+
+                px += render_carry(self.ms_pre_text[w], surface, px, py)
+                px += render_carry(child, surface, px, py)         
+
+        # Ammo
+        elif _set== 1:
+            px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
+            
+            w_ammo = self.ms_font_16.render('{} '.format(self.all_ammo_data[kw['key']][0]), 1, (0xff, 0x0, 0x80)) 
+            px += render_carry(w_ammo, surface, px, py)
+
+            px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
+            a_price = self.ms_font_16.render('{} cr.'.format(self.all_ammo_data[kw['key']][1]), 1, (0xff, 0x0, 0x80))
+            px += render_carry(a_price, surface, px, py)
+
+        
+        # Gadgets
+        elif _set == 2:
+            px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
+
+            w_name = self.ms_font_16.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
+            px += render_carry(w_name, surface, px, py)
+
+            px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
+            g_price = self.ms_font_16.render('{} cr.'.format(self.gl_gadgets[kw['key']]['g_price']), 1, (0xff, 0x0, 0x80))
+            px += render_carry(g_price, surface, px, py)
+
+            g_desc = self.ms_font_16.render(self.gl_gadgets[kw['key']]['g_desc'], 1, (0xff, 0x0, 0x80))
+            px += render_carry(g_desc, surface, 16, py + self.ms_font_height) 
+
 
 
     def ms_render_ammo(self, surface, **kw):
         """
             Render ammo
 
+            surface ->  Active screen surface
+
             return -> None
 
         """
+        if kw['hl_wpn'] is not None: 
+            hl_ammo = self.all_weapons_data[kw['hl_wpn']][0]
+        else:
+            hl_ammo = None
+
         for enum, key in enumerate(self.ms_aIcons['ammo_keys']):
             value = self.ms_aIcons[key]
 
@@ -495,8 +579,12 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             ammo_count = self.ms_font_16.render('x{}'.format(self._i_max_ammo), 1, (0xff if self._i_max_ammo else 0x80, 0x0, 0x80))
             surface.blit(ammo_count, (value.rs_getPos('left'), value.rs_getPos('bottom')))
 
+            if hl_ammo is not None and key == hl_ammo:
+                self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)    
+
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
+                self.ms_render_item_stats(surface, 1, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
 
                 if kw['click']: value.rs_click()
 
@@ -518,6 +606,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
+                self.ms_render_item_stats(surface, 2, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
 
                 if kw['click']: value.rs_click()
 
@@ -526,7 +615,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         """
             Render everything associated with health and armor bars
 
-            surface -> Surface which to draw on
+            surface -> Active screen surface
             click -> Pass variable to indicate mouse click
 
             return -> None
@@ -579,7 +668,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
             x, y -> Position
             icon_d -> Icon dimensions
-            surface -> Surface which to draw on to
+            surface -> Active screen surface
 
             return -> None
 
@@ -608,12 +697,13 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         csurf_64_d = bg.get_size()
 
         # Laser sight goggles
-        goggles = self.tk_scaleSurface(self.ElementTextures[2], self.menu_scale) 
-        _s = bg.copy()
-        _s.blit(goggles, (csurf_64_d[0] / 2 - goggles.get_width() / 2, 
-                          csurf_64_d[1] / 2 - goggles.get_height() / 2))
+        for key, value in self.gl_gadgets.iteritems():
+            surf = self.tk_scaleSurface(value['g_tex'], self.menu_scale) 
+            _s = bg.copy()
+            _s.blit(surf, (csurf_64_d[0] / 2 - surf.get_width()  / 2, 
+                           csurf_64_d[1] / 2 - surf.get_height() / 2)) 
 
-        self.ms_sIcons['mod_laser'] = RectSurface(_s, snd_hover_over=181, snd_click=184) 
+            self.ms_sIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184)  
 
         self.ms_sIcons['mod_keys'] = sorted(self.ms_sIcons.keys())
 
@@ -741,7 +831,7 @@ class MenuOptions(PagesHelp):
         """
             Run the options menu
 
-            surface -> Active su
+            surface -> Active screen surface
             snap_shot -> Take a snapshot of the surface for background(Used as pause background during game)
             enable_quit -> Allow quitting during game via menu
 

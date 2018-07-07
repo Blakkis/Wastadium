@@ -406,6 +406,9 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         cls.load_weapons()
 
         #
+        cls.load_gadgets()
+
+        #
         cls.inv_Reset()
 
         # 
@@ -435,8 +438,6 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         # 
         cls.Menus = MenuManager()
 
-        #
-        cls.load_gadgets()
         
       
     @classmethod
@@ -916,7 +917,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         """
             Render enemies near the player using spatial method
 
-            surface -> Surface which to draw on
+            surface -> Active screen surface
 
             return -> None
             
@@ -997,7 +998,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
                     2: effects (Not in-use)
                     3: walls
 
-            surface -> On which surface to draw the layers on
+            surface -> Active screen surface
 
             return -> None
             
@@ -1437,7 +1438,7 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
             x, y -> Spatial index
             ignore_id -> This is used by enemies to ignore their own collision
             get_ids -> Get the enemy rect and its id
-            surface -> Debug surface
+            surface -> Active screen surface (Debugging)
 
             return -> A list of all living entities near the origin
             
@@ -1485,7 +1486,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.Menus.all_menus[0].run(self.screen)
+        self.Menus.all_menus[3].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()

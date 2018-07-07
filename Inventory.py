@@ -1,10 +1,11 @@
 from Weapons import Weapons
+from GadgetLoader import GadgetLoader
 
 
-__all__ = ('Inventory', )
+__all__ = ('Inventory',)
 
 
-class Inventory(Weapons):
+class Inventory(Weapons, GadgetLoader):
 
 	# kghl4, tkar30, pp4-dual, uuz62, sh87, ahs12, pp4, uuz62-dual, fist, kkl2, skp5
 
@@ -30,7 +31,9 @@ class Inventory(Weapons):
 		cls.i_playerStats['health'] = [10, 100]
 		cls.i_playerStats['armor']  = [10, 100]
 		cls.i_playerStats['credits'] = 19284
-		cls.i_playerStats['mod_laser'] = 1
+		
+		# Setup gadgets booleans
+		for key in cls.gl_gadgets: cls.i_playerStats[key] = 1
 
 		for key, value in cls.all_ammo_data.iteritems():
 			# Id = Count
