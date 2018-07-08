@@ -18,5 +18,5 @@ TODO:
   - Add buy/sell functionality to shop
   - Work on the Wastadium launcher
   - Maybe add small shadows when standing near light in-game?
-  - 
+  - Enable enemies to shoot the player
   
