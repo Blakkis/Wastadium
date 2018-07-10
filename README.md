@@ -20,3 +20,4 @@ TODO:
   - Maybe add small shadows when standing near light in-game?
   - Enable enemies to shoot the player
   - Re-Create some effects to 8 frames 
+  - Fix shadow peeking from the corners
