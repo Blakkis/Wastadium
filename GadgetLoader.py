@@ -8,44 +8,44 @@ __all__ = ('GadgetLoader', 'LaserSightModule')
 
 class GadgetLoader(GlobalGameData):
 
-	gl_gadgets = {}
+    gl_gadgets = {}
 
-	
-	def __init__(self):
-		pass
+    
+    def __init__(self):
+        pass
 
-	
-	@classmethod
-	def load_gadgets(cls):
-		"""
-			TBD
+    
+    @classmethod
+    def load_gadgets(cls):
+        """
+            TBD
 
-			return -> None
+            return -> None
 
-		"""
-		# Source path for the gadget configs
-		src_path_cfg = cls.tk_path.join('configs', 'gadgets')
+        """
+        # Source path for the gadget configs
+        src_path_cfg = cls.tk_path.join('configs', 'gadgets')
 
-		# Source path for the gadget textures
-		ui_elem_path_tex = cls.tk_path.join('textures', 'uielements')
+        # Source path for the gadget textures
+        ui_elem_path_tex = cls.tk_path.join('textures', 'uielements')
 
-		for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
-			name = cls.tk_path.split(cfg)[-1].split('.')[0]
-        	tex_data = {'g_tex': None,
-        				'g_price': 100,
-        				'g_desc': '-'}
-        	
-        	for line in cls.tk_readFile(cfg, 'r'):
-        		if line[0] == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
-        		
-        		elif line[0] == 'g_price': tex_data[line[0]] = int(line[1]) 
-        		
-        		elif line[0] == 'g_desc': tex_data[line[0]] = line[1].replace('_', ' ') 
+        for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
+            name = cls.tk_path.split(cfg)[-1].split('.')[0]
+            tex_data = {'g_tex': None,
+                        'g_price': 100,
+                        'g_desc': '-'}
+            
+            for line in cls.tk_readFile(cfg, 'r'):
+                if line[0] == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
+                
+                elif line[0] == 'g_price': tex_data[line[0]] = int(line[1]) 
+                
+                elif line[0] == 'g_desc': tex_data[line[0]] = line[1].replace('_', ' ') 
 
-        	cls.gl_gadgets[name] = tex_data
+            cls.gl_gadgets[name] = tex_data
 
 
-        		
+                
 class LaserSightModule(GlobalGameData):
     """
         Cast a lasersight from player position

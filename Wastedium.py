@@ -14,6 +14,7 @@ from PreProcessor import PreProcessor
 from Inventory import Inventory
 from Timer import DeltaTimer
 from GadgetLoader import *
+from PickUps import Pickups
 
 
 # NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
@@ -293,7 +294,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
 
 class World(TextureLoader, EffectsLoader, Inventory, Weapons, 
             WeaponCasings, DecalGibsHandler, MessSolver, 
-            FootSteps, uiElements, SoundMusic, GadgetLoader):
+            FootSteps, uiElements, SoundMusic, GadgetLoader, Pickups):
     """
         Setup and handle all world related and external modules loading
 
@@ -438,6 +439,9 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         # 
         cls.Menus = MenuManager()
 
+        #
+        cls.load_pickups()
+
         
       
     @classmethod
@@ -518,6 +522,8 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
         cls.clear_effects()     
 
         cls.clear_casings()
+
+        cls.clear_pickups()
 
         cls.cell_x, cls.cell_y = 0, 0 
 
@@ -1486,7 +1492,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.Menus.all_menus[3].run(self.screen)
+        self.Menus.all_menus[0].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
@@ -1530,13 +1536,15 @@ class Main(World, DeltaTimer):
                 self.shadow_map.s_applyShadows(self.cell_x, self.cell_y, self.screen)
 
             # Render walls
-            #self.render_map(2, self.screen)
+            self.render_map(2, self.screen)
 
             self.uioverlay.drawOverlay(self.screen)
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
 
             self.tk_display.flip()
+
+            #for _ in xrange(800000): pass
             
 
 if __name__ == '__main__':
