@@ -937,6 +937,7 @@ class PygameFrame(TkinterResources, World):
 					# Store which button was pressed
 					mouse_button_id = event.button 
 
+
 		else:
 			# Get ready to flush event queue once focus has been restored to SDL window
 			# -- Hack --
@@ -968,7 +969,7 @@ class PygameFrame(TkinterResources, World):
 			self.pf_decorateWorld(self.pf_mouseSpatialPos(mx, my), self.screen, self.toolbar_action, mouse_button_id)  
 
 		# Render the texture/object selection frames when needed
-		self.tso_toolBarHandler(self.screen, self.toolbar_action)
+		self.tso_toolBarHandler(self.screen, self.toolbar_action, mouse_button_id)
 
 		if self.toolbar_action != -1: self.pygameBaseToolBar.h_render(self.screen, self.toolbar_action)
 

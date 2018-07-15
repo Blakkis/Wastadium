@@ -104,13 +104,14 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 	
 	
 	@classmethod
-	def tso_toolBarHandler(cls, surface, action):
+	def tso_toolBarHandler(cls, surface, action, click=0):
 		"""
 			Handle the toolbar associated with texture selection
 			Display the texture selection window and handle choosing the texture/object from it
 
 			surface -> Surface which receives the texture selection frame
 			action -> index of the texture/object button for displaying the correct texture/object set 
+			click -> Pass the 'mousebuttonup' event to this function
 
 			return -> None
 
@@ -130,9 +131,9 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 				# Assign correct texture selection frame for each categories
 				if isinstance(cls.tso_textureFrames[cls.tso_setMode].func, tuple):
 					func, mode = cls.tso_textureFrames[cls.tso_setMode].func 
-					func(surface, mode)
+					func(surface, mode, click)
 				else:
-					cls.tso_textureFrames[cls.tso_setMode].func(surface)
+					cls.tso_textureFrames[cls.tso_setMode].func(surface, click)
 			else:
 				# Blit the review frame
 				prevw = cls.tso_texReview[cls.tso_setMode].get_width() + 4	# Needed as anchor for the data tex about the texture 
@@ -239,11 +240,12 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 	
 	
 	@classmethod
-	def __lowTexture(cls, surface):
+	def __lowTexture(cls, surface, click=0):
 		"""
 			Render all ground textures (32x32)
 
 			surface -> Surface which to draw on
+			click -> Pass the 'mousebuttonup' event to this function
 
 			return -> None
 
@@ -288,11 +290,13 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 
 	
 	@classmethod
-	def __midObjectWallDecal(cls, surface, mode=0):
+	def __midObjectWallDecal(cls, surface, mode=0, click=0):
 		"""
 			Render all Objects, wallsets, decals (64x64)
 
 			surface -> Surface which to draw on
+			mode -> Which texture set are we using (0:Objects, 1:Walls, 2:Decals)
+			click -> Pass the 'mousebuttonup' event to this function
 
 			return -> None
 
@@ -329,7 +333,7 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 
 			if test_rect.collidepoint(cls.ed_mouse.get_pos()):
 				highlight = 0xff, 0xff, 0xff
-				if cls.ed_mouse.get_pressed()[0]:
+				if click:
 					cls.tso_updateTexturePreview(mode + 1, stex)
 					
 					cls.tso_textureSelectMode = 0	

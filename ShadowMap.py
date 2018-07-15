@@ -106,7 +106,10 @@ class Shadows(GlobalGameData):
     def s_fetchDelta(self, ofsx, ofsy):
         """
             TBD
+
+            return -> None
         """
+        # Note: Get rid of this, since the effects layer is no longer in use
         self.s_offset_align = ofsx, ofsy
 
 

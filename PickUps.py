@@ -1,7 +1,8 @@
 from ConfigsModule import GlobalGameData
+from Inventory import Inventory
 
 
-class Pickups(GlobalGameData):
+class Pickups(Inventory):
 
     # All usable pickups
     pu_pickups = {}
@@ -42,16 +43,22 @@ class Pickups(GlobalGameData):
 
     
     @classmethod
-    def spawn_pickups(cls, list_of_pickups):
+    def spawn_pickups(cls, list_of_pickups, player_spw_pos):
         """
             Spawn pickups on the map
 
             list_of_pickups -> List to pickups (x, y, pickup_id, pickup_value)
+            player_spw_pos -> Player spawn position
 
             return -> None
 
         """
-        pass
+        for pick in list_of_pickups:
+            x, y, item_id, item_value = pick 
+            x = ((cls.tk_res_half[0] - 16) + x)
+            y = ((cls.tk_res_half[1] - 16) + y)
+            
+            cls.pu_all_world_pickups[cls.pu_data['id']] = x, y, item_id, item_value    
 
     
     @classmethod
@@ -62,7 +69,7 @@ class Pickups(GlobalGameData):
             return -> None
 
         """
-        pu_all_world_pickups.clear()
+        cls.pu_all_world_pickups.clear()
         cls.pu_data['id'] = 0
 
     
@@ -78,5 +85,19 @@ class Pickups(GlobalGameData):
             return -> None
 
         """
-        pass
+        c_keys = cls.pu_all_world_pickups.keys() 
+        for _id in c_keys:
+            x, y, item_id, item_value = cls.pu_all_world_pickups[_id] 
+            tex = cls.pu_pickups[item_id]['p_tex']
+
+            # Get the distance between player and the item for grabbing
+            px_1, py_1 = x - cls.tk_res_half[0] + 32, y - cls.tk_res_half[1] + 32
+            px_2, py_2 = -(px - 16), -(py - 16)
+
+            if cls.tk_hypot(px_1 - px_2, py_1 - px_2) < 32: print 'Yeah?'
+
+
+            surface.blit(tex, (x + px, y + py))
+
+            
         

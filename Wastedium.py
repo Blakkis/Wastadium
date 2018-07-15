@@ -292,9 +292,9 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
 
 
 
-class World(TextureLoader, EffectsLoader, Inventory, Weapons, 
+class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons, 
             WeaponCasings, DecalGibsHandler, MessSolver, 
-            FootSteps, uiElements, SoundMusic, GadgetLoader, Pickups):
+            FootSteps, uiElements, SoundMusic, GadgetLoader):
     """
         Setup and handle all world related and external modules loading
 
@@ -667,6 +667,10 @@ class World(TextureLoader, EffectsLoader, Inventory, Weapons,
                               cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
         cls.w_spawnEnemies(enemies_locations)
+
+        #
+        pickups = [(64, 64, 'cash_suitcase', 'tkar30')]
+        cls.spawn_pickups(pickups, player_spawn_pos)
         
         # Build the lightmap...
         if not cls.tk_no_shadow_layer: Shadows.s_load_lightmap(cls.w_micro_cells)
@@ -1523,9 +1527,11 @@ class Main(World, DeltaTimer):
                 self.shadow_map.s_fetchDelta(self.cell_x, self.cell_y)
 
             self.gib_render_all(self.screen, self.cell_x, self.cell_y)
+
+            self.handle_pickups(self.screen, self.cell_x, self.cell_y)
             
             self.render_enemies(self.screen, dt)
-                
+
             self.hero.hero_handle(self.screen, dt)
                     
             self.render_effects(self.screen)
