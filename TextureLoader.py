@@ -195,14 +195,13 @@ class EffectsLoader(GlobalGameData):
     # Textures are stored on the class and instances can request frames by index
     all_effects = {}
     
-    # Provide each instance unique id by counter
-    effect_id_cnt = 0
-    
     # All map effects that are currently being display on the map
     map_effects = {}
     
     # Relative position for effects(Updated when player moves)
     effect_rel_pos = 0, 0
+
+    effect_data = {'id': 0}     # Provide unique id to each effect
     
     def __init__(self, generator, name, _id, pos, ofs_pos, rot, angle):
         self.effect_gen = generator
@@ -319,16 +318,16 @@ class EffectsLoader(GlobalGameData):
         """
         if loop:
             # Create an infinite effect(These are mostly called by the map to decorate the battlefield)
-            cls.map_effects[cls.effect_id_cnt] = EffectsLoader(cls.tk_cycle(xrange(0, len(cls.all_effects[effect][rot]) - 4, frame_skip)),
-                                                 effect, cls.effect_id_cnt, pos, cls.effect_rel_pos[:], 
+            cls.map_effects[cls.effect_data['id']] = EffectsLoader(cls.tk_cycle(xrange(0, len(cls.all_effects[effect][rot]) - 4, frame_skip)),
+                                                 effect, cls.effect_data['id'], pos, cls.effect_rel_pos[:], 
                                                  rot, angle) 
         else:
             # These are finite effects called by the entities
-            cls.map_effects[cls.effect_id_cnt] = EffectsLoader(iter(xrange(0, len(cls.all_effects[effect][rot]) - 4, frame_skip)),
-                                                 effect, cls.effect_id_cnt, pos, cls.effect_rel_pos[:], 
+            cls.map_effects[cls.effect_data['id']] = EffectsLoader(iter(xrange(0, len(cls.all_effects[effect][rot]) - 4, frame_skip)),
+                                                 effect, cls.effect_data['id'], pos, cls.effect_rel_pos[:], 
                                                  rot, angle)
         # Provide each effect unique id 
-        cls.effect_id_cnt += 1
+        cls.effect_data['id'] += 1
 
     
 
@@ -431,7 +430,7 @@ class EffectsLoader(GlobalGameData):
             return -> None
             
         """
-        cls.effect_id_cnt = 0; cls.map_effects = {}; cls.effect_rel_pos = 0, 0
+        cls.effect_data['id'] = 0; cls.map_effects = {}; cls.effect_rel_pos = 0, 0
 
 
 

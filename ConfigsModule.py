@@ -71,7 +71,7 @@ class GlobalGameData(object):
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 100
+    tk_fps = 60
     tk_resolution = 1280, 720
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), float(tk_resolution[1]) / float(720))     # Use the smallest as scalar for UI elements
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2
@@ -213,7 +213,7 @@ class GlobalGameData(object):
     tk_audio_channel = 2
 
     # A.I related
-    tk_enemy_turn_speed = 8       # Basic turning speed
+    tk_enemy_turn_speed = 4         # Basic turning speed
     tk_enemy_hearing_dist = 64      # Alert enemy when inside this distance
     tk_enemy_alarm_state = 4.1      # How long to hunt player for
     tk_enemy_waypoint_get = 2.5     # Delay getting newpoint

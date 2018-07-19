@@ -25,6 +25,7 @@ from PickUps import Pickups
 #   Refactor!
 #   Remember keys are global too(eg. K_UP)
 #   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
+#   All classes gets mixed up in the World class, so everyone has access to everything even if not explicitly stated
 
 
 class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
@@ -527,7 +528,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.cell_x, cls.cell_y = 0, 0 
 
-        player_spawn_pos = 0, 0 # is read from the mapfile
+        player_spawn_pos = 0, 0   # is read from the mapfile
         cls.w_map_size = 64, 64   # is read from the mapfile
 
         cls.cell_x -= 32 * player_spawn_pos[0]
@@ -1551,7 +1552,7 @@ class Main(World, DeltaTimer):
             self.tk_display.flip()
 
             #for _ in xrange(800000): pass
-            
+    
 
 if __name__ == '__main__':
     #Enemies.initialize_pathfinder()

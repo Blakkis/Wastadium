@@ -1,4 +1,3 @@
-from ConfigsModule import GlobalGameData
 from Inventory import Inventory
 
 
@@ -34,10 +33,13 @@ class Pickups(Inventory):
 
         for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
-            tex_data = {'p_tex': None}
+            tex_data = {'p_tex': None,
+                        'p_pickup_snd': None}
             
             for line in cls.tk_readFile(cfg, 'r'):
                 if line[0] == 'p_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
+
+                elif line[0] == 'p_pickup_snd': tex_data[line[0]] = int(line[1])
 
             cls.pu_pickups[name] = tex_data
 
@@ -94,8 +96,10 @@ class Pickups(Inventory):
             px_1, py_1 = x - cls.tk_res_half[0] + 32, y - cls.tk_res_half[1] + 32
             px_2, py_2 = -(px - 16), -(py - 16)
 
-            if cls.tk_hypot(px_1 - px_2, py_1 - px_2) < 32: print 'Yeah?'
-
+            if cls.tk_hypot(px_1 - px_2, py_1 - px_2) < 32:
+                if cls.pu_pickups[item_id]['p_pickup_snd'] is not None:
+                    cls.playSoundEffect(cls.pu_pickups[item_id]['p_pickup_snd'])
+                del cls.pu_all_world_pickups[_id]
 
             surface.blit(tex, (x + px, y + py))
 

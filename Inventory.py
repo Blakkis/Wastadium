@@ -18,6 +18,7 @@ class Inventory(Weapons, GadgetLoader):
 	# Max amout of ammo player can hold for each ammo type
 	_i_max_ammo = 99999
 
+
 	
 	@classmethod
 	def inv_Reset(cls, **kw):
@@ -27,7 +28,7 @@ class Inventory(Weapons, GadgetLoader):
 			return -> None
 
 		"""
-		cls.i_playerStats['weapon'] = 'tkar30'
+		cls.i_playerStats['weapon'] = 'uuz62'
 		cls.i_playerStats['health'] = [10, 100]
 		cls.i_playerStats['armor']  = [10, 100]
 		cls.i_playerStats['credits'] = 19284
