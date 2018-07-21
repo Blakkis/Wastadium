@@ -22,5 +22,4 @@ TODO:
   - Re-Create some effects to 8 frames  - Being Worked on 
   - Fix shadow peeking from the corners
   - Extend the death texture of the enemies to allow wider footstep catching
-  - Fix rate effects overwriting eachothers
   - Edit Effects class, class variables name binding issue

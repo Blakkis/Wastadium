@@ -71,7 +71,7 @@ class GlobalGameData(object):
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 60
+    tk_fps = 100
     tk_resolution = 1280, 720
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), float(tk_resolution[1]) / float(720))     # Use the smallest as scalar for UI elements
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2

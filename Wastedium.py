@@ -441,7 +441,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.Menus = MenuManager()
 
         #
-        cls.load_pickups()
+        cls.load_pickups(font=cls.ElementFonts[1])
 
         
       
@@ -670,8 +670,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_spawnEnemies(enemies_locations)
 
         #
-        pickups = [(64, 64, 'cash_suitcase', 'tkar30')]
-        cls.spawn_pickups(pickups, player_spawn_pos)
+        pickups = [(64, 64, 'cash_suitcase', 25000)]
+        cls.spawn_pickups(pickups)
         
         # Build the lightmap...
         if not cls.tk_no_shadow_layer: Shadows.s_load_lightmap(cls.w_micro_cells)
@@ -1544,6 +1544,8 @@ class Main(World, DeltaTimer):
 
             # Render walls
             self.render_map(2, self.screen)
+
+            self.handle_pickups_messages(self.screen)
 
             self.uioverlay.drawOverlay(self.screen)
 
