@@ -176,14 +176,13 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
             ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
             
             if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
-                self.playSoundEffect(self.tk_choice(self.all_weapons[self.i_playerStats['weapon']]['w_fire_sound']))
-                
                 World.fire_weapon(self.tk_res_half[0], self.tk_res_half[1],
                                   angle, 
                                   radToAngle, 
                                   self.i_playerStats['weapon'], 
                                   dual_index=self.weapon_dual_cycle[1],
-                                  surface=surface) 
+                                  surface=surface,
+                                  player=1) 
                 
                 play_fire_frame |= 1
                 
@@ -670,7 +669,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_spawnEnemies(enemies_locations)
 
         #
-        pickups = [(64, 64, 'cash_suitcase', 25000)]
+        pickups = [(64, 64, 'hot_meal', 100)]
         cls.spawn_pickups(pickups)
         
         # Build the lightmap...
@@ -766,7 +765,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             cx, cy = light_map.get_size()
             cx, cy = cx >> 1, cy >> 1   # Half the size for positioning
             
-            # The spotlight is build in steps to intensify the effect smaller the spotlight gets
+            # The spotlight is build in steps, to intensify the effect smaller the spotlight gets
             for s in xrange(l[2] >> 1, 32, -1):
                 color = list(l[3]); color[3] = light_intensity
                 cls.tk_draw_gfx_circle(light_map, cx, cy, s, color)
@@ -884,7 +883,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 # Which layer this wall is part of
                 pos = 32 * enum2, 32 * enum1
                 if x.collision:
-                    # Build a quadrilateral stretching from each block to topleft
+                    # Build a quadrilateral stretching from each block to topleft (Possible allow direction customization?)
                     cls.tk_draw_polygon(static_shadow_map, cls.tk_wall_shadow_color, 
                                         ((pos[0],                 pos[1]),
                                          (pos[0],                 pos[1] + 32),
@@ -912,6 +911,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
             Apply gradient effect to egdes of the map
 
+            wx, wy -> World dimensions
+
             return -> None
 
         """
@@ -929,6 +930,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             Render enemies near the player using spatial method
 
             surface -> Active screen surface
+            delta -> Delta tick
 
             return -> None
             
@@ -948,7 +950,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 
                 if len(cls.w_entities_dynamic[y][x]) > 0:
                     for _id in cls.w_entities_dynamic[y][x].copy():
-                        # Sanity check
                         # Just to make sure no enemies has avoided the death sequence
                         if _id not in cls.w_enemies:
                             cls.w_entities_dynamic[y][x].discard(_id)
@@ -1045,7 +1046,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
 
     @classmethod
-    def fire_weapon(cls, x, y, angle, f_angle, weapon, dual_index=0, surface=None, player=1, ignore_id=-1):
+    def fire_weapon(cls, x, y, angle, f_angle, weapon, dual_index=0, surface=None, player=0, ignore_id=-1):
         """
             Cast a ray from the origin towards the aim direction
             and find the first thing it collides with
@@ -1064,6 +1065,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             
         """
         # Note: Break this down to smaller functions
+
+        cls.playSoundEffect(cls.tk_choice(cls.all_weapons[weapon]['w_fire_sound']), not player)
 
         # Handle effects spawned by the weapon
         efx, efy = cls.tk_PolarToCartesian(x, y, angle - cls.all_weapons[weapon]['w_effect_angle'][dual_index], 
@@ -1330,6 +1333,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
              
         """
+        # NOTE: Move this inside enemy class and return all the bullshit needed for the world class
+
         srx, sry = sx, sy
 
         # Calculate the angle between shooter and target, and give it small offset angle
@@ -1346,6 +1351,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         
         # Decrease weapon damage from the enemy health pool
         cls.w_enemies[enemy_id].enemy_health -= cls.all_weapons[weapon]['w_damage']
+ 
+        cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd), 1)
+
         if cls.w_enemies[enemy_id].enemy_health <= 0:
             enemy_vector = cls.w_enemies[enemy_id].enemy_targetAngleDeg 
 
@@ -1371,6 +1379,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 # Make the ground stain player's boots
                 if cls.all_effects[corpse] > 0 and inside_world: 
                     cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[corpse][0][3]  # Get the stain index
+
+                cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_death_snd), 1)
  
             # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped)
             w = cls.w_enemies[enemy_id].enemy_weapon 
@@ -1545,7 +1555,7 @@ class Main(World, DeltaTimer):
             # Render walls
             self.render_map(2, self.screen)
 
-            self.handle_pickups_messages(self.screen)
+            self.handle_pickups_messages(self.screen, dt)
 
             self.uioverlay.drawOverlay(self.screen)
 

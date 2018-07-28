@@ -10,8 +10,8 @@ class SoundMusic(GlobalGameData):
 	all_music = {}
 
 	# Default volumes for sound and music
-	sm_volumes = {0: 0.4,	# Music
-				  1: 0.5}	# Effects
+	sm_volumes = {0: 1.0,	# Music
+				  1: 1.0}	# Effects
 
 	sm_volume_drop = 0.02
 
@@ -34,6 +34,7 @@ class SoundMusic(GlobalGameData):
 		# Sounds
 		for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'sounds.cfg')):
 			cls.all_sounds[int(line[0])] = cls.tk_mixer.Sound(cls.tk_path.join('soundmusic', line[1]))
+			#cls.all_sounds[int(line[0])].set_volume(cls.sm_volumes[1])
 
 		# Music (Only pathnames)
 		for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'music.cfg')):
@@ -43,6 +44,7 @@ class SoundMusic(GlobalGameData):
 		#cls.tk_mixer_music.set_volume(cls.sm_volumes[0])
 		#cls.tk_mixer_music.play(-1) 
 
+	
 	@classmethod
 	def editVolume(cls, volume_id, volume, edit=False, play_sound_cue=False):
 		"""
@@ -63,20 +65,25 @@ class SoundMusic(GlobalGameData):
 			# Effects
 			elif volume_id == 1 and volume != cls.sm_volumes[volume_id]:
 				cls.sm_volumes[volume_id] = volume
-				if play_sound_cue: cls.playSoundEffect(186)
+				if play_sound_cue: cls.playSoundEffect(188)
 
 
 	@classmethod
-	def playSoundEffect(cls, _id):
+	def playSoundEffect(cls, _id, distanced=0):
 		"""
 			Play sound-effect by id
 
 			_id -> int id of the needed soundeffect (See sounds.cfg for the sounds by id)
+			distanced -> Play the sound effect half the current volume 
+			
 			return -> None
 
 		"""
-		cls.all_sounds[_id].set_volume(cls.sm_volumes[1])
-		cls.all_sounds[_id].play()
+
+		print cls.sm_volumes[1] - (cls.sm_volumes[1] / 2.0 if distanced else 0)
+
+		cls.all_sounds[_id].play().set_volume(cls.sm_volumes[1] - (cls.sm_volumes[1] / 2.0 \
+																   if distanced else 0))
 
 
 	

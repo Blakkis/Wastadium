@@ -17,6 +17,7 @@ from numpy import sum as _sum
 #from numpy.linalg import norm as normalize
 from ast import literal_eval
 from glob import iglob
+from copy import deepcopy
 
 
 __all__ = ('GlobalGameData', 'TkCounter')
@@ -153,6 +154,7 @@ class GlobalGameData(object):
     tk_counter = TkCounter
     tk_literal_eval = staticmethod(literal_eval)
     tk_iglob =  staticmethod(iglob)
+    tk_deepcopy = deepcopy
 
     
     # Pygame
@@ -215,7 +217,7 @@ class GlobalGameData(object):
     # A.I related
     tk_enemy_turn_speed = 4         # Basic turning speed
     tk_enemy_hearing_dist = 64      # Alert enemy when inside this distance
-    tk_enemy_alarm_state = 4.1      # How long to hunt player for
+    tk_enemy_alarm_state = 1.5      # How long to hunt player for
     tk_enemy_waypoint_get = 2.5     # Delay getting newpoint
     tk_enemy_safe_distance = 44     # Distance away from waypoint
 

@@ -51,6 +51,7 @@ class ed_AutoWallSolver(object):
 
     __aw_deque = deque
 
+
     @classmethod
     def __aw_segmentOrient(cls, center, grid, wsize):
         """
@@ -531,6 +532,7 @@ class GlobalGameDataEditor(object):
     ed_keys = {'up': pygame.K_w, 'down':pygame.K_s, 'left':pygame.K_a, 'right':pygame.K_d, 
                'shift_l':1, 'action_1': pygame.K_1, 'action_2': pygame.K_2, 'action_3': pygame.K_3, 
                'action_rot': pygame.K_r}
+    
     ed_scroll_speed = 768
 
 

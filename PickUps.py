@@ -5,18 +5,26 @@ __all__ = 'Pickups',
 
 
 class MessagePickup(object):
-    def __init__(self, surface, px, py):
+    def __init__(self, surface, px, py, timer):
         self.mp_surf = surface
         self.mp_pos_x = px
         self.mp_pos_y = py
+        self.mp_timer = timer
 
-    def render_msg(self):
+    
+    def render_msg(self, delta):
         """
             TBD
 
             return -> Surface, (x, y)
+
         """
+        self.mp_pos_y -= 16 * delta
+
+        if not self.mp_timer.isDone(): return 0    # End the msg display
+
         return self.mp_surf, (self.mp_pos_x, self.mp_pos_y)
+
 
 
 class Pickups(Inventory):
@@ -94,7 +102,11 @@ class Pickups(Inventory):
             
             cls.pu_all_world_pickups[cls.pu_data['id']] = x, y, item_id, item_value, \
                                                           MessagePickup(msg, cls.tk_res_half[0] - msg.get_width()  / 2, 
-                                                                             cls.tk_res_half[1] - msg.get_height() / 2 - 32)    
+                                                                             cls.tk_res_half[1] - msg.get_height() / 2 - 32,
+                                                                        cls.tk_trigger_down(3, 1)) 
+
+            cls.pu_data['id'] += 1
+
 
     
     
@@ -109,22 +121,6 @@ class Pickups(Inventory):
         cls.pu_all_pickup_msg.clear()
         cls.pu_all_world_pickups.clear()
         cls.pu_data['id'] = 0
-
-
-    
-    @classmethod
-    def __render_pickup_msg(cls, surface):
-        """
-            TBD
-
-            return -> None
-
-        """
-        for _id in cls.pu_all_pickup_msg:
-            surface.blit(*cls.pu_all_world_pickups[_id][-1].render_msg())
-            #if _id in cls.pu_all_world_pickups: 
-            #    del cls.pu_all_world_pickups[_id]
-    
     
     
     @classmethod
@@ -140,6 +136,8 @@ class Pickups(Inventory):
         """
         c_keys = cls.pu_all_world_pickups.keys() 
         for _id in c_keys:
+            if _id in cls.pu_all_pickup_msg: continue
+
             x, y, item_id, item_value = cls.pu_all_world_pickups[_id][:-1] 
             tex = cls.pu_pickups[item_id]['p_tex']
 
@@ -147,7 +145,7 @@ class Pickups(Inventory):
             px_1, py_1 = x - cls.tk_res_half[0] + 32, y - cls.tk_res_half[1] + 32
             px_2, py_2 = -(px - 16), -(py - 16)
 
-            if cls.tk_hypot(px_1 - px_2, py_1 - py_2) < 32:
+            if cls.tk_hypot(px_1 - px_2, py_1 - py_2) < 48:
                 if cls.pu_pickups[item_id]['p_pickup_snd'] is not None:
                     cls.playSoundEffect(cls.pu_pickups[item_id]['p_pickup_snd'])
 
@@ -155,17 +153,28 @@ class Pickups(Inventory):
 
             surface.blit(tex, (x + px, y + py))
 
-
+    
     @classmethod
-    def handle_pickups_messages(cls, surface):
+    def handle_pickups_messages(cls, surface, delta):
         """
             TBD
 
             return -> None
 
         """ 
-        if cls.pu_all_pickup_msg: 
-            cls.__render_pickup_msg(surface)   
+        _del = set()
 
+        if cls.pu_all_pickup_msg: 
+            for _id in cls.pu_all_pickup_msg:
+                msg = cls.pu_all_world_pickups[_id][-1].render_msg(delta)
+                if not msg: _del.add(_id); continue
+
+                surface.blit(*msg)  
+
+        # Pickups ready to be deleted
+        if _del:
+            for _id in _del:
+                cls.pu_all_pickup_msg.discard(_id)
+                del cls.pu_all_world_pickups[_id]  
             
         

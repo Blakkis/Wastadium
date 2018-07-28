@@ -8,6 +8,7 @@ from DecalModule import DecalGibsHandler
 from LightEditor import Lights
 from MapParser import MapParser, WorldLoadException
 from StatisticsEditor import EditorStatistics
+from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
 
 # NOTE
@@ -153,7 +154,7 @@ class World(VisualResources):
         if reset: cls.w_Pos = [0, 0]
         else: cls.w_Pos[0] += x; cls.w_Pos[1] += y
 
-        cls.es_update(1, '({}, {})'.format(-cls.w_Pos[0], -cls.w_Pos[1]), 0) 
+        cls.es_update(1, '({}, {})'.format(-round(cls.w_Pos[0], 1), -round(cls.w_Pos[1], 1)), 0) 
 
     
     @classmethod
@@ -603,15 +604,15 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         ed_LabelFrame.__init__(self, base, 'Tools')
         self.grid(row=0, column=0, sticky=self.ed_sticky_full)
 
-        tk.Label(self, text='World Show/Hide').grid(row=0, column=0, padx=5, 
-                                                    sticky=self.ed_sticky_w)
+        tk.Label(self, text='World Show/Hide')\
+        .grid(row=0, column=0, padx=5, sticky=self.ed_sticky_w)
 
         ed_Checkbutton(self, 'Hide Ground',  self.bf_disp_gnd,   1, 0)
-        ed_Checkbutton(self, 'Hide Objects', self.bf_disp_objs,  2, 1)
+        ed_Checkbutton(self, 'Hide Objects', self.bf_disp_objs,  1, 1)
         ed_Checkbutton(self, 'Hide Walls',   self.bf_disp_wall,  2, 0)
         
-        self.ed_separator(self, orient='horizontal').grid(row=3, columnspan=3, pady=15, padx=5, 
-                                                          sticky=self.ed_sticky_vert)
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=3, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
         tk.Label(self, text='Decal Settings').grid(row=4, column=0, padx=5, 
                                                    sticky=self.ed_sticky_w)
@@ -619,33 +620,35 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         ed_Checkbutton(self, 'Hide Decals',  self.bf_disp_dec,   5, 0)
         ed_Checkbutton(self, 'Snap Decals',  self.bf_snap_dec,   5, 1)
 
-        self.ed_separator(self, orient='horizontal').grid(row=6, columnspan=3, pady=15, padx=5, 
-                                                          sticky=self.ed_sticky_vert)
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=6, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
-        tk.Label(self, text='Misc Settings').grid(row=7, column=0, padx=5, 
-                                                  sticky=self.ed_sticky_w)
+        tk.Label(self, text='Misc Settings')\
+        .grid(row=7, column=0, padx=5, sticky=self.ed_sticky_w)
         
         ed_Checkbutton(self, 'AutoWalling',  self.bf_autowalls,  8, 0)
         ed_Checkbutton(self, 'Show Chunks',  self.bf_disp_chunk, 9, 0)
 
-        self.ed_separator(self, orient='horizontal').grid(row=10, columnspan=3, pady=15, padx=5, 
-                                                          sticky=self.ed_sticky_vert)
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=10, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
-        tk.Label(self, text='Light & Wire Color').grid(row=11, column=0, padx=5, 
-                                                       sticky=self.ed_sticky_w)
+        tk.Label(self, text='Light & Wire Color')\
+        .grid(row=11, column=0, padx=5, sticky=self.ed_sticky_w)
         
         Lights.l_createColorFrame(self, row=12, column=0)
 
-        self.ed_separator(self, orient='horizontal').grid(row=13, columnspan=3, pady=15, padx=5, 
-                                                          sticky=self.ed_sticky_vert)
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=13, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
-        tk.Label(self, text='Editor & World Info').grid(row=14, column=0, padx=5, 
-                                                        sticky=self.ed_sticky_w)
+        EditorStatistics.es_createStatFrame(self, row=14, column=0)
 
-        EditorStatistics.es_createStatFrame(self, row=15, column=0)
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=15, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
-        self.ed_separator(self, orient='horizontal').grid(row=16, columnspan=3, pady=15, padx=5, 
-                                                          sticky=self.ed_sticky_vert)
+        EntityPicker.ep_createEntityFrame(self, row=16, column=0)
+
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=17, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
 # -------
 
@@ -852,7 +855,8 @@ class PygameFrame(TkinterResources, World):
                                 2: self.__pf_applyWallset,
                                 3: self.__pf_applyDecals,
                                 4: self.__pf_editCollisions,
-                                5: self.__pf_applyLights}
+                                5: self.__pf_applyLights,
+                                8: self.__pf_applyPickups}
 
         # Reserved F keys for the toolbar (If you need more than F12, extend via using bitwise mods + f keys?)
         self.tso_reserved_keys = set([pygame.K_F1 + f for f in xrange(ed_Button.ed_getButtonStates(True))])
@@ -1436,6 +1440,16 @@ class PygameFrame(TkinterResources, World):
             pcolor = 0xff, 0x0, 0x80 
         
         self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
+
+
+    def __pf_applyPickups(self, index, x, y, surface=None, action_key=0, set_id=0):
+        """
+            TBD
+
+            return -> None
+
+        """
+        pass
     
 
     def __pf_floodFill(self, index, surface, surface_str, surface_rot):

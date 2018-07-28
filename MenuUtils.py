@@ -79,16 +79,17 @@ class RadialSlider(GlobalGameData):
     def rs_size(self):
         return self._rs_size
     
+    
     @property
     def rs_mask(self):
         return self._rs_mask
 
+    
     @property
     def rs_color(self):
         return self._rs_color
     
     
-
     def _rs_create_radial(self):
         """
             Create the radial slider
@@ -123,7 +124,7 @@ class RadialSlider(GlobalGameData):
         
         # Value for controlling the slider input/output
         self._rs_value['max'] = len(self._rs_ring_points[0])                        # Max steps on the slider
-        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max'] / float(2))) # Set initial value to center
+        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max'])) # Set initial value to center
         self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']       # Get the range multiplier
         self._rs_value['adi'] = float(270) / self._rs_value['max']                  # Angle value per step
         self._rs_value['dva'] = self._rs_value['mul'] * self._rs_value['val']  

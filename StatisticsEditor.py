@@ -15,7 +15,10 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
 
 		self.grid(row=row, column=column, columnspan=3, sticky=self.ed_sticky_full)
 
-		for enum in xrange(len(self.__es_stats)):
+		tk.Label(self, text='Editor & World Info').grid(row=0, column=0, padx=5, 
+                                                        sticky=self.ed_sticky_w)
+
+		for enum in xrange(1, len(self.__es_stats)):
 			k, v = self.__es_stats[enum] 
 			tk.Label(self, text=k).grid(row=enum, column=0, ipadx=5, sticky=self.ed_sticky_w)
 			tk.Label(self, textvariable=v).grid(row=enum, column=1, sticky=self.ed_sticky_w)	
@@ -40,13 +43,14 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
 				r[1].set(rv) 
 		else:
 			# Stats on the statistics frame
-			cls.__es_stats[0] = ('Framerate:',     cls.ed_int())
-			cls.__es_stats[1] = ('Camera Position',cls.ed_str())
-			cls.__es_stats[2] = ('Object Count:',  cls.ed_int())
-			cls.__es_stats[3] = ('Decal Count:',   cls.ed_int())
-			cls.__es_stats[4] = ('Wall Segments:', cls.ed_int())
-			cls.__es_stats[5] = ('Light Count:',   cls.ed_int())
-			cls.__es_stats[6] = ('Enemy Count',    cls.ed_int())
+			cls.__es_stats[0] = ('Framerate:',      cls.ed_int())
+			cls.__es_stats[1] = ('Camera Position:',cls.ed_str())
+			cls.__es_stats[2] = ('Object Count:',   cls.ed_int())
+			cls.__es_stats[3] = ('Decal Count:',    cls.ed_int())
+			cls.__es_stats[4] = ('Wall Segments:',  cls.ed_int())
+			cls.__es_stats[5] = ('Light Count:',    cls.ed_int())
+			cls.__es_stats[6] = ('Enemy Count',     cls.ed_int())
+			cls.__es_stats[7] = ('Pickup Count',    cls.ed_int())
 
 
 	@classmethod
@@ -88,11 +92,13 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
 		elif op == 1: cls.__es_stats[_id][1].set(cls.__es_stats[_id][1].get() + value) 
 
 	
-
 	@classmethod
 	def es_createStatFrame(cls, base, row, column):
 		"""
-			TBD
+			Create statistics info frame
+
+			base -> Tkinter root frame
+			row, column -> grid row, column
 
 			return -> Instance
 

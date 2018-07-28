@@ -770,13 +770,13 @@ class MenuOptions(PagesHelp):
         self.mo_options = self.tk_ordereddict()
 
         self.mo_options[0] = RectSurface(self.mo_font_1.render("Volume", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=186, func=lambda: 0)
+                                                               snd_hover_over=180, snd_click=188, func=lambda: 0)
         
         self.mo_options[1] = RectSurface(self.mo_font_1.render("Controls", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=186, func=lambda: 1)
+                                                               snd_hover_over=180, snd_click=188, func=lambda: 1)
         
         self.mo_options[2] = RectSurface(self.mo_font_1.render("Exit", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=186, func=self.tk_quitgame)
+                                                               snd_hover_over=180, snd_click=188, func=self.tk_quitgame)
 
         self.mo_functions = {-1: self.mo_root_settings,
                               0: self.mo_sound_settings,
@@ -802,7 +802,7 @@ class MenuOptions(PagesHelp):
         # Note: Move all this in to its own class
         self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
         self.mo_music_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_music_volume['radial'].rs_mask, 1), 
-                                                   snd_click=186, _id=0) 
+                                                   snd_click=188, _id=0) 
         
         self.mo_music_volume['mask'].rs_updateRect(self.tk_res_half[0] - self.mo_music_volume['mask'].rs_getSize()[0] - 128 * self.menu_scale,
                                                    self.tk_res_half[1] - self.mo_music_volume['mask'].rs_getSize()[1] / 2)
@@ -813,7 +813,7 @@ class MenuOptions(PagesHelp):
 
         self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
         self.mo_effect_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_effect_volume['radial'].rs_mask, 1), 
-                                                    snd_click=186, _id=1)
+                                                    snd_click=188, _id=1)
         
         self.mo_effect_volume['mask'].rs_updateRect(self.tk_res_half[0] + 128 * self.menu_scale,
                                                     self.tk_res_half[1] - self.mo_effect_volume['mask'].rs_getSize()[1] / 2)

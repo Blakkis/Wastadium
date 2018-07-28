@@ -109,11 +109,10 @@ class WeaponCasings(GlobalGameData):
     # All live casings on the map being rendered
     casings_map = {}
 
-    # Provide all casings unique id
-    casing_id_cnt = 0
-
     # Relative to keep casings in proper position when the player moves
     casing_rel_pos = 0, 0
+
+    ca_data = {'id': 0}     # Provide all casings unique id
 
     # The number of frames on every casing texture array is based from 360 / deg
     # (Lower = Smoother casings flying animation)
@@ -192,8 +191,8 @@ class WeaponCasings(GlobalGameData):
             return -> None
 
         """
-        cls.casings_map[cls.casing_id_cnt] = WeaponCasings(x, y, _id, angle, cls.casing_rel_pos)
-        cls.casing_id_cnt += 1
+        cls.casings_map[cls.ca_data['id']] = WeaponCasings(x, y, _id, angle, cls.casing_rel_pos)
+        cls.ca_data['id'] += 1
 
     
     @classmethod
@@ -272,7 +271,7 @@ class WeaponCasings(GlobalGameData):
 
             return -> None
         """
-        cls.casing_id_cnt = 0; cls.casings_map = {}; cls.effect_rel_pos = 0, 0 
+        cls.ca_data['id'] = 0; cls.casings_map = {}; cls.effect_rel_pos = 0, 0 
 
 
 if __name__ == '__main__':

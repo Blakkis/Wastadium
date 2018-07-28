@@ -29,13 +29,16 @@ class DeltaTimer(object):
 class MsCountdownTrigger(DeltaTimer):
     __slots__ = 'ms'
 
-    def __init__(self, ms):
-        self.ms = ms            # Active timer
+    def __init__(self, ms, ret_type=0):
+        self.ms = ms               
+        self.ret_type = ret_type   # What to do when timer reaches 0
 
     def isDone(self):
-        if self.ms <= 0: raise StopIteration
-        self.ms -= self.dt_deltas['delta_ms']
+        if self.ms <= 0:
+            if self.ret_type: return 0
+            else: raise StopIteration
         
+        self.ms -= self.dt_deltas['delta_ms']
         return 1
 
 

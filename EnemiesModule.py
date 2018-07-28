@@ -1,17 +1,10 @@
 from ConfigsModule import TkCounter
 from TextureLoader import TextureLoader
 from Weapons import Weapons
-from copy import deepcopy
-from glob import iglob
-from ast import literal_eval
 
 import PathFinder
 
-# NOTE: Switch to Rect based collision checking: Fix coordinate system
-# NOTE: Increase the fov radius when alarmed: Implemented, needs more checking
-# NOTE: Weapon Fistdrop should be fixed
 # NOTE: Fix Rotation from player back to waypoint 
-
 
 class Enemies(TextureLoader, Weapons):
     """
@@ -36,22 +29,24 @@ class Enemies(TextureLoader, Weapons):
     
     def __init__(self, **kws):
         self.enemy_rect   = self.tk_rect(0, 0, 32, 32)
-        self.enemy_speed  = kws['speed']
-        self.enemy_health = kws['health']
+        self.enemy_speed  = kws['e_speed']
+        self.enemy_health = kws['e_health']
         self.enemy_name   = kws['name']
 
         # Distance, Awareness cone, alarmed cone
-        self.enemy_fov = kws['fovdist'][0], self.tk_radians(kws['fovdist'][1]) / 2, self.tk_radians(340) / 2
+        self.enemy_fov = kws['e_fovdist'][0], self.tk_radians(kws['e_fovdist'][1]) / 2, self.tk_radians(340) / 2
         
-        # Weapon related 
-        self.enemy_weapon = kws['weapon']
-        self.enemy_legs   = kws['legs_texture']
-        self.enemy_torso  = kws['torso_texture']
+        # Basic form
+        self.enemy_weapon = kws['e_weapon']
+        self.enemy_legs   = kws['tex_legs']
+        self.enemy_torso  = kws['tex_torso']
 
         # Stuff left behind when moving, getting hit or dying
-        self.enemy_blood_frames = kws['blood_texture']      # List of blood name strings
-        self.enemy_dead_frames =  kws['dead_texture']       # List of animations to be when dying
-        self.enemy_gore_profile = kws['gore_profile']       # When gibbed
+        self.enemy_blood_frames = kws['tex_bsplat']      # List of blood name strings
+        self.enemy_dead_frames =  kws['tex_death']       # List of animations to be when dying
+        self.enemy_gore_profile = kws['gore_profile']    # What gibs to spawn based on gore profile
+        self.enemy_pain_snd = kws['snd_pain']            # Pain sound id's 
+        self.enemy_death_snd = kws['snd_death']          # Death sound id's
         
         # 0: Guarding/Idling; 1: Agitated (Looking to murder the player)
         self.enemy_state  = 0
@@ -603,15 +598,16 @@ class Enemies(TextureLoader, Weapons):
         """
         # Source path for enemy configs
         src_path_cfg = cls.tk_path.join('configs', 'enemies')
+        
 
         # Line containing string data
-        non_literal_eval = ('legs_texture', 'torso_texture', 'weapon', 
-                            'blood_texture', 'dead_texture', 'gore_profile')
+        non_literal_eval = ('tex_legs',   'tex_torso', 'e_weapon', 'snd_death', 
+                            'tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain')
 
         # Lines which contain multiple data separated by comma
-        multi_strings = ('blood_texture', 'dead_texture', 'gore_profile') 
+        multi_strings = ('tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain', 'snd_death') 
 
-        for cfg in iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
+        for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             e_data = {}
     
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
@@ -619,19 +615,19 @@ class Enemies(TextureLoader, Weapons):
 
             for line in cls.tk_readFile(cfg, 'r'):
                 if line[0] in non_literal_eval:
-                    # Handle keywords with multiple values
+                    # Handle lines with multiple data values
                     if line[0] in multi_strings:
-                        e_data[line[0]] = [mv for mv in line[1].split(',') if mv]    
+                        e_data[line[0]] = [(int(mv) if line[0].startswith('snd') else mv) \
+                                            for mv in line[1].split(',') if mv]    
                     else:
                         # These are single strings
                         e_data[line[0]] = line[1]
 
                 else:
                     # Rest are integers/floats which can go through literal_eval
-                    e_data[line[0]] = literal_eval(line[1])       
+                    e_data[line[0]] = cls.tk_literal_eval(line[1])       
          
             cls.all_enemies[name] = cls(**e_data)
-            #enemy_id += 1
 
 
     
@@ -646,7 +642,7 @@ class Enemies(TextureLoader, Weapons):
             return -> initiated instance
             
         """
-        enemy = deepcopy(cls.all_enemies[_id])
+        enemy = cls.tk_deepcopy(cls.all_enemies[_id])
         enemy.load_enemy_animation()
         return enemy
 
