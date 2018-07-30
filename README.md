@@ -2,7 +2,7 @@
 
 TODO:
   - Add wire mode editor
-  - Add death sounds
+  - Add death sounds  - Nearly Done
   - Add music
   - Add more textures
   - Build campaign menu

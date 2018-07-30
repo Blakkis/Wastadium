@@ -79,9 +79,6 @@ class SoundMusic(GlobalGameData):
 			return -> None
 
 		"""
-
-		print cls.sm_volumes[1] - (cls.sm_volumes[1] / 2.0 if distanced else 0)
-
 		cls.all_sounds[_id].play().set_volume(cls.sm_volumes[1] - (cls.sm_volumes[1] / 2.0 \
 																   if distanced else 0))
 

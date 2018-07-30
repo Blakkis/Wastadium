@@ -884,6 +884,8 @@ class PygameFrame(TkinterResources, World):
         # Get the toolbar action we need
         self.toolbar_action = ed_Button.ed_getButtonStates()
 
+        EntityPicker.ep_controlState(self.toolbar_action)
+        
         # Render the world
         if not self.tso_textureSelectMode: self.w_renderWorld(self.screen, self.toolbar_action)
 
@@ -1551,6 +1553,8 @@ class PygameFrame(TkinterResources, World):
         """
         arrow_angle = self.ed_pi / 4
         theta = self.ed_radians(angle)
+
+        ox, oy = self.ed_floor(ox), self.ed_floor(oy)  
 
         endpx = int(ox + self.ed_sin(theta) * 28)
         endpy = int(oy + self.ed_cos(theta) * 28)

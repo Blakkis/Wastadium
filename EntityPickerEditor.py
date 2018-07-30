@@ -54,8 +54,14 @@ class EntityOptionMenu(tk.OptionMenu, GlobalGameDataEditor):
 
 class EntityPicker(tk.Frame, GlobalGameDataEditor):
 
-	ep_values = {'id': None,
-				 'content': None}
+	entity_data = {'id': None,		# string id of the entity
+				   'content': None,	# Content of the entity (or value)
+				   'state': -1}		# State of the picker widget
+
+	# Button id with associated function
+	entity_valid_id = {7: lambda: None,		# Enemies
+					   8: lambda: None}		# Pickups
+
 
 	def __init__(self, base, row, column):
 		super(EntityPicker, self).__init__(base)
@@ -66,20 +72,61 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		self.ep_labelinfo = tk.Label(self, text='Entity Settings')
 		self.ep_labelinfo.grid(row=0, column=0, padx=5, sticky=self.ed_sticky_w)
 		
-		self.ep_entity_id = EntityOptionMenu(self, self.ep_values['id'], "Entity id:", 1, 0)
-		self.ep_entity_content = EntityOptionMenu(self, self.ep_values['content'], "Content id:", 2, 0)
+		self.ep_entity_id = EntityOptionMenu(self, self.entity_data['id'], "Entity id:", 1, 0)
+		self.ep_entity_content = EntityOptionMenu(self, self.entity_data['content'], "Content id:", 2, 0)
 
-		self.ep_set_state()
+		self.ep_set_state()		# Default to hidden
+		
+		self.entity_data['state'].trace('w', self._state_traceback)
 
-
-	def ep_set_state(self, state='disabled'):
+	
+	def _state_traceback(self, *args):
 		"""
-			TBD
+			Work as a bridge between instance and class
 
 			return -> None
 
 		"""
-		[child.config(state=state) for child in self.winfo_children()]
+		v = self.entity_data['state'].get()
+		self.ep_set_state('normal' if v != -1 else 'disabled')
+
+	
+	def ep_set_state(self, state='disabled'):
+		"""
+			Control the state of the entity picker widget (Instance)
+
+			state -> 'normal', 'disabled'
+
+			return -> None
+
+		"""
+		for child in self.winfo_children():
+			if state == 'disabled' and isinstance(child, EntityOptionMenu): 
+				pass
+
+			child.config(state=state)
+		
+		#[child.config(state=state) for child in self.winfo_children()]
+
+
+	@classmethod
+	def ep_controlState(cls, button_id):
+		"""
+			Provide a class method to control the state of the widgets
+
+			return -> None
+
+		"""
+		# Enable
+		if button_id in cls.entity_valid_id:
+			if button_id == cls.entity_data['state'].get(): return None
+			cls.entity_data['state'].set(button_id)
+		
+		# Disable
+		else: 
+			if cls.entity_data['state'].get() == -1: return None
+			cls.entity_data['state'].set(-1)
+
 
 
 	@classmethod
@@ -93,7 +140,8 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 			return -> Instance
 
 		"""
-		cls.ep_values['id'] = cls.ed_str()
-		cls.ep_values['content'] = cls.ed_str()
+		cls.entity_data['id'] = cls.ed_str()
+		cls.entity_data['content'] = cls.ed_str()
+		cls.entity_data['state'] = cls.ed_int(); cls.entity_data['state'].set(-1) 
 
 		return cls(base, row, column)

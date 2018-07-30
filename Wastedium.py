@@ -1025,10 +1025,10 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         near_x, near_y = -int(cls.cell_x) >> 8, -int(cls.cell_y) >> 8 
         
         for y in xrange(near_y - 2, near_y + 3):
-            if y < 0 or y > cls.w_map_size_macro[1]-1:
+            if y < 0 or y > cls.w_map_size_macro[1] - 1:
                 continue
             for x in xrange(near_x - 3, near_x + 4):
-                if x < 0 or x > cls.w_map_size_macro[0]-1:
+                if x < 0 or x > cls.w_map_size_macro[0] - 1:
                     continue
                 cell_x, cell_y = cls.w_map_layers[layer][y][x][0]
                 

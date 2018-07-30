@@ -117,6 +117,8 @@ class Shadows(GlobalGameData):
     def s_loadSurfaceMap(self, surfaces):
         """
             TBD
+
+            return -> None
         """
         surf_size = 32 * self.tk_macro_cell_size 
         self.s_fade_surf = self.tk_surface((surf_size * len(surfaces[0]),
@@ -133,6 +135,9 @@ class Shadows(GlobalGameData):
     def s_load_lightmap(cls, lightmap):
         """
             TBD 
+
+            return -> None
+            
         """
         final = []
 

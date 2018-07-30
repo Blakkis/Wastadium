@@ -508,6 +508,7 @@ class GlobalGameDataEditor(object):
     ed_cos = math.cos
     ed_sin = math.sin
     ed_radians = math.radians
+    ed_floor = math.floor
     ed_pi = math.pi
     ed_deque = deque 
     ed_flatten = staticmethod(flatten)
