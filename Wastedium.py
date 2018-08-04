@@ -143,7 +143,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory):
         else: l.extend([1] * (firerate - 1))    # Use the firerate - 1 as length
         
         self.fire_anim_len = self.tk_deque(l)
-        self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / len(self.fire_anim_len)) 
+        self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
 
     def hero_handle(self, surface, delta=0):
@@ -1563,7 +1563,7 @@ class Main(World, DeltaTimer):
 
             self.tk_display.flip()
 
-            #for _ in xrange(800000): pass
+            #for _ in xrange(500000): pass
     
 
 if __name__ == '__main__':

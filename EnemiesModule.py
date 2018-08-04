@@ -109,7 +109,7 @@ class Enemies(TextureLoader, Weapons):
         else: l.extend([1] * (firerate - 1))    # Use the firerate - 1 as length
         
         self.enemy_fire_anim_len = self.tk_deque(l)
-        self.enemy_fire_anim_timer = self.tk_trigger_const(60 / float(1000) / len(self.enemy_fire_anim_len)) 
+        self.enemy_fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.enemy_fire_anim_len))) 
           
 
     def __repr__(self):
@@ -588,12 +588,14 @@ class Enemies(TextureLoader, Weapons):
 
 
     @classmethod
-    def build_all_enemies(cls):
+    def build_all_enemies(cls, editor_only=False):
         """
             Read/Build all the enemies from config
             Called once during startup
 
-            return -> None
+            editor_only -> Load minimalistic data about the enemies for the editor
+
+            return -> None or list of enemies if 'editor_only'
             
         """
         # Source path for enemy configs
@@ -613,6 +615,11 @@ class Enemies(TextureLoader, Weapons):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
             e_data['name'] = name
 
+            # Names needed only for the editor
+            if editor_only: 
+                cls.all_enemies[name] = None
+                continue
+
             for line in cls.tk_readFile(cfg, 'r'):
                 if line[0] in non_literal_eval:
                     # Handle lines with multiple data values
@@ -629,6 +636,7 @@ class Enemies(TextureLoader, Weapons):
          
             cls.all_enemies[name] = cls(**e_data)
 
+        if editor_only: return cls.all_enemies.keys() 
 
     
     @classmethod

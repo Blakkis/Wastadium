@@ -2,8 +2,31 @@ import Tkinter as tk
 from ConfigsModuleEditor import GlobalGameDataEditor 
 
 from PickUps import Pickups
+from EnemiesModule import Enemies
 
 __all__ = 'EntityPicker',
+
+
+class EntityOptionMenuContent(Pickups, Enemies):
+	"""
+		Provide more minimalistic version of the pickups, enemies, ...
+
+		Also pickups and Enemies relay on different configs
+	"""
+
+	@classmethod
+	def entity_content_load(cls):
+		"""
+			Load handler for the entity contents
+
+			return -> TBD
+
+		"""
+		token = {'id_enemy':   cls.build_all_enemies(editor_only=True),
+		         'id_pickups': cls.load_pickups(editor_only=True)}
+
+		return token
+
 
 
 class EntityOptionMenu(tk.OptionMenu, GlobalGameDataEditor):
@@ -20,11 +43,12 @@ class EntityOptionMenu(tk.OptionMenu, GlobalGameDataEditor):
 		self.ep_label = tk.Label(base, text=labeltext)
 		self.ep_label.grid(row=row, column=column, padx=5, sticky=self.ed_sticky_w)
 
-		self.grid(row=row, column=column + 1, sticky=self.ed_sticky_vert, columnspan=3, pady=5, padx=5)
+		self.grid(row=row, column=column + 1, sticky=self.ed_sticky_vert, columnspan=3, padx=5)
 
-		self.set_state()
 
-	
+	def epm_reset(self): self.variable_id_display.set('-')
+
+
 	def __opt_limit_width(self, value):
 		"""
 			Parse the value before displaying it
@@ -42,15 +66,6 @@ class EntityOptionMenu(tk.OptionMenu, GlobalGameDataEditor):
 		self.variable_id_display.set(value)
 
 
-	def set_state(self, state='disabled'):
-		"""
-			TBD
-
-			return -> None
-
-		"""
-		pass
-
 
 class EntityPicker(tk.Frame, GlobalGameDataEditor):
 
@@ -58,9 +73,9 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 				   'content': None,	# Content of the entity (or value)
 				   'state': -1}		# State of the picker widget
 
-	# Button id with associated function
-	entity_valid_id = {7: lambda: None,		# Enemies
-					   8: lambda: None}		# Pickups
+	# Button id with associated function (Modify the content of the menutabs)
+	entity_valid_id = {7: 0,	# Enemies
+					   8: 1}	# Pickups
 
 
 	def __init__(self, base, row, column):
@@ -72,6 +87,8 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		self.ep_labelinfo = tk.Label(self, text='Entity Settings')
 		self.ep_labelinfo.grid(row=0, column=0, padx=5, sticky=self.ed_sticky_w)
 		
+		tokens = EntityOptionMenuContent.entity_content_load()
+
 		self.ep_entity_id = EntityOptionMenu(self, self.entity_data['id'], "Entity id:", 1, 0)
 		self.ep_entity_content = EntityOptionMenu(self, self.entity_data['content'], "Content id:", 2, 0)
 
@@ -82,7 +99,7 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 	
 	def _state_traceback(self, *args):
 		"""
-			Work as a bridge between instance and class
+			Work as a bridge between instance and class via trace
 
 			return -> None
 
@@ -102,7 +119,7 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		"""
 		for child in self.winfo_children():
 			if state == 'disabled' and isinstance(child, EntityOptionMenu): 
-				pass
+				child.epm_reset()
 
 			child.config(state=state)
 		
@@ -113,6 +130,8 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 	def ep_controlState(cls, button_id):
 		"""
 			Provide a class method to control the state of the widgets
+
+			button_id -> Id of the buttons (For controlling when to enable the widgets)
 
 			return -> None
 

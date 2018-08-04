@@ -78,6 +78,7 @@ class LaserSightModule(GlobalGameData):
             self.l_offsets[k].append(self.tk_atan2(v[0], v[1]))
             self.l_offsets[k].append(self.tk_hypot(v[0], v[1]))
 
+        # Raycast function for checking walls within line-of-sight
         self.l_wall_check = wall_check_function 
 
   

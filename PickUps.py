@@ -14,7 +14,7 @@ class MessagePickup(object):
     
     def render_msg(self, delta):
         """
-            TBD
+            Render vertically rising message about the pickup
 
             return -> Surface, (x, y)
 
@@ -41,6 +41,9 @@ class Pickups(Inventory):
     # Common data for the pickups
     pu_data = {'id': 0,
                'font': None}
+
+    # 
+    #pu_valid_types = set(['t_ammo', 't_armor', 't_cash', 't_health', 't_weapon'])
     
     
     def __init__(self):
@@ -48,9 +51,11 @@ class Pickups(Inventory):
 
     
     @classmethod
-    def load_pickups(cls, **kw):
+    def load_pickups(cls, editor_only=False, **kw):
         """
-            TBD
+            Load and parse pickups
+
+            editor_only -> Load minimalistic data about the pickups for the editor
 
             return -> None
 
@@ -66,20 +71,59 @@ class Pickups(Inventory):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
             tex_data = {'p_tex': None,
                         'p_pickup_snd': None,
-                        'p_pickup_msg': ''}
+                        'p_pickup_msg': '',
+                        'p_pickup_type': '',
+                        'p_pickup_content': None}
             
             for line in cls.tk_readFile(cfg, 'r'):
-                if line[0] == 'p_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
+
+                if not editor_only and line[0] == 'p_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
 
                 elif line[0] == 'p_pickup_snd': tex_data[line[0]] = int(line[1])
 
                 elif line[0] == 'p_pickup_msg': tex_data[line[0]] = line[1].replace('_', ' ') 
 
-            cls.pu_pickups[name] = tex_data
+                elif line[0] == 'p_pickup_type': tex_data[line[0]] = line[1]
 
-        # Setup font for msg rendering
-        cls.pu_data['font'] = cls.tk_font(kw['font'], 14)
+                elif line[0] == 'p_pickup_content': tex_data[line[0]] = tuple([int(con) for con in line[1].split(',') if con])
 
+            cls.pu_pickups[name] = cls.parse_pickup_content(tex_data, editor_only)
+
+        
+        if editor_only:
+            return cls.pu_pickups
+        else:
+            # Setup font for msg rendering
+            cls.pu_data['font'] = cls.tk_font(kw['font'], 14)
+
+
+    @classmethod
+    def parse_pickup_content(cls, token, editor_only=False):
+        """
+            Apply special parsing for tokens which ever needs it
+
+            token -> Dict 
+            editor_only -> Remove unused keys, values from the token not needed for the editor
+
+            return -> None
+
+        """
+        if editor_only:
+            cls.load_weapons(editor_only)
+
+            if token['p_pickup_type'] == 't_weapon':
+                # Get all the weapons id's from the weapon class
+                token['p_pickup_weapons'] = tuple([wpn for wpn in cls.all_weapons.keys() if cls.all_weapons[wpn]['w_buyable'] and \
+                                                                                            not wpn.endswith('-dual')])
+
+            elif token['p_pickup_type'] == 't_ammo':
+                # Get all the ammo id's from the ammo class
+                token['p_pickup_ammo'] = {cls.all_ammo_data[key]:key for key, value in cls.all_ammo_data.iteritems()}
+
+            # Get rid of unnecessary data from the pickups
+            del token['p_pickup_snd'], token['p_pickup_msg'], token['p_tex']
+
+        return token
     
     
     @classmethod
@@ -109,7 +153,6 @@ class Pickups(Inventory):
 
 
     
-    
     @classmethod
     def clear_pickups(cls):
         """
@@ -122,6 +165,7 @@ class Pickups(Inventory):
         cls.pu_all_world_pickups.clear()
         cls.pu_data['id'] = 0
     
+
     
     @classmethod
     def handle_pickups(cls, surface, px, py):

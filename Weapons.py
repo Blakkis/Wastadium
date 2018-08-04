@@ -31,7 +31,7 @@ class Weapons(GlobalGameData):
         
     
     @classmethod
-    def load_weapons(cls):
+    def load_weapons(cls, editor_only=False, **kw):
         """
             Loads and setups all weapons/ammo data
 
@@ -47,13 +47,16 @@ class Weapons(GlobalGameData):
         # Source path for weapon configs
         src_weapon_path_cfg = cls.tk_path.join('configs', 'weapons') 
         
-
         for line in cls.tk_readFile(cls.tk_path.join(src_ammo_path_cfg, 'ammo_types.cfg'), 'r'):
             # Breakdown the ammo data (From left by index)
             # 0 -> Name of ammo in game 
             # 1 -> Price (Minimum is 2 (!Forced)) 
             # 2 - 3 -> Ammo icons which are 32x32 and 64x64
             data = line[1].split(',')
+
+            if editor_only:
+                cls.all_ammo_data[int(line[0])] = data[0]
+                continue
 
             cls.all_ammo_data[int(line[0])] = [data[0], max(2, int(data[1]))]
 
@@ -65,13 +68,15 @@ class Weapons(GlobalGameData):
         
         for weapon in iglob(cls.tk_path.join(src_weapon_path_cfg, '*.cfg')):
             name = weapon.split('\\')[-1].split('.')[0]
+
+            # Editor needs names only (Leave values incase something is needed in the future)
             w_cfg = {}
 
             for line in cls.tk_readFile(weapon, 'r'):
                 # Lines with multiple strings separated by comma dont go through literal_eval
                 if line[0] in multi_strings:
                     mstr = tuple(line[1].split(',')) 
-                    if line[0] == 'w_data':
+                    if line[0] == 'w_data' and not editor_only:
                         # As of this comment: The w_data contains AmmoType, WeaponIcon
                         cls.all_weapons_data[name] = (int(mstr[0]), cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, mstr[1])).convert_alpha())
                     else:
@@ -94,7 +99,25 @@ class Weapons(GlobalGameData):
                         w_cfg[line[0]] = literal_eval(line[1])
 
             # Store the weapon token
-            cls.all_weapons[name] = w_cfg 
+            cls.all_weapons[name] = cls.parse_weapon_content(w_cfg, editor_only) 
+
+    
+    @classmethod
+    def parse_weapon_content(cls, token, editor_only=False):
+        """
+            Apply special parsing for tokens which ever needs it
+
+            token -> Dict 
+            editor_only -> Remove unused keys, values from the token not needed for the editor
+
+            return -> None
+
+        """
+        if editor_only:
+            # Add values needed by the editor here
+            token = {'w_buyable': token['w_buyable']}
+
+        return token
 
 
 class WeaponCasings(GlobalGameData):
