@@ -132,17 +132,16 @@ class WeaponCasings(GlobalGameData):
     # All live casings on the map being rendered
     casings_map = {}
 
-    # Relative to keep casings in proper position when the player moves
-    casing_rel_pos = 0, 0
-
-    ca_data = {'id': 0}     # Provide all casings unique id
+    # Common data for the casings
+    casing_data = {'id': 0,             # Provide all casings unique id
+                   'offset': (0, 0)}    # Keep the casings fixed to the position
 
     # The number of frames on every casing texture array is based from 360 / deg
     # (Lower = Smoother casings flying animation)
-    casing_deg = 15
+    __casing_deg = 15
 
     # Number of frames for every casing animation 
-    casing_num_of_frames = 360 / casing_deg - 1
+    casing_num_of_frames = 360 / __casing_deg - 1
 
     
     def __init__(self, x, y, _id, angle, ofs_pos):
@@ -214,8 +213,8 @@ class WeaponCasings(GlobalGameData):
             return -> None
 
         """
-        cls.casings_map[cls.ca_data['id']] = WeaponCasings(x, y, _id, angle, cls.casing_rel_pos)
-        cls.ca_data['id'] += 1
+        cls.casings_map[cls.casing_data['id']] = WeaponCasings(x, y, _id, angle, cls.casing_data['offset'])
+        cls.casing_data['id'] += 1
 
     
     @classmethod
@@ -251,7 +250,7 @@ class WeaponCasings(GlobalGameData):
             imgs.append(base_surf)
             
             # Rest are rotated version of the base_surf
-            for d in xrange(cls.casing_deg, 360, cls.casing_deg):
+            for d in xrange(cls.__casing_deg, 360, cls.__casing_deg):
                 imgs.append(cls.tk_rotateImage(base_surf, d, base_surf_rect, fast_rot=1))
 
             cls.all_casings[_id] = tuple(imgs)
@@ -271,14 +270,14 @@ class WeaponCasings(GlobalGameData):
                 img, pos, ofs = cls.casings_map[key].render_casing_pos()
                 
                 # Fix the casings in-place
-                diff = ofs[0] - cls.casing_rel_pos[0], ofs[1] - cls.casing_rel_pos[1]
+                diff = ofs[0] - cls.casing_data['offset'][0], ofs[1] - cls.casing_data['offset'][1]
                 x, y = pos[0] - diff[0], pos[1] - diff[1]
     
                 # Store the img and position so we can work with the last frame before it gets destroyed
                 cls.casings_map[key].casing_last_frame = img, (x, y)
                 
-                # And blit it
                 surface.blit(img, (x, y))
+            
             except StopIteration:
                 # Blit the casing to the ground forever
                 cls.solveMess(*cls.casings_map[key].casing_last_frame, sm_rel_pos=(cls.cell_x, cls.cell_y))
@@ -293,8 +292,9 @@ class WeaponCasings(GlobalGameData):
             Clear all casings for new map
 
             return -> None
+
         """
-        cls.ca_data['id'] = 0; cls.casings_map = {}; cls.effect_rel_pos = 0, 0 
+        cls.casing_data['id'] = 0; cls.casings_map = {}; cls.casing_data['offset'] = 0, 0 
 
 
 if __name__ == '__main__':

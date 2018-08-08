@@ -1018,8 +1018,6 @@ class PygameFrame(TkinterResources, World):
         """
         self.ed_draw_rect(self.w_Cells_Layers[layer][chunk_index[1]][chunk_index[0]][-1], 
                           clean_color, rect)
-        #
-        #
     
     
     

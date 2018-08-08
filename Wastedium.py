@@ -503,10 +503,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                     if tb_rect.colliderect(check):
                         cls.cell_y -= y; check_y = 0
         
-        # Update all the relative positions
+        # Update all the relative positions (Why the fuck did i put these here? Do the offset calculation by
+        #                                    By passing the cls.cell to the appropriate functions FIX THIS!
         Enemies.update_relative_pos(rel_pos[0] - cls.cell_x, rel_pos[1] - cls.cell_y)
-        cls.effect_rel_pos = cls.cell_x, cls.cell_y
-        cls.casing_rel_pos = cls.cell_x, cls.cell_y 
+        cls.effect_data['offset'] = cls.cell_x, cls.cell_y
+        cls.casing_data['offset'] = cls.cell_x, cls.cell_y 
 
 
     @classmethod
@@ -662,7 +663,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Time to fill the world with stuff to kill.
         #enemies_locations = [(4, 5, 'rifleman') for _ in xrange(1)] 
 
-        num_of_enemies = 32
+        num_of_enemies = 0
         enemies_locations = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                               cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
@@ -1547,7 +1548,7 @@ class Main(World, DeltaTimer):
                     
             self.render_effects(self.screen)
 
-            self.render_casings(self.screen, dt)
+            self.render_casings(self.screen)
 
             if not self.tk_no_shadow_layer:
                 self.shadow_map.s_applyShadows(self.cell_x, self.cell_y, self.screen)
@@ -1563,7 +1564,7 @@ class Main(World, DeltaTimer):
 
             self.tk_display.flip()
 
-            #for _ in xrange(500000): pass
+            #for _ in xrange(800000): pass
     
 
 if __name__ == '__main__':
