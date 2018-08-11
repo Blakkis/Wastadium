@@ -6,6 +6,8 @@ from PreProcessor import PreProcessor
 # Start the shadowing from the mid to borders in clockwise and create shadow frustrum to test most outer blocks 
 # inside the frustrum to cancel them from casting shadows
 
+__all__ = 'Shadows', 'CharacterShadows'
+
 
 class Shadows(GlobalGameData):
 
@@ -255,4 +257,107 @@ def s_applyShadows(self, x, y, surface=None):
 
     """.format(surface='self.s_shadow_surf' if GlobalGameData.tk_shadow_quality else 'surface'),
     tk_shadow_quality=GlobalGameData.tk_shadow_quality))
+
+
+
+class CharacterShadows(GlobalGameData):
+
+    cs_data = {'world': None,
+               'end_points': None,
+               'falloff_mult': None,
+               'index_points': None}
+
+    # Number of polygons on the shadow ellipse
+    __shadow_poly_limit = 12 
+
+
+    @classmethod
+    def cs_shadow_cast(cls, surface, px, py, pAngle):
+        """
+            Cast dynamic character shadows from world lights
+
+            surface -> Active screen surface
+            px, py -> World coordinates
+            pAngle -> 
+
+            return -> None
+
+        """
+        points = []
+        
+        ix, iy = int(px) >> 8, int(py) >> 8
+        try:
+            for x, y in cls.cs_data['index_points'][(ix, iy)]:
+                for l in cls.cs_data['world'][y][x].itervalues():
+                    dist = max(12, cls.tk_hypot(px - l.x, py - l.y)) 
+                    if dist < l.r / 2:
+                        dist = min(64, dist)
+                        angle = cls.tk_atan2(py - l.y, px - l.x) 
+                        
+                        tx = cls.tk_cos(angle)
+                        ty = cls.tk_sin(angle)
+
+                        for cos, sin in cls.cs_data['end_points']:
+                            lx = int((cls.tk_res_half[0] + dist * cos * tx - 12 * sin * ty) + tx * (dist - 12)) 
+                            ly = int((cls.tk_res_half[1] + 12 * sin * tx + dist * cos * ty) + ty * (dist - 12)) 
+                            points.append((lx, ly))
+
+                        cls.tk_draw_gfx_polygon(surface, points, (0x20, 0x20, 0x20, 255 - dist * cls.cs_data['falloff_mult']))
+        
+        except KeyError: 
+            return 
+
+
+    
+    @classmethod
+    def cs_load_lights(cls, lights, world_size):
+        """
+            Build lights hashmap for dynamic shadows
+
+            lights -> List of lights entities
+            world_size -> Size of the world
+
+            return -> None
+
+        """
+        cls.cs_data['world'] = [[{} for x in xrange(world_size[0])] for y in xrange(world_size[1])]
+
+        for light in lights:
+            key = light.x, light.y
+            index = light.x >> 8, light.y >> 8
+            cls.cs_data['world'][index[1]][index[0]][key] = light
+
+        cls.cs_data['index_points'] = {}
+        
+        for wy in xrange(world_size[1]):
+            for wx in xrange(world_size[0]):
+                points = []
+                for y in xrange(wy - 1, wy + 2):
+                    if not -1 < y < world_size[1]:
+                        continue
+                    
+                    for x in xrange(wx - 1, wx + 2):
+                        if not -1 < x < world_size[0]:
+                            continue 
+
+                        points.append((x, y))
+            
+                cls.cs_data['index_points'][(wx, wy)] = points
+
+
+    @classmethod
+    def cs_setup_character_shadows(cls):
+        """
+            Setup(and possible load stuff in the future) for character shadow mapping
+
+            return -> None
+
+        """
+        # Create the polygon points in ellipse shadow
+        cls.cs_data['end_points'] = [cls.tk_radians(p) for p in xrange(0, 360, 360 / cls.__shadow_poly_limit)]
+        cls.cs_data['end_points'] = tuple([(cls.tk_cos(r), cls.tk_sin(r)) for r in cls.cs_data['end_points']])
+
+        # Shadow attenuation (Distance from the light)
+        cls.cs_data['falloff_mult'] = 255 / float(128) * 2
+
 

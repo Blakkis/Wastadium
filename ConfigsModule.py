@@ -145,6 +145,7 @@ class GlobalGameData(object):
     tk_path = os.path
     tk_environ = os.environ
     tk_deque = collections.deque
+    tk_namedtuple = staticmethod(collections.namedtuple)
     tk_ordereddict = collections.OrderedDict
     tk_np_roll = staticmethod(roll)     
     tk_np_copyto = copyto

@@ -201,7 +201,10 @@ class Pickups(Inventory):
     @classmethod
     def handle_pickups_messages(cls, surface, delta):
         """
-            TBD
+            Handle messages spawned by picking up the goodies
+
+            surface -> Active screen surface
+            delta -> Delta time
 
             return -> None
 

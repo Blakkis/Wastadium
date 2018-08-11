@@ -15,6 +15,7 @@ from Timer import DeltaTimer
 #   Getting Tkinter and Pygame to work together includes some small hacks
 #   Such as controlling the execution of events
 #   I've marked someone of hacks with comment '# -- Hack --'
+#   Tokenizing the data is shit. Switch to something more understandable
 
 
 class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatistics, 
@@ -529,19 +530,29 @@ class TkinterResources(VisualResources):
         """
         error = False
         try:
+            name = self.bf_mapname.get()
+            width = self.bf_mapwidth.get() 
+            height = self.bf_mapheight.get()
+
             # Check everything to satisfy minimum details
-            if not self.bf_mapname.get():
+            if not name:
                 self.ed_msg_box.showerror("Empty Name", "Please specify name for the map!")
                 error = True
 
             # Make sure the map width/height are multiples of 8
-            elif ((self.bf_mapwidth.get()  % self.ed_chunk_size or self.bf_mapwidth.get()  == 0) or 
-                  (self.bf_mapheight.get() % self.ed_chunk_size or self.bf_mapheight.get() == 0)):
+            elif ((width  % self.ed_chunk_size or width  == 0) or 
+                  (height % self.ed_chunk_size or height == 0)):
                 self.ed_msg_box.showerror("Incorrect Map Dimensions", 
                                           "Map dimensions are incorrect. They need to be multiple of 8!")
                 error = True
 
-        except ValueError:
+            # Map max dimensions are 64 x 64
+            elif width > 64 or height > 64:
+                self.ed_msg_box.showerror("Incorrect Map Dimensions",
+                                          "Map max width/height are 64 x 64!")
+                error = True
+
+        except ValueError, Exception:
             # Entries with 'IntVar' expects Integers so we need to prepare for strings on them
             self.ed_msg_box.showerror("Incorrect Values", "Some of the entries has incorrect values!")
             error = True    
@@ -856,6 +867,7 @@ class PygameFrame(TkinterResources, World):
                                 3: self.__pf_applyDecals,
                                 4: self.__pf_editCollisions,
                                 5: self.__pf_applyLights,
+                                7: self.__pf_applyEnemies,
                                 8: self.__pf_applyPickups}
 
         # Reserved F keys for the toolbar (If you need more than F12, extend via using bitwise mods + f keys?)
@@ -1450,8 +1462,20 @@ class PygameFrame(TkinterResources, World):
 
         """
         pass
+
+
+    
+    def __pf_applyEnemies(self, index, x, y, surface=None, action_key=0, set_id=0):
+        """
+            TBD
+
+            return -> None
+
+        """
+        pass
     
 
+    
     def __pf_floodFill(self, index, surface, surface_str, surface_rot):
         """
             Perform a floodfill on ground by finding and replacing all target ground
