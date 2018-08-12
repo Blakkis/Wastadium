@@ -675,7 +675,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             cls.w_applyStaticShadows()
             
             # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-            lights = [(160 + 16, 32  + 16, 128 + 32, (0xff, 0x0, 0xff,  0x0))]
+            lights = [(160 + 16, 32  + 16, 128 + 32, (0xff, 0x0, 0xff,  0x0)),
+                      (160 + 16, 128  + 16, 128 + 32, (0xff, 0x0, 0xff,  0x0))]
 
             lights = [cls.w_entity_fac['id_light'](*l) for l in lights]
 
@@ -697,7 +698,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         enemies = [cls.w_entity_fac['id_enemy'](*e) for e in enemies]
         cls.w_spawnEnemies(enemies)
 
-        # Apply pickups
+        # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
         pickups = [(64, 64, 'hot_meal', 100)]
         
         pickups = [cls.w_entity_fac['id_pickup'](*p) for p in pickups]

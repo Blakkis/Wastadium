@@ -47,6 +47,20 @@ class EntityOptionMenu(tk.OptionMenu, GlobalGameDataEditor):
 		self.grid(row=row, column=column + 1, sticky=self.ed_sticky_vert, columnspan=3, padx=5)
 
 
+	def emp_configure_options(self, list_of_options):
+		"""
+			TBD
+
+			return -> None
+
+		"""
+		self['menu'].delete(0, 'end')
+
+		for s in list_of_options:
+			self['menu'].add_command(label=s, command=lambda v=s: self.__opt_limit_width(v))
+
+
+
 	def epm_set(self, value): 
 		"""
 			Set the default value on the optionmenu widget
@@ -99,8 +113,10 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		self.ep_labelinfo.grid(row=0, column=0, padx=5, sticky=self.ed_sticky_w)
 		
 		tokens = EntityOptionMenuContent.entity_content_load()
-		self.entity_valid_id[7] = tokens['id_enemy'],   'ID_ENEMY' 
-		self.entity_valid_id[8] = tokens['id_pickups'], 'ID_PICKUP'
+		_tokenizer = self.ed_namedtuple('Token', 'content id func')
+
+		self.entity_valid_id[7] = _tokenizer(tokens['id_enemy'],   'ID_ENEMY', self.__ep_entity_enemy)
+		self.entity_valid_id[8] = _tokenizer(tokens['id_pickups'], 'ID_PICKUP', self.__ep_entity_pickup)
 
 		self.ep_entity_id = EntityOptionMenu(self, self.entity_data['id'], "Entity id:", 1, 0)
 		self.ep_entity_content = EntityOptionMenu(self, self.entity_data['content'], "Content id:", 2, 0)
@@ -108,7 +124,7 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		self.ep_set_state()		# Default to hidden
 		
 		self.entity_data['state'].trace('w', self.__state_traceback)
-		self.entity_data['id'].trace('w', self.__ep_entity_configure)		# MUISTA TAMA!
+		self.entity_data['id'].trace('w', lambda *args: self.entity_valid_id[self.entity_data['state'].get()].func())
 
 	
 	def __state_traceback(self, *args):
@@ -140,19 +156,40 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		
 		value = self.entity_data['state'].get() 
 		if value != -1: 
-			self.ep_entity_id.epm_set(self.entity_valid_id[value][1])
+			self.ep_entity_id.epm_set(self.entity_valid_id[value].id)
 			self.ep_entity_content.config(state='disabled')	
+			self.entity_valid_id[value].func(True, value)
+		
 
-	
-	def __ep_entity_configure(self, *args):
+	def __ep_entity_enemy(self, populate=False, v=-1):
 		"""
 			TBD
 
 			return -> None
 
 		"""
-		print args
-			
+		if populate:
+			self.ep_entity_id.emp_configure_options(self.entity_valid_id[v].content)
+		
+		else:
+			print self.entity_data['id'].get()
+
+
+	
+	def __ep_entity_pickup(self, populate=False, v=-1):
+		"""
+			TBD
+
+			return -> None
+
+		"""
+		if populate:
+			self.ep_entity_id.emp_configure_options(sorted(self.entity_valid_id[v].content.keys()))
+		
+		else:
+			print self.entity_data['id'].get()
+
+		
 
 	@classmethod
 	def ep_controlState(cls, button_id):

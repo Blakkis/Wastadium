@@ -6,7 +6,7 @@ import math
 from PIL import Image as pil_image
 from ImageTk import PhotoImage
 from os import environ, path
-from collections import deque
+from collections import deque, namedtuple
 from compiler.ast import flatten
 from copy import copy
 
@@ -510,7 +510,8 @@ class GlobalGameDataEditor(object):
     ed_radians = math.radians
     ed_floor = math.floor
     ed_pi = math.pi
-    ed_deque = deque 
+    ed_deque = deque
+    ed_namedtuple = staticmethod(namedtuple) 
     ed_flatten = staticmethod(flatten)
     ed_copy = staticmethod(copy) 
 
