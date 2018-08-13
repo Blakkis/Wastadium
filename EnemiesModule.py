@@ -1,12 +1,13 @@
 from ConfigsModule import TkCounter
 from TextureLoader import TextureLoader
 from Weapons import Weapons
+from Timer import DeltaTimer
 
 import PathFinder
 
 # NOTE: Fix Rotation from player back to waypoint 
 
-class Enemies(TextureLoader, Weapons):
+class Enemies(TextureLoader, Weapons, DeltaTimer):
     """
         TBD
     """
@@ -388,7 +389,7 @@ class Enemies(TextureLoader, Weapons):
             Hunt for the target position(Which can be waypoint or player)
 
             waypoint_track -> Hunt waypoints
-            sx, sy -> 
+            sx, sy -> Enemy coordinates relative to player
 
             return -> None
 
@@ -408,9 +409,9 @@ class Enemies(TextureLoader, Weapons):
         self.enemy_targetAngleDif = diff
 
 
-    def handle_enemy(self, env_cols=None, f_cols=None, surface=None, delta=0):
+    def handle_enemy(self, env_cols=None, f_cols=None, surface=None):
         """
-            TBD
+            Handle enemy logic
 
             env_cols -> Environment collisions 
             f_col -> Friendly collisions
@@ -452,6 +453,8 @@ class Enemies(TextureLoader, Weapons):
         
         # Distance to player or waypoint
         dist_to_target = self.tk_hypot(tri_x, tri_y)
+
+        delta = self.dt_getDelta()
 
         # Move orientation toward target based on rotationspeed 
         # (Increase the speed when engaging the player)

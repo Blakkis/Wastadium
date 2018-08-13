@@ -484,8 +484,12 @@ class TkinterResources(VisualResources):
         nm_geo_frame.grid(row=0, column=0, sticky=self.ed_sticky_full)
 
         ed_LabelEntry(nm_geo_frame, 'MapName:',  self.bf_mapname,   row=0)
-        ed_LabelEntry(nm_geo_frame, 'Width:',    self.bf_mapwidth,  row=1); tk.Label(nm_geo_frame, text='Mult of 8!').grid(row=1, column=2, padx=5)
-        ed_LabelEntry(nm_geo_frame, 'Height:',   self.bf_mapheight, row=2); tk.Label(nm_geo_frame, text='Mult of 8!').grid(row=2, column=2, padx=5)
+        
+        ed_LabelEntry(nm_geo_frame, 'Width:',    self.bf_mapwidth,  row=1)
+        tk.Label(nm_geo_frame, text='Mult of 8!').grid(row=1, column=2, padx=5)
+        
+        ed_LabelEntry(nm_geo_frame, 'Height:',   self.bf_mapheight, row=2)
+        tk.Label(nm_geo_frame, text='Mult of 8!').grid(row=2, column=2, padx=5)
 
         self.ed_separator(nm_geo_frame, orient='horizontal').grid(row=3, columnspan=3, pady=5, padx=5,
                                                                   sticky=self.ed_sticky_vert)
@@ -497,7 +501,8 @@ class TkinterResources(VisualResources):
                                             self.ed_pygameToTkinter(self.low_textures[default_tex]['tex_main']), 4, 0) 
 
         nm_option_menu_1 = tk.OptionMenu(nm_geo_frame, self.bf_mapbase_tex, *self.low_textures.keys(), 
-                                         command=lambda v1: nm_preview_1.setImage(self.ed_pygameToTkinter(self.low_textures[v1]['tex_main'])))
+                                         command=lambda v1: nm_preview_1.setImage(self.ed_pygameToTkinter(\
+                                                                                  self.low_textures[v1]['tex_main'])))
         nm_option_menu_1.grid(row=5, column=1, sticky=self.ed_sticky_vert, columnspan=2, pady=5)
 
         
@@ -507,7 +512,8 @@ class TkinterResources(VisualResources):
                                             self.ed_pygameToTkinter(self.mid_textures[default_tex][0]), 6, 0) 
 
         nm_option_menu_2 = tk.OptionMenu(nm_geo_frame, self.bf_mapwall_tex, *self.mid_textures.keys(), 
-                                         command=lambda v1: nm_preview_2.setImage(self.ed_pygameToTkinter(self.mid_textures[v1][0])))
+                                         command=lambda v1: nm_preview_2.setImage(self.ed_pygameToTkinter(\
+                                                                                  self.mid_textures[v1][0])))
         nm_option_menu_2.grid(row=7, column=1, sticky=self.ed_sticky_vert, columnspan=2, pady=5)
 
         

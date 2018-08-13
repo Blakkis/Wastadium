@@ -28,7 +28,7 @@ from PickUps import Pickups
 #   All classes gets mixed up in the World class, so everyone has access to everything even if not explicitly stated
 
 
-class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows):
+class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, DeltaTimer):
     """
         Provide all import data for player character
 
@@ -146,13 +146,12 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows):
         self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
 
-    def hero_handle(self, surface, px, py, delta=0):
+    def hero_handle(self, surface, px, py):
         """
             Handle everything related to player
 
             surface -> Active screen surface
-            px, py -> World coordinates
-            delta -> Deltatime 
+            px, py -> World coordinates 
 
             return -> None
 
@@ -205,6 +204,8 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows):
         
         # Handle the player movement(Moving Back/Side gets slowed to 3/4 of the speed)
         keys = self.tk_key_pressed()
+        delta = self.dt_getDelta()
+
         if keys[self.tk_user['up']]:
             dir_frames = 1
             World.move_map(x * delta, y * delta, obj_col=self.char_rect)
@@ -691,7 +692,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
  
 
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 0
+        num_of_enemies = 32
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
@@ -959,7 +960,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
 
     @classmethod
-    def render_enemies(cls, surface=None, delta=0):
+    def render_enemies(cls, surface=None):
         """
             Render enemies near the player using spatial method
 
@@ -1008,7 +1009,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                             cls.w_entities_dynamic[old_index[1]][old_index[0]].discard(cls.w_enemies[_id].enemy_id)
                             cls.w_entities_dynamic[new_index[1]][new_index[0]].add(cls.w_enemies[_id].enemy_id)
                             
-                        token = cls.w_enemies[_id].handle_enemy(env_col, ent_col, surface=surface, delta=delta)
+                        token = cls.w_enemies[_id].handle_enemy(env_col, ent_col, surface=surface)
                         
                         # Check if enemy is firing and display the effects and test for hits
                         if token is not None: cls.fire_weapon(*token, surface=surface, ignore_id=_id)
@@ -1385,8 +1386,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         
         # Decrease weapon damage from the enemy health pool
         cls.w_enemies[enemy_id].enemy_health -= cls.all_weapons[weapon]['w_damage']
- 
-        cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd), 1)
+        
+        if cls.tk_randrange(0, 100) > 60:
+            cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd), 1)
 
         if cls.w_enemies[enemy_id].enemy_health <= 0:
             enemy_vector = cls.w_enemies[enemy_id].enemy_targetAngleDeg 
@@ -1575,9 +1577,9 @@ class Main(World, DeltaTimer):
 
             self.handle_pickups(self.screen, self.cell_x, self.cell_y)
             
-            self.render_enemies(self.screen, dt)
+            self.render_enemies(self.screen)
 
-            self.hero.hero_handle(self.screen, self.cell_x, self.cell_y, dt)
+            self.hero.hero_handle(self.screen, self.cell_x, self.cell_y)
                     
             self.render_effects(self.screen)
 
@@ -1589,7 +1591,7 @@ class Main(World, DeltaTimer):
             # Render walls
             self.render_map(2, self.screen)
 
-            self.handle_pickups_messages(self.screen, dt)
+            self.handle_pickups_messages(self.screen)
 
             self.uioverlay.drawOverlay(self.screen)
 

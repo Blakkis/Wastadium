@@ -1,10 +1,11 @@
 from Inventory import Inventory
+from Timer import DeltaTimer
 
 
 __all__ = 'Pickups',
 
 
-class MessagePickup(object):
+class MessagePickup(DeltaTimer):
     def __init__(self, surface, px, py, timer):
         self.mp_surf = surface
         self.mp_pos_x = px
@@ -12,14 +13,14 @@ class MessagePickup(object):
         self.mp_timer = timer
 
     
-    def render_msg(self, delta):
+    def render_msg(self):
         """
             Render vertically rising message about the pickup
 
             return -> Surface, (x, y)
 
         """
-        self.mp_pos_y -= 16 * delta
+        self.mp_pos_y -= 16 * self.dt_getDelta()
 
         if not self.mp_timer.isDone(): return 0    # End the msg display
 
@@ -199,7 +200,7 @@ class Pickups(Inventory):
 
     
     @classmethod
-    def handle_pickups_messages(cls, surface, delta):
+    def handle_pickups_messages(cls, surface):
         """
             Handle messages spawned by picking up the goodies
 
@@ -213,7 +214,7 @@ class Pickups(Inventory):
 
         if cls.pu_all_pickup_msg: 
             for _id in cls.pu_all_pickup_msg:
-                msg = cls.pu_all_world_pickups[_id][-1].render_msg(delta)
+                msg = cls.pu_all_world_pickups[_id][-1].render_msg()
                 if not msg: _del.add(_id); continue
 
                 surface.blit(*msg)  

@@ -22,7 +22,11 @@ class DeltaTimer(object):
         return dt
 
     @classmethod
-    def dt_fps(cls): return cls.__dt_clock.get_fps() 
+    def dt_fps(cls): return cls.__dt_clock.get_fps()
+
+
+    @classmethod
+    def dt_getDelta(cls): return cls.dt_deltas['delta_ms'] 
 
 
 
