@@ -368,7 +368,8 @@ class GlobalGameData(object):
             return -> Corrected offset x, y
 
         """
-
+        # Note: Use this function more often. There's too many converts 
+        
         # Turn angle + offset angle to x, y point around the origin 
         new_x = org_x - cls.tk_sin(angle) * dist 
         new_y = org_y - cls.tk_cos(angle) * dist

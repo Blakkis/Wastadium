@@ -6,6 +6,8 @@ __all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger',
            'MsHoldTrigger', 'MsCountdownTrigger', 'MsDelayTrigger')
 
 
+# NOTE: Switch the delta timer to consumer based delta timer
+#       Needs total rework on the game logic
 class DeltaTimer(object):
 
     __dt_clock = Clock()

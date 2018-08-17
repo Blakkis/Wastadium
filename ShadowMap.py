@@ -290,7 +290,7 @@ class CharacterShadows(GlobalGameData):
             for x, y in cls.cs_data['index_points'][(ix, iy)]:
                 for l in cls.cs_data['world'][y][x].itervalues():
                     dist = max(10, cls.tk_hypot(px - l.x, py - l.y)) 
-                    if dist < l.r / 2:
+                    if dist < l.radius / 2:
                         dist = min(64, dist)
                         angle = cls.tk_atan2(py - l.y, px - l.x) 
                         

@@ -15,6 +15,7 @@ from Inventory import Inventory
 from Timer import DeltaTimer
 from GadgetLoader import *
 from PickUps import Pickups
+from Tokenizers import *
 
 
 # NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
@@ -23,7 +24,6 @@ from PickUps import Pickups
 
 # NOTES:
 #   Refactor!
-#   Remember keys are global too(eg. K_UP)
 #   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
 #   All classes gets mixed up in the World class, so everyone has access to everything even if not explicitly stated
 
@@ -165,7 +165,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
 
         baseAx, baseAy = self.tk_sin(angle), self.tk_cos(angle) 
 
-        # Movement direction and speed (Magnitude)
+        # Movement direction and magnitude
         x = baseAx * self.player_data['speed']
         y = baseAy * self.player_data['speed']
 
@@ -224,7 +224,6 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
 
         # Character is moving. Fetch the next animation frame when ready and check for diagonal movements
         if dir_frames:
-
             if self.animation_delay.isReady():
                 # Update the animation index keys for the next frame
                 self.legs_frame_index = self.legs_frame_cycle.next()
@@ -340,11 +339,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     # might throw them off eachother 
     w_offset = 0, 0
 
-    # Entity containers
-    w_entity_fac = {'id_light': None,
-                    'id_enemy': None,
-                    'id_pickup': None}
-
 
     def __init__(self, x, y, low_id='', mid_id=''):
         self.texture = self.low_textures[low_id]['tex_main']
@@ -414,11 +408,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
             
         """
-        # Provide structs for Entities
-        cls.w_entity_fac['id_light'] = cls.tk_namedtuple('light', 'x y r c')
-        cls.w_entity_fac['id_enemy'] = cls.tk_namedtuple('enemy', 'x, y, id')
-        cls.w_entity_fac['id_pickup'] = cls.tk_namedtuple('pickup', 'x, y, id, v')
-
         cls.setup_gradients()
         
         # Init/load all external modules
@@ -676,10 +665,10 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             cls.w_applyStaticShadows()
             
             # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-            lights = [(160 + 16, 32  + 16, 128 + 32, (0xff, 0x0, 0xff,  0x0)),
-                      (160 + 16, 128  + 16, 128 + 32, (0xff, 0x0, 0xff,  0x0))]
+            lights = [(160 + 16, 32 + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
+                      (160 + 16, 128  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
 
-            lights = [cls.w_entity_fac['id_light'](*l) for l in lights]
+            lights = [ID_Light(*l) for l in lights]
 
             # Apply lights to the world
             cls.w_applyLights(lights)
@@ -692,17 +681,17 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
  
 
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 32
+        num_of_enemies = 2
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
-        enemies = [cls.w_entity_fac['id_enemy'](*e) for e in enemies]
+        enemies = [ID_Enemy(*e) for e in enemies]
         cls.w_spawnEnemies(enemies)
 
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
         pickups = [(64, 64, 'hot_meal', 100)]
         
-        pickups = [cls.w_entity_fac['id_pickup'](*p) for p in pickups]
+        pickups = [ID_Pickup(*p) for p in pickups]
         cls.spawn_pickups(pickups)
         
         # Create lightmap for shadowing
@@ -745,7 +734,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         Enemies.get_world_collisions(cls.w_micro_cells)
 
 
-    
     @classmethod
     def w_ambientTone(cls, ground=True, walls=False):
         """
@@ -790,21 +778,21 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         for l in list_of_lights: 
             # Spotlight surface
-            light_map = cls.tk_surface((l.r, l.r), cls.tk_srcalpha)
+            light_map = cls.tk_surface((l.radius, l.radius), cls.tk_srcalpha)
             
             # Half the size of the original spotlight to create a corona effect
-            light_map_power = cls.tk_surface((l.r >> 1, l.r >> 1), cls.tk_srcalpha)
+            light_map_power = cls.tk_surface((l.radius >> 1, l.radius >> 1), cls.tk_srcalpha)
 
             cx, cy = light_map.get_size()
             cx, cy = cx >> 1, cy >> 1   # Half the size for positioning
             
             # The spotlight is build in steps, to intensify the effect smaller the spotlight gets
-            for s in xrange(l.r >> 1, 32, -1):
-                color = list(l.c) 
+            for s in xrange(l.radius >> 1, 32, -1):
+                color = list(l.color) 
                 color[3] = light_intensity
                 cls.tk_draw_gfx_circle(light_map, cx, cy, s, color)
 
-                color = list(l.c); 
+                color = list(l.color); 
                 color[3] = light_powermap
                 # The inner corona is half the size of the original spotlight
                 cls.tk_draw_gfx_circle(light_map_power, cx >> 1, cy >> 1, s >> 1, color)
@@ -907,7 +895,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         """
         # The entire map at once gets build in memory for shadowing and then cut in to sections
-        static_shadow_map = cls.tk_surface((32 * cls.w_map_size[0], 32 * cls.w_map_size[1]), cls.tk_srcalpha)
+        static_shadow_map = cls.tk_surface((32 * cls.w_map_size[0], 
+                                            32 * cls.w_map_size[1]), cls.tk_srcalpha)
 
         # Length of the shadows
         sl = 16
@@ -918,7 +907,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 # Which layer this wall is part of
                 pos = 32 * enum2, 32 * enum1
                 if x.collision:
-                    # Build a quadrilateral stretching from each block to topleft (Possible allow direction customization?)
+                    # Build a quadrilateral stretching from each block to topleft 
+                    # (Possible allow direction customization?)
                     cls.tk_draw_polygon(static_shadow_map, cls.tk_wall_shadow_color, 
                                         ((pos[0],                 pos[1]),
                                          (pos[0],                 pos[1] + 32),
@@ -965,7 +955,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             Render enemies near the player using spatial method
 
             surface -> Active screen surface
-            delta -> Delta tick
 
             return -> None
             
@@ -1560,14 +1549,13 @@ class Main(World, DeltaTimer):
         self.dt_tick() 
         
         while 1:
-            dt = self.dt_tick(self.tk_fps)
+            self.dt_tick(self.tk_fps)
 
             self.screen.fill(self.tk_bg_color)
 
             for event in self.tk_eventDispatch():
                 self.uioverlay.Event_handleEvents(event.type)      
 
-            # Render ground
             self.render_map(0, self.screen)
             
             if not self.tk_no_shadow_layer:
@@ -1588,7 +1576,6 @@ class Main(World, DeltaTimer):
             if not self.tk_no_shadow_layer:
                 self.shadow_map.s_applyShadows(self.cell_x, self.cell_y, self.screen)
 
-            # Render walls
             self.render_map(2, self.screen)
 
             self.handle_pickups_messages(self.screen)

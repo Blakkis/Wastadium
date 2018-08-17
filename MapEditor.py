@@ -15,7 +15,7 @@ from Timer import DeltaTimer
 #   Getting Tkinter and Pygame to work together includes some small hacks
 #   Such as controlling the execution of events
 #   I've marked someone of hacks with comment '# -- Hack --'
-#   Tokenizing the data is shit. Switch to something more understandable
+#   Tokenizing the data is shit. Switch to something more understandable (namedtuple)
 
 
 class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatistics, 
@@ -331,13 +331,16 @@ class World(VisualResources):
 
         # Extra visual info for the active tool (Order doesn't matter here)
         if disp_decals: 
-            for dec in disp_decals: cls.__w_ShowDecalOrigin(surface, *dec)
+            for dec in disp_decals: 
+                cls.__w_ShowDecalOrigin(surface, *dec)
 
         elif disp_collis:
-            for col in disp_collis: cls.__w_ShowCollisionOrigin(surface, *col)
+            for col in disp_collis: 
+                cls.__w_ShowCollisionOrigin(surface, *col)
 
         elif disp_light:
-            for lig in disp_light:  cls.ed_draw_circle(surface, *lig)    
+            for lig in disp_light:  
+                cls.ed_draw_circle(surface, *lig)    
 
         # Display the chunk sectors
         if disp_chunks:
@@ -759,7 +762,8 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         cls.h_helpstrings[2] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
                                                 "Press '{}', to open '{}' selection window".format(str_key['action_1'], 'walls textures'), 
                                                 "'{}', to rotate 90\xb0 (Manual mode)".format(str_key['action_rot']),
-                                                "'{}' / '{}', shift between segments (left/right) (Manual mode)".format(str_key['action_2'], str_key['action_3'])))
+                                                "'{}' / '{}', shift between segments (left/right) (Manual mode)".format(str_key['action_2'], 
+                                                                                                                        str_key['action_3'])))
 
         # Decals
         cls.h_helpstrings[3] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
@@ -782,11 +786,13 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
 
         # Enemy
         cls.h_helpstrings[7] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
-                                                "'{}' / '{}', shift between enemy type (left/right)".format(str_key['action_2'], str_key['action_3'])))
+                                                "'{}' / '{}', shift between enemy type (left/right)".format(str_key['action_2'], 
+                                                                                                            str_key['action_3'])))
 
         # Pickup
         cls.h_helpstrings[8] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
-                                                "'{}' / '{}', shift between pickups (left/right)".format(str_key['action_2'], str_key['action_3'])))
+                                                "'{}' / '{}', shift between pickups (left/right)".format(str_key['action_2'], 
+                                                                                                         str_key['action_3'])))
 
     
     @classmethod
@@ -804,7 +810,7 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         
 
 
-class PygameFrame(TkinterResources, World):
+class PygameFrame(TkinterResources, World, DeltaTimer):
     """
         Create a custom 'Frame' which contains the SDL window and pygame related stuff
 
@@ -834,7 +840,6 @@ class PygameFrame(TkinterResources, World):
 
         self.ed_init_everything()
         self.screen = pygame.display.set_mode(self.ed_resolution, pygame.NOFRAME)
-        self.clock = pygame.time.Clock()
 
         self.initVisualsAndExtModules()     
 
@@ -883,15 +888,13 @@ class PygameFrame(TkinterResources, World):
         self.toolbar_action = -1
 
 
-    def pf_RunPygameLogic(self, frame_delta):
+    def pf_RunPygameLogic(self):
         """
             This is the basic pygame 'loop'
 
             return -> None
 
         """
-        self.clock.tick(self.ed_fps)    # Just to get fps
-        
         mouse_focus = self.ed_mouse.get_focused()
         mx, my = self.ed_mouse.get_pos()
 
@@ -971,7 +974,7 @@ class PygameFrame(TkinterResources, World):
         keys = self.ed_key.get_pressed()
         mods = self.ed_key.get_mods()    # For special operations (Bitwise)
         
-        speed = (self.ed_scroll_speed * (2 if mods & self.ed_keys['shift_l'] else 1)) * frame_delta 
+        speed = (self.ed_scroll_speed * (2 if mods & self.ed_keys['shift_l'] else 1)) * self.dt_getDelta()
         if keys[self.ed_keys['up']]:
             if self.tso_textureSelectMode: pass
             else: self.w_moveWorld(y=speed) 
@@ -1003,7 +1006,7 @@ class PygameFrame(TkinterResources, World):
         
         self.screen.fill(self.ed_bg_color)
 
-        self.es_update(0, round(self.clock.get_fps(), 1))
+        self.es_update(0, round(self.dt_fps(), 1))
 
     
 
@@ -1386,7 +1389,8 @@ class PygameFrame(TkinterResources, World):
 
             self.w_Cells_Layers[3][cy][cx].append({'tex':  rot,
                                                    'name': tex_data['name'],
-                                                   'pos': (decal_pos[0] - xoff + offs_corr[0], decal_pos[1] - yoff + offs_corr[1]),
+                                                   'pos': (decal_pos[0] - xoff + offs_corr[0], 
+                                                           decal_pos[1] - yoff + offs_corr[1]),
                                                    'w':    rot_w,
                                                    'h':    rot_h})
 
@@ -1493,6 +1497,8 @@ class PygameFrame(TkinterResources, World):
             return -> None
 
         """  
+        neighbor_nodes = ((-1, 0), (0, -1), (1, 0), (0, 1)) 
+
         visited = set()
 
         n_visit = set(); n_visit.add(index)
@@ -1510,7 +1516,7 @@ class PygameFrame(TkinterResources, World):
                 visited.add(n)
 
                 # Visit the next cells
-                for nod in ((-1, 0), (0, -1), (1, 0), (0, 1)):
+                for nod in neighbor_nodes:
                     node = n[0] + nod[0], n[1] + nod[1] 
                     if self.__pf_floodFillCellCheck(node, base_surface_str) and node not in visited:
                         n_visit.add(node)   
@@ -1551,18 +1557,18 @@ class PygameFrame(TkinterResources, World):
             return -> Bool
             
         """
-        bx, by = index
+        #bx, by = index
 
         # Since object painting starts from topleft, the right and bottom needs to be
         # check'd only for crossing the border
         for y in xrange(size[1]):
-            if by + y > self.w_Size[5] - 1: return False  
+            if index[1] + y > self.w_Size[5] - 1: return False  
             
             for x in xrange(size[0]):
-                if bx + x > self.w_Size[4] - 1: return False
+                if index[0] + x > self.w_Size[4] - 1: return False
                 
                 # Check the cells are free
-                if self.w_Cells_Single[by + y][bx + x].cell_link is not None:
+                if self.w_Cells_Single[index[1] + y][index[0] + x].cell_link is not None:
                     return False
         
         return True
@@ -1614,10 +1620,11 @@ class Main(GlobalGameDataEditor, DeltaTimer):
     def mainloop(self):
         self.dt_tick()
         while 1:
-            dt = self.dt_tick()
+            self.dt_tick()
+            
             try:
                 self.base.update()
-                self.pygameWindow.pf_RunPygameLogic(dt)
+                self.pygameWindow.pf_RunPygameLogic()
             except tk.TclError, Exception:
                 # This is just to suppress the Exceptions when the window is closed
                 break
