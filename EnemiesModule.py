@@ -46,8 +46,11 @@ class Enemies(TextureLoader, Weapons, DeltaTimer):
         self.enemy_blood_frames = kws['tex_bsplat']      # List of blood name strings
         self.enemy_dead_frames =  kws['tex_death']       # List of animations to be when dying
         self.enemy_gore_profile = kws['gore_profile']    # What gibs to spawn based on gore profile
+        
+        # Sound
         self.enemy_pain_snd = kws['snd_pain']            # Pain sound id's 
         self.enemy_death_snd = kws['snd_death']          # Death sound id's
+        self.enemy_hit_snd = kws['snd_hit']              # Getting hit
         
         # 0: Guarding/Idling; 1: Agitated (Looking to murder the player)
         self.enemy_state  = 0
@@ -607,10 +610,11 @@ class Enemies(TextureLoader, Weapons, DeltaTimer):
 
         # Line containing string data
         non_literal_eval = ('tex_legs',   'tex_torso', 'e_weapon', 'snd_death', 
-                            'tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain')
+                            'tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain',
+                            'snd_hit')
 
         # Lines which contain multiple data separated by comma
-        multi_strings = ('tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain', 'snd_death') 
+        multi_strings = ('tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain', 'snd_death', 'snd_hit') 
 
         for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             e_data = {}

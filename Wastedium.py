@@ -290,7 +290,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
             surface.blit(self.tk_rotateImage(image, radToAngle, f[1]), (x, y))
 
         # Cast constant lasersight ray if player owns the goggles
-        if self.i_playerStats['mod_laser']:
+        if self.i_playerStats['mod_laser'] and self.all_weapons[self.i_playerStats['weapon']]['w_range'] > 64:
             self.lmodule.cast_lasersight(surface, angle, 
                                          self.all_weapons[self.i_playerStats['weapon']]['w_range'],
                                          self.torso_textures[self.player_data['model']][0][-1], 
@@ -344,7 +344,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         self.texture = self.low_textures[low_id]['tex_main']
         self.pos = (x * 32 + self.tk_res_half[0] - 16,
                     y * 32 + self.tk_res_half[1] - 16)
-        self.texture_effect = self.low_textures[low_id]['tex_effect_id'] 
+        self.w_tex_effect = self.low_textures[low_id]['tex_effect_id']
+        self.w_sound_hit = self.low_textures[low_id]['tex_hit_sound_id']
         
         # These will get replaced (Currently random cell collision)
         if any((x, y)):
@@ -352,20 +353,21 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if self.collision else False
             if self.collision:
                 self.texture = self.mid_textures[mid_id][6]
-                self.texture_effect = self.mid_textures[mid_id]['tex_effect_id']         
+                self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id']
+                self.w_sound_hit = self.mid_textures[mid_id]['tex_hit_sound_id']         
         else:
             self.collision = False
 
-
-        self.w_texture_low = self.low_textures[low_id]['tex_main']
-        self.w_texture_obj = None
-        self.w_texture_mid = self.mid_textures[mid_id][6]
+        #self.w_texture_low = self.low_textures[low_id]['tex_main']
+        #self.w_texture_obj = None
+        #self.w_texture_mid = self.mid_textures[mid_id][6]
         
-        self.w_collision = False
-        self.w_occluder = False
+        #self.w_collision = False
+        #self.w_occluder = False
         
         # Sound id when walking over this cell
         self.w_sound_walk = self.low_textures[low_id]['tex_walk_sound_id']
+        
         # Corpses can stain this cell with guts
         self.w_footstep_stain_id = 0
     
@@ -666,7 +668,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             
             # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
             lights = [(160 + 16, 32 + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
-                      (160 + 16, 128  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
+                      (160 + 16, 128  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
+                      (256 + 16, 256  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
+                      (512 + 16, 512  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
 
             lights = [ID_Light(*l) for l in lights]
 
@@ -679,9 +683,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Gradient the world boundaries to darkness
         cls.w_applyEdgeGradient(frag_w, frag_h)
  
-
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 2
+        num_of_enemies = 32
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
@@ -1167,7 +1170,10 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                             # Pinpoint the location of the wall so we can examine its data
                             ex = (int(pair[0].x - cls.tk_res_half[0] - cls.cell_x) >> 5) + 1
                             ey = (int(pair[0].y - cls.tk_res_half[1] - cls.cell_y) >> 5) + 1
-                            hit_effect = cls.w_micro_cells[ey][ex].texture_effect 
+                            
+                            hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
+                            if cls.w_micro_cells[ey][ex].w_sound_hit is not None: 
+                                cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 1)
                             
                             if hit_effect is not None:
                                 # Choose random effect from the list of effect from the wall/object
@@ -1197,6 +1203,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                                     # Down
                                     l = normals[index][0] - orx 
                                     cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] + offset[1] - 2), dface)
+
                     else:
                         # Run damage check to see if projectile weapon Area-of-effect hit anything
                         print 'Aoe Damage Check: Hit Wall!'
@@ -1222,9 +1229,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                     
                     if cls.tk_boundaryCheck(gx, gy, cls.w_map_size):
                         # Blit the groundeffect to ground
-                        if cls.w_micro_cells[gy][gx].texture_effect is not None:
-                            cls.spawn_effect(cls.tk_choice(cls.w_micro_cells[gy][gx].texture_effect), (dx, dy),
-                                             angle=f_angle)   
+                        if cls.w_micro_cells[gy][gx].w_tex_effect is not None:
+                            cls.spawn_effect(cls.tk_choice(cls.w_micro_cells[gy][gx].w_tex_effect), (dx, dy),
+                                             angle=f_angle)
+
+                        if cls.w_micro_cells[gy][gx].w_sound_hit is not None:
+                            cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[gy][gx].w_sound_hit), 1)
+
                 else:
                     # Energy dispatched went out from this world
                     pass
@@ -1378,6 +1389,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         
         if cls.tk_randrange(0, 100) > 60:
             cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd), 1)
+
+        cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_hit_snd), 1)
 
         if cls.w_enemies[enemy_id].enemy_health <= 0:
             enemy_vector = cls.w_enemies[enemy_id].enemy_targetAngleDeg 

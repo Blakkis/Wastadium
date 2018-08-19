@@ -69,17 +69,22 @@ class SoundMusic(GlobalGameData):
 
 
 	@classmethod
-	def playSoundEffect(cls, _id, distanced=0):
+	def playSoundEffect(cls, _id, distanced=False):
 		"""
 			Play sound-effect by id
 
 			_id -> int id of the needed soundeffect (See sounds.cfg for the sounds by id)
-			distanced -> Play the sound effect half the current volume 
+			distanced -> Play the sound effect half the current volume
+						 (Possible calculate actual distance to the sound location and use that) 
 			
 			return -> None
 
 		"""
+		if not isinstance(_id, int): return None
+
 		channel = cls.all_sounds[_id].play()
+		if channel is None: return
+		
 		channel.set_volume(cls.sm_volumes[1] / 8.0 if distanced else cls.sm_volumes[1])
 
 
