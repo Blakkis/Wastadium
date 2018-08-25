@@ -272,13 +272,14 @@ class CharacterShadows(GlobalGameData):
 
 
     @classmethod
-    def cs_shadow_cast(cls, surface, px, py, pAngle):
+    def cs_shadow_cast(cls, surface, px, py, pAngle=None):
         """
             Cast dynamic character shadows from world lights
 
             surface -> Active screen surface
             px, py -> World coordinates
-            pAngle -> 
+            pAngle -> Not used currently (Idea was to rotate the shadow based on the angle of the casting object)
+                      Might add in the future  
 
             return -> None
 
@@ -305,6 +306,7 @@ class CharacterShadows(GlobalGameData):
                         cls.tk_draw_gfx_polygon(surface, points, (0x20, 0x20, 0x20, 255 - dist * cls.cs_data['falloff_mult']))
                         points = []
         
+        # Out of bounds from the map
         except KeyError: 
             return 
 

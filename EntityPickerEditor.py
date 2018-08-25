@@ -1,5 +1,5 @@
 import Tkinter as tk
-from ConfigsModuleEditor import GlobalGameDataEditor 
+from ConfigsModuleEditor import GlobalGameDataEditor, ed_LabelEntry
 
 from PickUps import Pickups
 from EnemiesModule import Enemies
@@ -65,16 +65,21 @@ class EntityOptionMenu(tk.OptionMenu, GlobalGameDataEditor):
 			self.__opt_limit_width(list_of_options[0])
 
 
-	def epm_set(self, value): 
+	def epm_set(self, value='', reset=False): 
 		"""
 			Set the default value on the optionmenu widget
 
-			value -> Set default to this value
+			value -> Set the default value for this widget 
 
 			return -> None
 
 		"""
-		self.variable_id_display.set(value)
+		if reset:
+			self.variable_id_display.set('-')
+			self.config(state='disabled')
+		
+		else:
+			self.variable_id_display.set(value)	
 
 
 	def __opt_limit_width(self, value):
@@ -100,8 +105,8 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 
 	entity_data = {'c_id': None,		# string id of the entity
 				   'c_content': None,	# Content of the entity 
-				   'c_value': None, # Content value
-				   'state': -1}		# State of the picker widget
+				   'c_value': None, 	# Content value
+				   'state': -1}			# State of the picker widget
 
 	# Button id with associated function (Modify the content of the menutabs)
 	# The int id are buttons indexes from the menubar
@@ -173,13 +178,14 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 
 	def __ep_entity_enemy(self, populate=False, key=-1):
 		"""
-			TBD
+			populate -> Pre-populate the entity id to remove the 'ID_ENEMY'
+			key -> 
 
 			return -> None
 
 		"""
 		if populate:
-			self.ep_entity_id.emp_configure_options(self.entity_valid_id[key].content)
+			self.ep_entity_id.emp_configure_options(sorted(self.entity_valid_id[key].content))
 		
 		else:
 			print self.entity_data['c_id'].get()
@@ -187,7 +193,10 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 
 	def __ep_entity_pickup(self, populate=False, key=-1):
 		"""
-			TBD
+			Edit the optionmenu widget contents 
+
+			populate -> Pre-populate the entity id to remove the 'ID_PICKUP'
+			key -> 
 
 			return -> None
 
@@ -196,14 +205,37 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 			self.ep_entity_id.emp_configure_options(sorted(self.entity_valid_id[key].content.keys()))
 		
 		else:
+			enable_id_state = 0
+
 			_id = self.entity_data['c_id'].get()
 			if self.entity_valid_id[key].content[_id]['p_pickup_type'] == 't_ammo':
 				c_ids = sorted(self.entity_valid_id[key].content[_id]['p_pickup_ammo'].keys())
-				c_val = self.entity_valid_id[key].content[_id]['p_pickup_content'] 
-			
-			
-			self.ep_entity_content.emp_configure_options(c_ids, default=1)
-			self.ep_entity_value.emp_configure_options(c_val, default=1)
+				enable_id_state = 1
+
+			elif self.entity_valid_id[key].content[_id]['p_pickup_type'] == 't_weapon':
+				c_ids = sorted(self.entity_valid_id[key].content[_id]['p_pickup_weapons'])
+				enable_id_state = 1	
+
+			# Content is option for some pickups
+			if enable_id_state:
+				self.ep_entity_content.emp_configure_options(c_ids, default=1)
+			else:
+				self.ep_entity_content.epm_set(reset=True)
+		
+			# Value is mandatory
+			c_val = sorted(self.entity_valid_id[key].content[_id]['p_pickup_content'])
+			self.ep_entity_value.emp_configure_options(c_val, default=1)	
+
+	
+	@classmethod
+	def ep_getvalue(cls, key):
+		"""
+			TBD
+
+			return -> None
+
+		"""
+		return cls.entity_data[key].get()
 
 
 	@classmethod
@@ -241,7 +273,7 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
 		"""
 		cls.entity_data['c_id'] = cls.ed_str()
 		cls.entity_data['c_content'] = cls.ed_str()
-		cls.entity_data['c_value'] = cls.ed_str()
+		cls.entity_data['c_value'] = cls.ed_str() 
 
 		cls.entity_data['state'] = cls.ed_int(); cls.entity_data['state'].set(-1) 
 

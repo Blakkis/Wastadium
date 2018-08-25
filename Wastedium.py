@@ -1451,11 +1451,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
             return -> None
         """ 
-        # Get the groundzero cell for the explosion
+        # Get the groundzero cell for the explosion (Enemy spatial cells 2x2)
         gx, gy = cls.get_spatial_pos(ex, ey, 6) 
         
-        if cls.tk_boundaryCheck(gx, gy, cls.w_ent_cell_size):
-            print cls.all_weapons[weapon]['w_aoe_range']
+        if not cls.tk_boundaryCheck(gx, gy, cls.w_ent_cell_size):
+            return 
+        
+        print cls.get_ent_col(gx, gy, get_ids=1)
 
 
     

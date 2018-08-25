@@ -401,7 +401,9 @@ class ed_LabelEntry(tk.Entry):
         label.config(padx=5, pady=5)
         
         tk.Entry.__init__(self, base, textvariable=variable, width=16)
-        self.grid(row=row, column=column + 1, sticky=tk.W, padx=5)
+        self.grid(row=row, column=column + 1, sticky=tk.W+tk.E+tk.N+tk.S, 
+                  pady=3, padx=5 if 'padx' not in kw else kw['padx'])
+        
         self.config(justify=tk.CENTER, relief=tk.GROOVE)
         self.bind("<FocusIn>", self._resetEntry)
         self.bind("<FocusOut>", self._checkEntry)
@@ -414,6 +416,7 @@ class ed_LabelEntry(tk.Entry):
         """
             TBD
         """
+        print 'IN!'
         if eq_check:
             pass
         else:
@@ -427,6 +430,7 @@ class ed_LabelEntry(tk.Entry):
             return -> None
 
         """
+        print 'OUT!'
         if self.get():
             pass
         else:

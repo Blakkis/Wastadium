@@ -93,7 +93,7 @@ class GlobalGameData(object):
     # Option 
     tk_no_effect_layer = 0      # Partially used. Explain where/why
     tk_no_shadow_layer = 0
-    tk_shadow_quality = 1       # 1: High quality (Experimental and Slow) Actually the entire shadow casting is shit(Needs massive overhaul)
+    tk_shadow_quality = 0       # 1: High quality (Experimental and Slow) Actually the entire shadow casting is shit(Needs massive overhaul)
     tk_no_footsteps = 0
     
     # Lightmap 

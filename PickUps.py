@@ -70,15 +70,16 @@ class Pickups(Inventory):
         
         for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
-            tex_data = {'p_tex': None,
-                        'p_pickup_snd': None,
-                        'p_pickup_msg': '',
-                        'p_pickup_type': '',
+            tex_data = {'p_tex':            None,
+                        'p_pickup_snd':     None,
+                        'p_pickup_msg':     None,
+                        'p_pickup_type':    None,
                         'p_pickup_content': None}
             
             for line in cls.tk_readFile(cfg, 'r'):
 
-                if not editor_only and line[0] == 'p_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
+                if not editor_only and line[0] == 'p_tex': tex_data[line[0]] = \
+                cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
 
                 elif line[0] == 'p_pickup_snd': tex_data[line[0]] = int(line[1])
 
@@ -86,13 +87,14 @@ class Pickups(Inventory):
 
                 elif line[0] == 'p_pickup_type': tex_data[line[0]] = line[1]
 
-                elif line[0] == 'p_pickup_content': tex_data[line[0]] = tuple([int(con) for con in line[1].split(',') if con])
+                elif line[0] == 'p_pickup_content': tex_data[line[0]] = tuple([int(v) for v in line[1].split(',') if v])  
 
             cls.pu_pickups[name] = cls.parse_pickup_content(tex_data, editor_only)
 
         
         if editor_only:
             return cls.pu_pickups
+        
         else:
             # Setup font for msg rendering
             cls.pu_data['font'] = cls.tk_font(kw['font'], 14)

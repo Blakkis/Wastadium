@@ -10,6 +10,8 @@ from MapParser import MapParser, WorldLoadException
 from StatisticsEditor import EditorStatistics
 from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
+from Tokenizers import *
+
 
 # NOTE
 #   Getting Tkinter and Pygame to work together includes some small hacks
@@ -47,7 +49,7 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
         cls.tso_createTextureSets()
 
 
-class World(VisualResources):
+class World(VisualResources, MapParser):
     """
         Everything related to world
 
@@ -66,12 +68,11 @@ class World(VisualResources):
                         5: [],  # Lights        * Dict
                         6: [],  # Wire endpoints        
                         7: [],  # Enemies       * Dict
-                        8: []}  # Pickups
+                        8: []}  # Pickups       * Dict
 
     # Order in which the layers are rendered
     w_Blit_Order = [0, 3, 1, 2, 5, 4]
-
-    # - Continues x,y pairs - 
+  
     # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
     w_Size = 0, 0, 0, 0, 0, 0
 
@@ -140,6 +141,18 @@ class World(VisualResources):
     cell_link = property(_get_link, _set_link)
 
 
+    
+    @classmethod
+    def w_getIterator(cls, data=-1):
+        """
+            return generator over cells data for saving
+
+            return -> None
+
+        """
+        pass 
+
+
 
     @classmethod
     def w_moveWorld(cls, x=0, y=0, reset=False):
@@ -157,6 +170,7 @@ class World(VisualResources):
 
         cls.es_update(1, '({}, {})'.format(-round(cls.w_Pos[0], 1), -round(cls.w_Pos[1], 1)), 0) 
 
+
     
     @classmethod
     def w_toggleLayers(cls, layer_id):
@@ -171,7 +185,7 @@ class World(VisualResources):
 
     
     @classmethod
-    def w_createMap(cls, width, height, floor_id, wall_set_id):
+    def w_createMap(cls, width, height, floor_id='', wall_set_id=''):
         """
             Worldbuild
 
@@ -189,7 +203,7 @@ class World(VisualResources):
 
         # Reset entity containers (Ignore the first 3)
         for reset_enum in sorted(cls.w_Cells_Layers.keys())[3:]:
-            _type = dict if reset_enum in (4, 5, 7) else list
+            _type = dict if reset_enum in (4, 5, 7, 8) else list
             cls.w_Cells_Layers[reset_enum] = [[_type() for x in xrange(0, width,  cls.ed_chunk_size)] 
                                                        for y in xrange(0, height, cls.ed_chunk_size)]
 
@@ -314,11 +328,12 @@ class World(VisualResources):
                     # Lights
                     elif layer == 5:
                         for light in cls.w_Cells_Layers[layer][y][x].itervalues():
-                            posx, posy = cls.w_homePosition(*light['pos'])
+                            posx, posy = cls.w_homePosition(light.x, light.y)
                             posx, posy = int(posx), int(posy)
                             if active_tool == layer:
-                                disp_light.add((light['color'], (posx, posy), light['radius'], 1))
-                            cls.ed_draw_circle(surface, light['color'], (posx, posy), 8)        
+                                disp_light.add((light.color, (posx, posy), light.radius, 1))
+                            #cls.ed_draw_circle(surface, light['color'], (posx, posy), 8) 
+                            surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16))       
 
                     
                     # Rest are world surfaces
@@ -446,7 +461,7 @@ class TkinterResources(VisualResources):
         cls.es_initVariables()  # Statistic stats
 
         # Map                              # Debug values
-        cls.bf_mapname     = cls.ed_str(); cls.bf_mapname.set('Hello') 
+        cls.bf_mapname     = cls.ed_str(); cls.bf_mapname.set('None') 
         cls.bf_mapwidth    = cls.ed_int(); cls.bf_mapwidth.set(64) 
         cls.bf_mapheight   = cls.ed_int(); cls.bf_mapheight.set(64) 
         cls.bf_mapbase_tex = cls.ed_str()
@@ -481,7 +496,8 @@ class TkinterResources(VisualResources):
         # Note: The code is structured in the same way as the gui is displaying it
         nm_frame = ed_TopLevel('Map Details', w_takefocus=True)
 
-        nm_frame.protocol('WM_DELETE_WINDOW', lambda: (self.bf_disablePygameEvents.set(False), nm_frame.destroy()))
+        nm_frame.protocol('WM_DELETE_WINDOW', lambda: (self.bf_disablePygameEvents.set(False), 
+                                                       nm_frame.destroy(), self.bf_mapname.set('None')))
         
         nm_geo_frame = ed_LabelFrame(nm_frame, 'Map Basics', False)
         nm_geo_frame.grid(row=0, column=0, sticky=self.ed_sticky_full)
@@ -602,7 +618,7 @@ class BaseFrame(tk.Tk, TkinterResources):
         self.menuMap = tk.Menu(self.menuBar, tearoff=0)
         self.menuMap.add_command(label='New',        command=self.bf_newMap)
         self.menuMap.add_command(label='Open...',    command=lambda: None)
-        self.menuMap.add_command(label='Save',       command=lambda: None)
+        self.menuMap.add_command(label='Save',       command=lambda: self.mp_save(World.w_getIterator))
         self.menuMap.add_command(label='Save as...', command=lambda: None)
         self.menuMap.add_separator()
         self.menuMap.add_command(label='Exit',       command=lambda: self.destroy())
@@ -962,7 +978,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                         elif event.button == 4: self.l_changeSize(32) 
 
                     # Store which button was pressed
-                    mouse_button_id = event.button 
+                    mouse_button_id = event.button
 
 
         else:
@@ -1306,6 +1322,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                     tex = self.tso_tex_modes[tex_data['set']][tex_data['name']][seg]
                     rot = self.ed_transform.rotate(tex, r * 90)     
                     self.w_Cells_Layers[2][cy][cx][-1].blit(rot, seg_index) 
+            
             # Manual
             else:
                 self.w_Cells_Single[index[1]][index[0]].cell_midTex = (tex_data['name'], 
@@ -1434,36 +1451,38 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         cx, cy = index[0] >> 3, index[1] >> 3
 
         if self.w_Cells_Single[index[1]][index[0]].cell_midTex[0] is None:
-            pcolor = 0xff, 0xff, 0x0 
+            pcolor = 0xff, 0xff, 0x0    # Valid placement 
+            
+            # Light radius indicator
             self.ed_draw_circle(surface, (0xff, 0xff, 0x0), (int(x + 16), int(y + 16)), self.l_current_size, 1)
-            #self.ed_draw_rect(surface, self.l_current_color[0], (x + 8, y + 8, 16, 16))
 
+            # Smaller light to give better look at the color
             self.ed_draw_circle(surface, self.l_current_color[0], (int(x + 16), int(y + 16)), 8)
 
-            pos = (index[0] * 32 + 16, index[1] * 32 + 16) 
+            # Works as position and key
+            pos = (index[0] * 32 + 16, index[1] * 32 + 16)  
 
             if action_key == 1:
                 no_update = 1 if pos in self.w_Cells_Layers[5][cy][cx] else 0  
-                
-                token = {'pos':    pos,
-                         'color':  self.l_current_color[0],
-                         'radius': self.l_current_size}
 
-                self.w_Cells_Layers[5][cy][cx][pos] = token
+                self.w_Cells_Layers[5][cy][cx][pos] = ID_Light(x=pos[0], y=pos[1], 
+                                                               color=self.l_current_color[0],
+                                                               radius=self.l_current_size)
 
                 return 1 - no_update
 
             elif action_key == 2 and pos in self.w_Cells_Layers[5][cy][cx]:
                 del self.w_Cells_Layers[5][cy][cx][pos] 
-
                 return -1
 
         else:
-            pcolor = 0xff, 0x0, 0x80 
+            pcolor = 0xff, 0x0, 0x80    # Invalid placement 
         
         self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
 
 
+
+    @EditorStatistics.es_update_decorator(_id=7)
     def __pf_applyPickups(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             TBD
@@ -1471,10 +1490,32 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             return -> None
 
         """
-        pass
+        cx, cy = index[0] >> 3, index[1] >> 3
 
+        if self.w_Cells_Single[index[1]][index[0]].cell_midTex[0] is None:
+            pcolor = 0xff, 0xff, 0x0
+
+            pos = (index[0] * 32 + 16, index[1] * 32 + 16) 
+
+            if action_key == 1:
+                print repr(EntityPicker.ep_getvalue('c_id'))
+                no_update = 1 if pos in self.w_Cells_Layers[8][cy][cx] else 0
+
+                self.w_Cells_Layers[8][cy][cx][pos] = ID_Pickup(x=pos[0], y=pos[1], id=10, value=10)
+
+                return 1 - no_update
+
+            elif action_key == 2 and pos in self.w_Cells_Layers[8][cy][cx]:
+                del self.w_Cells_Layers[8][cy][cx][pos] 
+                return -1
+
+        else:
+            pcolor = 0xff, 0x0, 0x80
+
+        self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
 
     
+    @EditorStatistics.es_update_decorator(_id=6)
     def __pf_applyEnemies(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             TBD
@@ -1482,7 +1523,28 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             return -> None
 
         """
-        pass
+        cx, cy = index[0] >> 3, index[1] >> 3
+
+        if self.w_Cells_Single[index[1]][index[0]].cell_midTex[0] is None:
+            pcolor = 0xff, 0xff, 0x0 
+
+            pos = (index[0] * 32 + 16, index[1] * 32 + 16) 
+
+            if action_key == 1:
+                no_update = 1 if pos in self.w_Cells_Layers[7][cy][cx] else 0
+
+                self.w_Cells_Layers[7][cy][cx][pos] = ID_Enemy(x=pos[0], y=pos[1], id=10)
+
+                return 1 - no_update
+
+            elif action_key == 2 and pos in self.w_Cells_Layers[7][cy][cx]:
+                del self.w_Cells_Layers[7][cy][cx][pos] 
+                return -1
+
+        else:
+            pcolor = 0xff, 0x0, 0x80    
+
+        self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
     
 
     
