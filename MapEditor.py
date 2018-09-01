@@ -54,6 +54,8 @@ class World(VisualResources, MapParser):
         Everything related to world
 
     """
+    # NOTE: Create a struct for holding the layer and associated display bool together!
+
     w_Pos = [0, 0]
     
     # 2d array containing all single cells(32 x 32)
@@ -71,21 +73,22 @@ class World(VisualResources, MapParser):
                         8: []}  # Pickups       * Dict
 
     # Order in which the layers are rendered
-    w_Blit_Order = [0, 3, 1, 2, 5, 4]
+    w_Blit_Order = [0, 3, 1, 2, 5, 7, 8, 4]
   
     # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
     w_Size = 0, 0, 0, 0, 0, 0
 
     # Which layers to display (Bool)
-    w_Display_Layer =  [1,  # Ground 
-                        1,  # Objects
-                        1,  # Walls
-                        1,  # Decals
-                        1,  # Wires
-                        1,  # Enemies
-                        1,  # Pickups
-                        1,  # Lights
-                        0]  # Chunks
+    w_Display_Layer = {0: 1,   
+                       1: 1,    
+                       2: 1,    
+                       3: 1,
+                       4: 1,
+                       5: 1,
+                       6: 1,
+                       7: 1,
+                       8: 1,
+                       -1: 0}   # Sectors edges
 
 
     def __init__(self, x, y, low_id):
@@ -330,10 +333,26 @@ class World(VisualResources, MapParser):
                         for light in cls.w_Cells_Layers[layer][y][x].itervalues():
                             posx, posy = cls.w_homePosition(light.x, light.y)
                             posx, posy = int(posx), int(posy)
+                            # Render light radius when the light tool is active
                             if active_tool == layer:
                                 disp_light.add((light.color, (posx, posy), light.radius, 1))
-                            #cls.ed_draw_circle(surface, light['color'], (posx, posy), 8) 
+
+                            # Render icon for the light position
                             surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16))       
+
+                    # Enemies
+                    elif layer == 7:
+                        pass
+
+                    # Pickups
+                    elif layer == 8:
+                        for pickup in cls.w_Cells_Layers[layer][y][x].itervalues():
+                            posx, posy = cls.w_homePosition(pickup.x, pickup.y)
+                            posx, posy = int(posx), int(posy)
+                            if active_tool == layer:
+                                pass
+
+                            surface.blit(cls.ElementTextures[41], (posx - 16, posy - 16))   
 
                     
                     # Rest are world surfaces
@@ -341,7 +360,7 @@ class World(VisualResources, MapParser):
                         px, py, tex = cls.w_Cells_Layers[layer][y][x]
                         px, py = cls.w_homePosition(px, py) 
                         surface.blit(tex, (px, py))
-                        if cls.w_Display_Layer[8]:
+                        if cls.w_Display_Layer[-1]:
                             disp_chunks.add((px, py, cls.ed_chunk_size_raw, cls.ed_chunk_size_raw))  
 
         # Extra visual info for the active tool (Order doesn't matter here)
@@ -869,7 +888,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.bf_disp_objs.trace( 'w', lambda *args: self.w_toggleLayers(1))
         self.bf_disp_wall.trace( 'w', lambda *args: self.w_toggleLayers(2))
         self.bf_disp_dec.trace(  'w', lambda *args: self.w_toggleLayers(3))
-        self.bf_disp_chunk.trace('w', lambda *args: self.w_toggleLayers(8))
+        self.bf_disp_chunk.trace('w', lambda *args: self.w_toggleLayers(-1))
 
         
         # More traces to extra display/settings
@@ -1350,7 +1369,13 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     @EditorStatistics.es_update_decorator(_id=3)
     def __pf_applyDecals(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
-            TBD
+            Paint decals
+
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id ->  Id used to what category is this part of
 
             return -> None
 
@@ -1423,6 +1448,12 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         """
             Edit world collisions
 
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id ->  Id used to what category is this part of
+
             return -> None
 
         """
@@ -1443,7 +1474,13 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     @EditorStatistics.es_update_decorator(_id=5)
     def __pf_applyLights(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
-            Apply lights to the world
+            Apply lights
+
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id ->  Id used to what category is this part of
 
             return -> None
 
@@ -1465,7 +1502,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             if action_key == 1:
                 no_update = 1 if pos in self.w_Cells_Layers[5][cy][cx] else 0  
 
-                self.w_Cells_Layers[5][cy][cx][pos] = ID_Light(x=pos[0], y=pos[1], 
+                self.w_Cells_Layers[5][cy][cx][pos] = Id_Light(x=pos[0], y=pos[1], 
                                                                color=self.l_current_color[0],
                                                                radius=self.l_current_size)
 
@@ -1485,7 +1522,13 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     @EditorStatistics.es_update_decorator(_id=7)
     def __pf_applyPickups(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
-            TBD
+            Apply pickups 
+
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id ->  Id used to what category is this part of
 
             return -> None
 
@@ -1498,10 +1541,13 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             pos = (index[0] * 32 + 16, index[1] * 32 + 16) 
 
             if action_key == 1:
-                print repr(EntityPicker.ep_getvalue('c_id'))
+                token = EntityPicker.ep_getPacket()
+                if token is None: return 0
+
                 no_update = 1 if pos in self.w_Cells_Layers[8][cy][cx] else 0
 
-                self.w_Cells_Layers[8][cy][cx][pos] = ID_Pickup(x=pos[0], y=pos[1], id=10, value=10)
+                self.w_Cells_Layers[8][cy][cx][pos] = Id_Pickup(x=pos[0], y=pos[1], 
+                                                                id=token.id, content=token.content, value=token.value)
 
                 return 1 - no_update
 
@@ -1518,7 +1564,13 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     @EditorStatistics.es_update_decorator(_id=6)
     def __pf_applyEnemies(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
-            TBD
+            Place enemies
+
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id ->  Id used to what category is this part of
 
             return -> None
 
@@ -1531,9 +1583,12 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             pos = (index[0] * 32 + 16, index[1] * 32 + 16) 
 
             if action_key == 1:
+                token = EntityPicker.ep_getPacket()
+                if token is None: return 0
+
                 no_update = 1 if pos in self.w_Cells_Layers[7][cy][cx] else 0
 
-                self.w_Cells_Layers[7][cy][cx][pos] = ID_Enemy(x=pos[0], y=pos[1], id=10)
+                self.w_Cells_Layers[7][cy][cx][pos] = Id_Enemy(x=pos[0], y=pos[1], id=token.id)
 
                 return 1 - no_update
 

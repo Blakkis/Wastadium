@@ -414,9 +414,11 @@ class ed_LabelEntry(tk.Entry):
     
     def _resetEntry(self, event, eq_check=False):
         """
-            TBD
+            Reset entry to empty
+
+            return -> None
+            
         """
-        print 'IN!'
         if eq_check:
             pass
         else:
@@ -430,7 +432,6 @@ class ed_LabelEntry(tk.Entry):
             return -> None
 
         """
-        print 'OUT!'
         if self.get():
             pass
         else:

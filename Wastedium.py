@@ -672,7 +672,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                       (256 + 16, 256  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
                       (512 + 16, 512  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
 
-            lights = [ID_Light(*l) for l in lights]
+            lights = [Id_Light(*l) for l in lights]
 
             # Apply lights to the world
             cls.w_applyLights(lights)
@@ -688,13 +688,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
-        enemies = [ID_Enemy(*e) for e in enemies]
+        enemies = [Id_Enemy(*e) for e in enemies]
         cls.w_spawnEnemies(enemies)
 
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        pickups = [(64, 64, 'hot_meal', 100)]
+        pickups = [(64, 64, 'hot_meal', 'test', 100)]
         
-        pickups = [ID_Pickup(*p) for p in pickups]
+        pickups = [Id_Pickup(*p) for p in pickups]
         cls.spawn_pickups(pickups)
         
         # Create lightmap for shadowing

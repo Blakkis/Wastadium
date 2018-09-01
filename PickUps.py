@@ -29,7 +29,6 @@ class MessagePickup(DeltaTimer):
 
 
 class Pickups(Inventory):
-
     # All usable pickups
     pu_pickups = {}
 
@@ -43,10 +42,6 @@ class Pickups(Inventory):
     pu_data = {'id': 0,
                'font': None}
 
-    # 
-    #pu_valid_types = set(['t_ammo', 't_armor', 't_cash', 't_health', 't_weapon'])
-    
-    
     def __init__(self):
         pass
 
@@ -140,22 +135,23 @@ class Pickups(Inventory):
 
         """
         for pick in list_of_pickups:
-            x, y, item_id, item_value = pick 
+            x, y = pick.x, pick.y 
+            
             x = ((cls.tk_res_half[0] - 16) + x)
             y = ((cls.tk_res_half[1] - 16) + y)
 
-            msg = cls.pu_pickups[item_id]['p_pickup_msg']
-            msg = cls.tk_renderText(cls.pu_data['font'], msg.format(item_value), 1, (0xff, 0x0, 0x0), shadow=1)
+            msg = cls.pu_pickups[pick.id]['p_pickup_msg']
+            msg = cls.tk_renderText(cls.pu_data['font'], msg.format(pick.value), 1, (0xff, 0x0, 0x0), shadow=1)
+
+            w = cls.tk_res_half[0] - msg.get_width() / 2 
+            h = cls.tk_res_half[1] - msg.get_height() / 2 - 32 
             
-            cls.pu_all_world_pickups[cls.pu_data['id']] = x, y, item_id, item_value, \
-                                                          MessagePickup(msg, cls.tk_res_half[0] - msg.get_width()  / 2, 
-                                                                             cls.tk_res_half[1] - msg.get_height() / 2 - 32,
-                                                                        cls.tk_trigger_down(3, 1)) 
+            cls.pu_all_world_pickups[cls.pu_data['id']] = x, y, pick, \
+                                                          MessagePickup(msg, w, h, cls.tk_trigger_down(3, 1)) 
 
             cls.pu_data['id'] += 1
 
 
-    
     @classmethod
     def clear_pickups(cls):
         """
@@ -169,7 +165,6 @@ class Pickups(Inventory):
         cls.pu_data['id'] = 0
     
 
-    
     @classmethod
     def handle_pickups(cls, surface, px, py):
         """
@@ -185,22 +180,22 @@ class Pickups(Inventory):
         for _id in c_keys:
             if _id in cls.pu_all_pickup_msg: continue
 
-            x, y, item_id, item_value = cls.pu_all_world_pickups[_id][:-1] 
-            tex = cls.pu_pickups[item_id]['p_tex']
+            x, y, pick = cls.pu_all_world_pickups[_id][:-1] 
+            tex = cls.pu_pickups[pick.id]['p_tex']
 
             # Get the distance between player and the item for grabbing
             px_1, py_1 = x - cls.tk_res_half[0] + 32, y - cls.tk_res_half[1] + 32
             px_2, py_2 = -(px - 16), -(py - 16)
 
             if cls.tk_hypot(px_1 - px_2, py_1 - py_2) < 48:
-                if cls.pu_pickups[item_id]['p_pickup_snd'] is not None:
-                    cls.playSoundEffect(cls.pu_pickups[item_id]['p_pickup_snd'])
+                if cls.pu_pickups[pick.id]['p_pickup_snd'] is not None:
+                    cls.playSoundEffect(cls.pu_pickups[pick.id]['p_pickup_snd'])
 
                 cls.pu_all_pickup_msg.add(_id)    
 
             surface.blit(tex, (x + px, y + py))
+ 
 
-    
     @classmethod
     def handle_pickups_messages(cls, surface):
         """
