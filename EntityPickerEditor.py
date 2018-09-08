@@ -5,6 +5,7 @@ from PickUps import Pickups
 from EnemiesModule import Enemies
 from Tokenizers import Id_Entity_Values
 
+
 __all__ = ('EntityPicker',)
 
 
@@ -191,7 +192,9 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
             self.ep_entity_id.emp_configure_options(sorted(self.entity_valid_id[key].content))
         
         else:
-            print self.entity_data['c_id'].get()
+            # This is just to pass the apply check
+            c_val = 1,
+            self.ep_entity_value.emp_configure_options(c_val, default=1) 
 
 
     def __ep_entity_pickup(self, populate=False, key=-1):

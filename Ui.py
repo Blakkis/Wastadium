@@ -61,6 +61,7 @@ class uiOverlay(uiElements, EventManager, Inventory):
         # Health 
         self.healthBar = self.tk_surface((96, 28), self.tk_srcalpha)
         self.heartBeatCycle = self.tk_cycle(self.__heartBeatGenerator(self.i_playerStats['health'][0]))
+        self.heartBeatTable = [self.tk_sin(self.tk_radians(x)) for x in xrange(0, 360, 10)]
 
         self.healthBarCriticalCycle = self.tk_cycle(self.tk_chain(xrange(0, 128, 4), xrange(128, 0, -4)))
         self.healthBarCritical = self.tk_surface((96, 28), self.tk_srcalpha)
@@ -87,8 +88,8 @@ class uiOverlay(uiElements, EventManager, Inventory):
 
         """
         # Full 360 heartbeat
-        for beat in xrange(0, 360, 10):
-            yield self.tk_sin(self.tk_radians(beat))
+        for beat in self.heartBeatTable:
+            yield beat
 
         yield None  # Do an action between the beat and at start of rest    
         

@@ -10,7 +10,6 @@ TODO:
   - Add options menu to in-game options
   - Build map save/load class
   - Create new enemies
-  - Create pickups editor  - Being Worked on
   - Editor settings menu if needed?
   - Create the JaaBabe background images
   - Add the explosion function to calculate who got caught in the ground zero
@@ -21,4 +20,3 @@ TODO:
   - Re-Create some effects to 8 frames  - Being Worked on 
   - Fix shadow peeking from the corners
   - Extend the death texture of the enemies to allow wider footstep catching
-  - Edit Effects class, class variables name binding issue - Being worked on

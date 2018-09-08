@@ -17,6 +17,8 @@ from GadgetLoader import *
 from PickUps import Pickups
 from Tokenizers import *
 
+from pygame import FULLSCREEN
+
 
 # NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
 # ITS EFFECT LAYER THUS DISABLED
@@ -1255,7 +1257,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             # And keep the trails on the bullet path
             sx, sy = int(efx - baseAx * r_dist), int(efy - baseAy * r_dist)
 
-            # Display bullet trails
+            # Display bullet trails (Displayed on 1 frame only)
             cls.tk_draw_gfx_line(surface, sx, sy, 
                                 int(sx + baseAx * 48), 
                                 int(sy + baseAy * 48), 

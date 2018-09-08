@@ -512,6 +512,8 @@ class GlobalGameDataEditor(object):
     ed_path = path
     ed_cos = math.cos
     ed_sin = math.sin
+    ed_hypot = math.hypot
+    ed_sqrt = math.sqrt
     ed_radians = math.radians
     ed_floor = math.floor
     ed_pi = math.pi
