@@ -669,7 +669,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             cls.w_applyStaticShadows()
             
             # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-            lights = [(160 + 16, 32 + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
+            lights = [(160 + 16, 32   + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
                       (160 + 16, 128  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
                       (256 + 16, 256  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
                       (512 + 16, 512  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]

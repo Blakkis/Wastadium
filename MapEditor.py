@@ -50,10 +50,6 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
 
 
 class World(VisualResources, MapParser):
-    """
-        Everything related to world
-
-    """
     # NOTE: Create a struct for holding the layer and associated display bool together!
 
     w_Pos = [0, 0]
@@ -76,7 +72,7 @@ class World(VisualResources, MapParser):
     w_Cells_Layers = {key: [] for key in w_enum.itervalues()}
 
     # Order in which the layers are rendered
-    w_Blit_Order = [0, 3, 1, 2, 5, 7, 8, 4]
+    w_Blit_Order = frozenset((0x0, 0x3, 0x1, 0x2, 0x5, 0x7, 0x8, 0x4))
   
     # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
     w_Size = 0, 0, 0, 0, 0, 0
@@ -88,9 +84,9 @@ class World(VisualResources, MapParser):
     def __init__(self, x, y, low_id):
         self.cell_pos = 32 * x, 32 * y
         # Texture, Orientation(0-3), *(wall segment id)
-        self.cell_lowTex =    low_id, 0
-        self._cell_midTex =   None,   0, 0
-        self._cell_objTex =   None,   0
+        self.cell_lowTex =  low_id, 0
+        self._cell_midTex = None,   0, 0
+        self._cell_objTex = None,   0
         
         # Objects might occupy multiple cells. Keep a link between the cells
         self._cell_link = None
@@ -285,16 +281,11 @@ class World(VisualResources, MapParser):
         """
         dx, dy = -int(cls.w_Pos[0]) >> 8, -int(cls.w_Pos[1]) >> 8    # Spatial pos
 
-        # These Needs to be draw last on stack (Extra info when the tool is active)
-        disp_chunks = set()     # Display each world chunk outline
-        disp_decals = set()     # Display each decal origin point
-        disp_collis = set()     # Display collision markers
-        disp_light  = set()     # Display outer radius for the lights
-
         disp_extra = {-1: set(),     # Chunk sectors
                        cls.E_ID_DECAL:     set(),
                        cls.E_ID_COLLISION: set(),
-                       cls.E_ID_LIGHT:     set()}
+                       cls.E_ID_LIGHT:     set(),
+                       cls.E_ID_ENEMY:     set()}
         
         #cls.w_render_decals(surface, active_tool, 3)
 
@@ -324,6 +315,7 @@ class World(VisualResources, MapParser):
                         if cls.w_Display_Layer[-1][0]:
                             disp_extra[-1].add((int(px), int(py), cls.ed_chunk_size_raw, cls.ed_chunk_size_raw))  
 
+        
         # Render extra display info about the current active entities (Based on the current active tool)
         for k, v in disp_extra.iteritems():
             if k == -1: continue
@@ -341,7 +333,10 @@ class World(VisualResources, MapParser):
             elif k == cls.E_ID_LIGHT:
                 # Display light radius
                 for i in v:
-                    cls.ed_draw_circle(surface, *i)      
+                    cls.ed_draw_aacircle(surface, *i) 
+
+            elif k == cls.E_ID_ENEMY:
+                pass     
 
         # Display the chunk sectors
         if disp_extra[-1]:
@@ -364,12 +359,12 @@ class World(VisualResources, MapParser):
         extra_info = set()
 
         for decals in cls.w_Cells_Layers[cls.E_ID_DECAL][y][x]:
-            posx, posy = cls.w_homePosition(*decals['pos']) 
-            surface.blit(decals['tex'], (posx, posy))
+            posx, posy = cls.w_homePosition(*decals.pos) 
+            surface.blit(decals.tex, (posx, posy))
             # Add origin markers for the decals to be more visible
             if tool_id == cls.E_ID_DECAL:
-                origin = (int(posx) + decals['w'] / 2, 
-                          int(posy) + decals['h'] / 2)
+                origin = (int(posx) + decals.w / 2, 
+                          int(posy) + decals.h / 2)
                 extra_info.add(origin) 
 
         return tool_id, extra_info
@@ -411,7 +406,8 @@ class World(VisualResources, MapParser):
             posx, posy = int(posx), int(posy)
             # Render light radius when the light tool is active
             if tool_id == cls.E_ID_LIGHT:
-                extra_info.add((light.color, (posx, posy), light.radius, 1))
+                #extra_info.add((light.color, (posx, posy), light.radius, 1))
+                extra_info.add((posx, posy, light.radius, light.color))
 
             surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16)) 
 
@@ -426,15 +422,17 @@ class World(VisualResources, MapParser):
             return -> None
 
         """
+        extra_info = set()
+
         for enemy in cls.w_Cells_Layers[cls.E_ID_ENEMY][y][x].itervalues():
             posx, posy = cls.w_homePosition(enemy.x, enemy.y)
             posx, posy = int(posx), int(posy)
             if tool_id == cls.E_ID_ENEMY:
-                pass
+                extra_info.add((posx, posy, enemy.id))    
 
             surface.blit(cls.ElementTextures[42], (posx - 16, posy - 16)) 
 
-        return None
+        return tool_id, extra_info
 
 
     @classmethod
@@ -906,7 +904,6 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         
         # Lights
         cls.h_helpstrings[5] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
-                                                "Use 'ScrollWheel' to change size of the light(min: 64, max: 256)",
                                                 "Use the Tools menu to change the color of the light"))
 
         # Wire
@@ -1089,9 +1086,9 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                         elif event.button == 4: self.tso_updateScrollLevel(-1)
 
                     # Light size
-                    elif self.toolbar_action == 5:
-                        if event.button == 5:   self.l_changeSize(-32)
-                        elif event.button == 4: self.l_changeSize(32) 
+                    #elif self.toolbar_action == 5:
+                    #    if event.button == 5:   self.l_changeSize(-32)
+                    #    elif event.button == 4: self.l_changeSize(32) 
 
                     # Store which button was pressed
                     mouse_button_id = event.button
@@ -1418,7 +1415,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                     for nx in xrange(index[0] - 2, index[0] + 3):
                         if not -1 < nx < self.w_Size[4]: continue
                         
-                        # Discard cells outside the map borders
                         row.append((nx, ny, self.w_Cells_Single[ny][nx].cell_midTex[1:]))
                     
                     _5x5_cells.append(row)
@@ -1526,14 +1522,14 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Some offset correction is needed for every other power of 2 textures
             offs_corr = ((fade_pos[0] - pos[0] + ofsx_1) + xoff, 
                          (fade_pos[1] - pos[1] + ofsy_1) + yoff)
+            
+            pos = int(decal_pos[0] - xoff + offs_corr[0]), int(decal_pos[1] - yoff + offs_corr[1]) 
 
-            token = {'tex': rot,
-                     'name': tex_data['name'],
-                     'pos': (int(decal_pos[0] - xoff + offs_corr[0]), int(decal_pos[1] - yoff + offs_corr[1])),
-                     'w': rot_w,
-                     'h': rot_h}
-
-            self.w_Cells_Layers[self.E_ID_DECAL][cy][cx].append(token)
+            self.w_Cells_Layers[self.E_ID_DECAL][cy][cx].append(Id_Decal(tex=rot, 
+                                                                         name=tex_data['name'], 
+                                                                         pos=pos, 
+                                                                         w=rot_w, 
+                                                                         h=rot_h))
 
             return 1
 
@@ -1542,9 +1538,9 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             del_id = None
             
             for enum, d in enumerate(self.w_Cells_Layers[self.E_ID_DECAL][cy][cx]):
-                rx, ry = d['w'] / 2, d['h'] / 2
-                dist = self.ed_hypot(mx - (d['pos'][0] + rx), my - (d['pos'][1] + ry))
-                if dist < self.ed_sqrt(rx * ry):
+                rx, ry = d.w / 2, d.h / 2
+                dist = self.ed_hypot(mx - (d.pos[0] + rx), my - (d.pos[1] + ry))
+                if dist < self.ed_hypot(rx, ry):
                     del_id = enum
                     break    
 
@@ -1612,8 +1608,8 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx] else 0  
 
                 self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx][pos] = Id_Light(x=pos[0], y=pos[1], 
-                                                               color=self.l_current_color[0],
-                                                               radius=self.l_current_size)
+                                                                             color=self.l_current_color[0],
+                                                                             radius=self.l_current_size)
 
                 return 1 - no_update
 
@@ -1656,7 +1652,9 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx] else 0
 
                 self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx][pos] = Id_Pickup(x=pos[0], y=pos[1], 
-                                                                id=token.id, content=token.content, value=token.value)
+                                                                               id=token.id, 
+                                                                               content=token.content, 
+                                                                               value=token.value)
 
                 return 1 - no_update
 

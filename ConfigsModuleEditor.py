@@ -1,4 +1,5 @@
 import pygame
+import pygame.gfxdraw
 import Tkinter as tk
 import ttk
 import tkMessageBox
@@ -499,6 +500,7 @@ class GlobalGameDataEditor(object):
     ed_draw_line = pygame.draw.line
     ed_draw_circle = pygame.draw.circle
     ed_draw_aaline = pygame.draw.aaline
+    ed_draw_aacircle = pygame.gfxdraw.aacircle
     ed_rect = pygame.Rect
     ed_srcalpha = pygame.SRCALPHA
     ed_font = pygame.font.Font

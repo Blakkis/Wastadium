@@ -14,7 +14,7 @@ class Lights(tk.Frame, GlobalGameDataEditor):
     l_hex_color = None      # -- || --
     
     l_current_color = None  # Stored output of the askcolor()
-    l_current_size  = 32    # Min: 32 Max: 128
+    l_current_size  = 80    # Min: 32 Max: 128
 
     # Threshold between black & white foreground text on the button
     __l_threshold = 64
