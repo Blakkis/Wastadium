@@ -48,6 +48,8 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
 
         cls.tso_createTextureSets()
 
+        cls.editor_font = cls.ed_font(cls.ElementFonts[1], 12)
+
 
 class World(VisualResources, MapParser):
     # NOTE: Create a struct for holding the layer and associated display bool together!
@@ -285,7 +287,8 @@ class World(VisualResources, MapParser):
                        cls.E_ID_DECAL:     set(),
                        cls.E_ID_COLLISION: set(),
                        cls.E_ID_LIGHT:     set(),
-                       cls.E_ID_ENEMY:     set()}
+                       cls.E_ID_ENEMY:     set(),
+                       cls.E_ID_PICKUP:    set()}
         
         #cls.w_render_decals(surface, active_tool, 3)
 
@@ -336,7 +339,13 @@ class World(VisualResources, MapParser):
                     cls.ed_draw_aacircle(surface, *i) 
 
             elif k == cls.E_ID_ENEMY:
-                pass     
+                # Display id of the enemy
+                for i in v:
+                    surface.blit(*i)  
+
+            elif k == cls.E_ID_PICKUP:
+                for i in v:
+                    surface.blit(*i) 
 
         # Display the chunk sectors
         if disp_extra[-1]:
@@ -406,7 +415,6 @@ class World(VisualResources, MapParser):
             posx, posy = int(posx), int(posy)
             # Render light radius when the light tool is active
             if tool_id == cls.E_ID_LIGHT:
-                #extra_info.add((light.color, (posx, posy), light.radius, 1))
                 extra_info.add((posx, posy, light.radius, light.color))
 
             surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16)) 
@@ -428,7 +436,9 @@ class World(VisualResources, MapParser):
             posx, posy = cls.w_homePosition(enemy.x, enemy.y)
             posx, posy = int(posx), int(posy)
             if tool_id == cls.E_ID_ENEMY:
-                extra_info.add((posx, posy, enemy.id))    
+                extra_info.add((enemy.debug_name,
+                                (posx -  enemy.debug_name.get_width() / 2, 
+                                 posy - (enemy.debug_name.get_height() + 16))))    
 
             surface.blit(cls.ElementTextures[42], (posx - 16, posy - 16)) 
 
@@ -443,19 +453,23 @@ class World(VisualResources, MapParser):
             return -> None
 
         """
+        extra_info = set()
+
         for pickup in cls.w_Cells_Layers[cls.E_ID_PICKUP][y][x].itervalues():
             posx, posy = cls.w_homePosition(pickup.x, pickup.y)
             posx, posy = int(posx), int(posy)
             if tool_id == cls.E_ID_PICKUP:
-                pass
+                extra_info.add((pickup.debug_name,
+                                (posx -  pickup.debug_name.get_width() / 2, 
+                                 posy - (pickup.debug_name.get_height() + 16)))) 
 
             surface.blit(cls.ElementTextures[41], (posx - 16, posy - 16))
 
-        return None
+        return tool_id, extra_info
 
 
     @classmethod
-    def w_setupWorldStructure(cls):
+    def w_setupWorldState(cls):
         """
             TBD
 
@@ -866,11 +880,10 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
 
         """
         # NOTE: Move these to the buttons themself
-
-        font = cls.ed_font(cls.ElementFonts[1], 12)
+        helpstrFont = cls.ed_font(cls.ElementFonts[1], 12)
 
         # Small function for converting text strings to surface strings
-        h_createStrings = lambda strs: [font.render(s, 1, (0xff, 0xff, 0xff)) for s in strs] 
+        h_createStrings = lambda strs: [helpstrFont.render(s, 1, (0xff, 0xff, 0xff)) for s in strs] 
 
         # Convert user keys to string representation
         str_key = {name : cls.ed_key.name(rep) for name, rep in cls.ed_keys.iteritems()}
@@ -992,7 +1005,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.bf_autowalls.trace(          'w', lambda *args: self.extra_options['auto_wall'].bit_toggle())
         self.bf_disablePygameEvents.trace('w', lambda *args: self.extra_options['event_stop'].bit_toggle())
 
-        self.w_setupWorldStructure()
+        self.w_setupWorldState()
 
         # Clear all events queued when the SDL window has no focus to clear 
         self.clear_event_stack = 1      # -- Hack --
@@ -1426,14 +1439,14 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
                     self.pf_chunkClearArea(2, (cx, cy), (seg_index[0], seg_index[1], 32, 32))
 
-                    r, seg = p[2]   
+                    _rot, seg = p[2]   
 
                     self.w_Cells_Single[p[1]][p[0]].cell_midTex = (tex_data['name'], 
-                                                                   r, 
+                                                                   _rot, 
                                                                    seg)
 
                     tex = self.tso_tex_modes[tex_data['set']][tex_data['name']][seg]
-                    rot = self.ed_transform.rotate(tex, r * 90)     
+                    rot = self.ed_transform.rotate(tex, _rot * 90)     
                     self.w_Cells_Layers[self.E_ID_WALL][cy][cx][-1].blit(rot, seg_index) 
             
             # Manual
@@ -1651,10 +1664,14 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx] else 0
 
+                id_name = self.editor_font.render("{} : {}".format(token.content if token.content else token.id, 
+                                                                   token.value), True, (0xff, 0xff, 0xff))
+
                 self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx][pos] = Id_Pickup(x=pos[0], y=pos[1], 
                                                                                id=token.id, 
                                                                                content=token.content, 
-                                                                               value=token.value)
+                                                                               value=token.value,
+                                                                               debug_name=id_name)
 
                 return 1 - no_update
 
@@ -1695,7 +1712,12 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_ENEMY][cy][cx] else 0
 
-                self.w_Cells_Layers[self.E_ID_ENEMY][cy][cx][pos] = Id_Enemy(x=pos[0], y=pos[1], id=token.id)
+                id_name = self.editor_font.render(token.id, True, (0xff, 0xff, 0xff))
+
+                self.w_Cells_Layers[self.E_ID_ENEMY][cy][cx][pos] = Id_Enemy(x=pos[0], 
+                                                                             y=pos[1], 
+                                                                             id=token.id,
+                                                                             debug_name=id_name)
 
                 return 1 - no_update
 
@@ -1842,9 +1864,16 @@ class Main(GlobalGameDataEditor, DeltaTimer):
     
 
     def mainloop(self):
+        """
+            Editor loop
+
+            return -> None
+
+        """
         self.dt_tick()
+        
         while 1:
-            self.dt_tick()
+            self.dt_tick(256)
             
             try:
                 self.base.update()

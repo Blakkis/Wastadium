@@ -686,7 +686,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_applyEdgeGradient(frag_w, frag_h)
  
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 32
+        num_of_enemies = 0
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 

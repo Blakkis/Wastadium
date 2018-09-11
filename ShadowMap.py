@@ -2,6 +2,7 @@ from ConfigsModule import GlobalGameData
 from PreProcessor import PreProcessor
 
 
+
 # NOTE: This can be optimized further
 # Start the shadowing from the mid to borders in clockwise and create shadow frustrum to test most outer blocks 
 # inside the frustrum to cancel them from casting shadows
@@ -96,13 +97,17 @@ class Shadows(GlobalGameData):
                     d = non_axis_dir[non_axis][:] 
                 
                 d.append(min(y_range_value, x_range_value))
-                d.append(self.tk_hypot(x_mid_value - e2, y_mid_value - e1)) 
+                
+                # Fixes peeking by lowering the extra angle per wall
+                # as the distance increases
+                dist = self.tk_hypot(x_mid_value - e2, y_mid_value - e1)
+                d.append(max(0, 0.08 - 0.015 * dist))
+                
                 row.append(tuple(d))
             
             self.s_shadow_dir_map.append(tuple(row))
         
         self.s_shadow_dir_map = tuple(self.s_shadow_dir_map)
-        
         
     
     def s_fetchDelta(self, ofsx, ofsy):
@@ -207,12 +212,12 @@ def s_applyShadows(self, x, y, surface=None):
                 
                 ep1 = sox + pc[0], soy + pc[1]      # Endpoint 1
                 # Calculate the angle to endpoints of the cubes
-                angle_1 = self.tk_atan2(ori_x - (ep1[0] + x), ori_y - (ep1[1] + y)) + self.s_extra_angle
+                angle_1 = self.tk_atan2(ori_x - (ep1[0] + x), ori_y - (ep1[1] + y)) + pc[5]
                 end_p_1 = (ep1[0] - self.tk_sin(angle_1) * length,
                            ep1[1] - self.tk_cos(angle_1) * length)
                 
                 ep2 = sox + pc[2], soy + pc[3]      # Endpoint 2
-                angle_2 = self.tk_atan2(ori_x - (ep2[0] + x), ori_y - (ep2[1] + y)) - self.s_extra_angle
+                angle_2 = self.tk_atan2(ori_x - (ep2[0] + x), ori_y - (ep2[1] + y)) - pc[5]
                 end_p_2 = (ep2[0] - self.tk_sin(angle_2) * length,
                            ep2[1] - self.tk_cos(angle_2) * length)
                 
