@@ -18,6 +18,7 @@ from Tokenizers import *
 #   Such as controlling the execution of events
 #   I've marked someone of hacks with comment '# -- Hack --'
 #   Tokenizing the data is shit. Switch to something more understandable (namedtuple)
+#   Make the code more understandable
 
 
 class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatistics, 
@@ -751,7 +752,8 @@ class BaseFrame(tk.Tk, TkinterResources):
         
         self.menuBar.add_cascade(label='Map', menu=self.menuMap)
 
-        self.menuBar.add_command(label='Settings', command=lambda: None)
+        self.menuBar.add_command(label='Settings', command=lambda: None, state='disabled')
+
 
         
 # ------

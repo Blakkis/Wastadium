@@ -341,6 +341,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     # might throw them off eachother 
     w_offset = 0, 0
 
+    w_test = {0: []}
+
 
     def __init__(self, x, y, low_id='', mid_id=''):
         self.texture = self.low_textures[low_id]['tex_main']
@@ -490,7 +492,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         # Normalize the speed when going diagonally
         keys = cls.tk_key_pressed()
-        if (keys[cls.tk_user['up']] or keys[cls.tk_user['down']]) and \
+        if (keys[cls.tk_user['up']]    or keys[cls.tk_user['down']]) and \
            (keys[cls.tk_user['right']] or keys[cls.tk_user['left']]):
             # Or perhaps don't..?
             x /= cls.tk_sqrt(2)
@@ -686,7 +688,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_applyEdgeGradient(frag_w, frag_h)
  
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 0
+        num_of_enemies = 32
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
@@ -1006,7 +1008,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                         token = cls.w_enemies[_id].handle_enemy(env_col, ent_col, surface=surface)
                         
                         # Check if enemy is firing and display the effects and test for hits
-                        if token is not None: cls.fire_weapon(*token, surface=surface, ignore_id=_id)
+                        #if token is not None: cls.fire_weapon(*token, surface=surface, ignore_id=_id)
 
                         if cls.w_enemies[_id].enemy_delete: 
                             e_killed.append((_id, x, y, cls.w_enemies[_id].enemy_id))     
@@ -1208,7 +1210,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
                     else:
                         # Run damage check to see if projectile weapon Area-of-effect hit anything
-                        print 'Aoe Damage Check: Hit Wall!'
+                        #print 'Aoe Damage Check: Hit Wall!'
                         cls.calc_aoe_taken(*test_rect.center, weapon=weapon)
                 
                 else:
@@ -1221,7 +1223,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         else:
             # Went through the loop without any wall/enemy hits. 
             if cls.all_weapons[weapon]['w_type'] == 2:
-                print 'Aoe Damage Check: Hit Nothing'
+                #print 'Aoe Damage Check: Hit Nothing'
                 cls.calc_aoe_taken(*test_rect.center, weapon=weapon)
 
             else:
@@ -1283,11 +1285,12 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             x, y -> origin
             bx, by -> angle x, y
             dist -> max ray distance
-
             ret_first_dist -> if 'True' -> return distance to the first rect within the ray
+            
             return -> 'set' of all collisions found on the rays path
 
         """
+        # Gather all collisions cells within ray's path
         env_collisions = set()
         for step in xrange(0, dist + 1, 32):
             dx = int(x - bx * step)
@@ -1309,7 +1312,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 test_rect.center = dx, dy
                 
                 if test_rect.collidelist(l) != -1:
-                    return cls.tk_hypot(dx - x, dy - y) - 4   
+                    return max(0, cls.tk_hypot(dx - x, dy - y) - 4)  
 
             return dist
 
@@ -1358,7 +1361,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
     
     @classmethod
-    def calc_dmg_taken(cls, sx, sy, tx, ty, weapon=None, enemy_id=None):
+    def calc_dmg_taken(cls, sx, sy, tx, ty, weapon=None, enemy_id=None, ignore_after=False):
         """
             Calculate weapon damage against enemies or player
 
@@ -1366,6 +1369,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             tx, ty -> Target (x, y) 
             weapon -> Weapon id 
             enemy_id -> Id of the enemy who took the hit
+            ignore_after -> If this function is called by aoe damage checker, 
+                            ignore the aoe damage check to stop recursion
+
 
             return -> None
              
@@ -1437,10 +1443,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                                      sy - cls.tk_cos(drop_vector) * drop_dist), 
                                      angle=enemy_vector)
 
-        # Add Aoe damage top of the normal hit damage if projectile weapon
-        if cls.all_weapons[weapon]['w_type'] == 2: 
-            print 'Aoe Damage Check: Hit Enemy'
-            cls.calc_aoe_taken(sx, sy, weapon)
+        if not ignore_after:
+            # Add Aoe damage top of the normal hit damage if projectile weapon
+            if cls.all_weapons[weapon]['w_type'] == 2: 
+                #print 'Aoe Damage Check: Hit Enemy'
+                cls.calc_aoe_taken(sx, sy, weapon)
 
     
     @classmethod
@@ -1454,12 +1461,41 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
         """ 
         # Get the groundzero cell for the explosion (Enemy spatial cells 2x2)
-        gx, gy = cls.get_spatial_pos(ex, ey, 6) 
+        gx, gy = cls.get_spatial_pos(ex, ey, 6)     # Get the spatial index for entities  
         
         if not cls.tk_boundaryCheck(gx, gy, cls.w_ent_cell_size):
-            return 
-        
-        print cls.get_ent_col(gx, gy, get_ids=1)
+            return
+
+        wx, wy = cls.get_spatial_pos(ex, ey, 0)                  # Get the World position for the effect 
+        max_dist = cls.all_weapons[weapon]['w_aoe_range'] / 2    # Area-of-effect range
+
+        # Check if any enemy got hit by aoe damage
+        for check in cls.get_ent_col(gx, gy, get_ids=1):
+            x, y = check[0].center
+            dist = cls.tk_hypot(ex - x, ey - y)
+            angle = cls.tk_atan2(ey - y, ex - x)
+            
+            #if dist < max_dist:
+                #cls.get_ray_env_collisions(ex, ey, x, y, max_dist, ret_first_dist=1) 
+                #cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)    
+
+
+    @classmethod
+    def get_ray_env_collisions_poor(cls, x, y, angle, dist):
+        """
+            Shoot an ray in steps to check if the step(index) is within collision cell
+            (Poor quality but gives explosive a bigger chance to hit just right around the corner)
+
+            return -> None
+
+        """
+        sx = cls.tk_cos(angle)
+        sy = cls.tk_sin(angle)
+
+        for step in xrange(0, dist, 8):
+            rx = int(x - sx * step)
+            ry = int(y - sy * step)
+            
 
 
     
