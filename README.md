@@ -12,7 +12,6 @@ TODO:
   - Create new enemies
   - Editor settings menu if needed?
   - Create the JaaBabe background images
-  - Add the explosion function to calculate who got caught in the ground zero
   - Add buy/sell functionality to shop
   - Work on the Wastadium launcher
   - Enable enemies to shoot the player

@@ -1318,6 +1318,35 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         return env_collisions
 
+    
+    @classmethod
+    def get_ray_env_collisions_poor(cls, x, y, angle, dist):
+        """
+            Shoot an ray in steps to check if the step(index) is within collision cell
+            (Poor quality but gives explosive a bigger chance to hit just right around the corner)
+
+            x, y -> World coordinates
+            angle -> Angle between explosive and enemy
+            dist -> Distance to enemy (int)
+
+            return -> None
+
+        """
+        sx = cls.tk_cos(angle)
+        sy = cls.tk_sin(angle)
+
+        for step in xrange(4, dist, 8):
+            rx = int(x - sx * step) >> 5
+            ry = int(y - sy * step) >> 5
+
+            if not (-1 < rx < cls.w_map_size[0]) or \
+               not (-1 < ry < cls.w_map_size[1]): return 1
+
+            if cls.w_micro_cells[ry][rx].collision:
+                return 1
+
+        return 0
+
 
     @classmethod
     def get_ray_ent_collisions(cls, x, y, bx, by, dist, ignore_id):
@@ -1475,27 +1504,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             dist = cls.tk_hypot(ex - x, ey - y)
             angle = cls.tk_atan2(ey - y, ex - x)
             
+            if dist < max_dist:
+                if not cls.get_ray_env_collisions_poor(wx, wy, angle, int(dist)):
+                    cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)   
+
             #if dist < max_dist:
                 #cls.get_ray_env_collisions(ex, ey, x, y, max_dist, ret_first_dist=1) 
                 #cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)    
-
-
-    @classmethod
-    def get_ray_env_collisions_poor(cls, x, y, angle, dist):
-        """
-            Shoot an ray in steps to check if the step(index) is within collision cell
-            (Poor quality but gives explosive a bigger chance to hit just right around the corner)
-
-            return -> None
-
-        """
-        sx = cls.tk_cos(angle)
-        sy = cls.tk_sin(angle)
-
-        for step in xrange(0, dist, 8):
-            rx = int(x - sx * step)
-            ry = int(y - sy * step)
-            
 
 
     
