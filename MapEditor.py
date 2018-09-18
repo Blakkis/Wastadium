@@ -1016,14 +1016,14 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.pf_old_index = [0, 0]
 
         # Functions for texture/object applying 
-        self.build_functions = {0: self.__pf_applyGround,
-                                1: self.__pf_applyObject,
-                                2: self.__pf_applyWallset,
-                                3: self.__pf_applyDecals,
-                                4: self.__pf_editCollisions,
-                                5: self.__pf_applyLights,
-                                7: self.__pf_applyEnemies,
-                                8: self.__pf_applyPickups}
+        self.build_functions = {self.E_ID_GROUND:    self.__pf_applyGround,
+                                self.E_ID_OBJECT:    self.__pf_applyObject,
+                                self.E_ID_WALL:      self.__pf_applyWallset,
+                                self.E_ID_DECAL:     self.__pf_applyDecals,
+                                self.E_ID_COLLISION: self.__pf_editCollisions,
+                                self.E_ID_LIGHT:     self.__pf_applyLights,
+                                self.E_ID_ENEMY:     self.__pf_applyEnemies,
+                                self.E_ID_PICKUP:    self.__pf_applyPickups}
 
         # Reserved F keys for the toolbar (If you need more than F12, extend via using bitwise mods + f keys?)
         self.tso_reserved_keys = set([pygame.K_F1 + f for f in xrange(ed_Button.ed_getButtonStates(True))])
