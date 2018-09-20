@@ -42,7 +42,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
         self.char_rect.move_ip(self.char_center)
 
         self.player_data = {'speed':  180,            # Speed
-                            'legs':   'legs_prison',  # Legs str id
+                            'legs':   'legs_black',  # Legs str id
                             'torso':  'hero',         # Torso str id 
                             'model':  ''}             # Torso + weapon
         
@@ -688,7 +688,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_applyEdgeGradient(frag_w, frag_h)
  
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 32
+        num_of_enemies = 0
         enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
                     cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
 
@@ -1008,7 +1008,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                         token = cls.w_enemies[_id].handle_enemy(env_col, ent_col, surface=surface)
                         
                         # Check if enemy is firing and display the effects and test for hits
-                        #if token is not None: cls.fire_weapon(*token, surface=surface, ignore_id=_id)
+                        if token is not None: cls.fire_weapon(*token, surface=surface, ignore_id=_id)
 
                         if cls.w_enemies[_id].enemy_delete: 
                             e_killed.append((_id, x, y, cls.w_enemies[_id].enemy_id))     
@@ -1600,7 +1600,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.Menus.all_menus[0].run(self.screen)
+        self.Menus.all_menus['m_intro'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
@@ -1614,7 +1614,9 @@ class Main(World, DeltaTimer):
             return -> None
             
         """
-        self.dt_tick() 
+        self.dt_tick()
+
+        paused = False
         
         while 1:
             self.dt_tick(self.tk_fps)
@@ -1622,7 +1624,10 @@ class Main(World, DeltaTimer):
             self.screen.fill(self.tk_bg_color)
 
             for event in self.tk_eventDispatch():
-                self.uioverlay.Event_handleEvents(event.type)      
+                self.uioverlay.Event_handleEvents(event.type) 
+
+                if event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']: paused = True     
 
             self.render_map(0, self.screen)
             
@@ -1651,6 +1656,9 @@ class Main(World, DeltaTimer):
             self.uioverlay.drawOverlay(self.screen)
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
+
+            # Paused is just before flip to get the latest surface
+            if paused: paused = self.Menus.all_menus['m_options'].run(self.screen, snapshot=1)
 
             self.tk_display.flip()
 

@@ -257,7 +257,7 @@ class WeaponCasings(GlobalGameData):
 
 
     @classmethod
-    def render_casings(cls, surface, delta=0):
+    def render_casings(cls, surface):
         """
             Render all casings
             surface -> Surface which to draw on

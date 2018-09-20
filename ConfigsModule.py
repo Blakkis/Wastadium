@@ -84,6 +84,7 @@ class GlobalGameData(object):
     tk_wall_shadow_color = 0x14, 0x14, 0x14, 0x40
     tk_blend_rgba_mult = pygame.BLEND_RGBA_MULT
     tk_blend_rgba_add = pygame.BLEND_RGBA_ADD
+    tk_blend_rgba_sub = pygame.BLEND_RGBA_MAX
     tk_ambient_color_tone = 0xcc, 0xcc, 0xcc
 
     # Weapon and casing related
@@ -304,7 +305,6 @@ class GlobalGameData(object):
             pass 
 
         return surface   
-
 
 
     @classmethod

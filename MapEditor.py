@@ -1097,8 +1097,11 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 if event.type == pygame.MOUSEBUTTONUP:
                     # Texture window scrolling
                     if self.tso_textureSelectMode: 
-                        if event.button == 5:   self.tso_updateScrollLevel(1)
-                        elif event.button == 4: self.tso_updateScrollLevel(-1)
+                        if event.button == self.ed_scroll_wheeldown:
+                            self.tso_updateScrollLevel(1);
+                        
+                        elif event.button == self.ed_scroll_wheelup: 
+                            self.tso_updateScrollLevel(-1)
 
                     # Light size
                     #elif self.toolbar_action == 5:

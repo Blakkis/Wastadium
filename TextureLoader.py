@@ -1,8 +1,9 @@
 from ConfigsModule import GlobalGameData
-#from MessSolver import MessSolver
+from SoundModule import SoundMusic
 
-# Note!
+# NOTE:
 #   Change this module name to better describe it since it does more than texture loading
+#   Redesign this shit
 
 
 __all__ = ('TextureLoader', 'EffectsLoader', 'FootSteps', 'uiElements')
@@ -142,6 +143,7 @@ class TextureLoader(GlobalGameData):
                 
                 if not enum:
                     cls.legs_textures[name] = {}
+                
                 else:
                     cls.torso_textures[name] = {}
                 
@@ -183,7 +185,7 @@ class TextureLoader(GlobalGameData):
         
 
 
-class EffectsLoader(GlobalGameData):
+class EffectsLoader(SoundMusic, GlobalGameData):
     """
         Handles all effects of the game, spawning, rendering
 
@@ -199,9 +201,7 @@ class EffectsLoader(GlobalGameData):
     
     # All map effects that are currently being display on the map
     map_effects = {}
-    
-    # Relative position for effects(Updated when player moves)
-    effect_rel_pos = 0, 0
+
 
     effect_data = {'id': 0,             # Provide unique id to each effect
                    'offset': (0, 0)}    # Keep effects fixed in-place
@@ -222,7 +222,7 @@ class EffectsLoader(GlobalGameData):
         self.effect_angle = angle
         
         # Get and store halfsize of the texture for positioning it properly
-        w, h = self.all_effects[name][0][4].get_size()
+        w, h = self.all_effects[name][0][5].get_size()
         self.effect_size_h = w >> 1, h >> 1
         
         # Offset to center the effect around new origin  
@@ -269,14 +269,13 @@ class EffectsLoader(GlobalGameData):
                 # Relative fix: When firing and moving decals needs to be fixed in-place
                 rel = rel[0] - cls.effect_data['offset'][0], rel[1] - cls.effect_data['offset'][1]
                 
-                # The first 3 elements in the array are data related to the effect, rest are frames
-                # So start counting from 3
-                img = cls.all_effects[name][rot][index + 4]
+                img = cls.all_effects[name][rot][index + 5]
                 
                 # The effect has an angle, so it needs to be rotated
-                if angle: img = cls.tk_rotateImage(cls.all_effects[name][0][index + 4], angle, img.get_rect(), fast_rot=1)       
+                if angle: img = cls.tk_rotateImage(cls.all_effects[name][0][index + 5], angle, img.get_rect(), fast_rot=1)       
 
-                x, y = pos[0] - center[0] - rel[0], pos[1] - center[1] - rel[1]  
+                x = pos[0] - center[0] - rel[0]
+                y = pos[1] - center[1] - rel[1]  
 
                 # Does the effect contain end_effect? If it does, it needs to blit the end_decal to the ground layer
                 if cls.all_effects[name][rot][0] is not None:
@@ -319,14 +318,17 @@ class EffectsLoader(GlobalGameData):
             return -> None
 
         """
+        if cls.all_effects[effect][0][4] is not None:
+            cls.playSoundEffect(cls.tk_choice(cls.all_effects[effect][0][4]), 1)
+
         if loop:
             # Create an infinite effect(These are mostly called by the map to decorate the battlefield)
-            cls.map_effects[cls.effect_data['id']] = EffectsLoader(cls.tk_cycle(xrange(0, len(cls.all_effects[effect][rot]) - 4, frame_skip)),
+            cls.map_effects[cls.effect_data['id']] = EffectsLoader(cls.tk_cycle(xrange(0, len(cls.all_effects[effect][rot]) - 5, frame_skip)),
                                                  effect, cls.effect_data['id'], pos, cls.effect_data['offset'][:], 
                                                  rot, angle) 
         else:
             # These are finite effects called by the entities
-            cls.map_effects[cls.effect_data['id']] = EffectsLoader(iter(xrange(0, len(cls.all_effects[effect][rot]) - 4, frame_skip)),
+            cls.map_effects[cls.effect_data['id']] = EffectsLoader(iter(xrange(0, len(cls.all_effects[effect][rot]) - 5, frame_skip)),
                                                  effect, cls.effect_data['id'], pos, cls.effect_data['offset'][:], 
                                                  rot, angle)
         # Provide each effect unique id 
@@ -351,8 +353,8 @@ class EffectsLoader(GlobalGameData):
         for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
             
-            # The 4 first data stored in the effect array is: end_decal, offset, playbackrate, leave stain
-            cls.all_effects[name] = {0: [None, (0, 0), 0, 0]}
+            # The 4 first data stored in the effect array is: end_decal, offset, playbackrate, leave stain, snd_effect(s)
+            cls.all_effects[name] = {0: [None, (0, 0), 0, 0, None]}
             
             sheet = None        # Effect spritesheet
             
@@ -396,6 +398,9 @@ class EffectsLoader(GlobalGameData):
 
                         elif line[0] == 'stain':
                             cls.all_effects[name][0][3] = cls.tk_literal_eval(line[1])
+
+                        elif line[0] == 'snd_effect':
+                            cls.all_effects[name][0][4] = tuple([int(snd) for snd in line[1].split(',') if snd])
                         
                         elif line[0] == 'frame':
                             # Rest are frames
@@ -404,6 +409,7 @@ class EffectsLoader(GlobalGameData):
                                                                              frame_size[1] * y,
                                                                              frame_size[0],
                                                                              frame_size[1]))
+
             # If the effect has all_side 'True', rotate the effect to face 4 sides
             # Effects that has this variable are mostly effects spawned when firing a wall or object 
             # and the effect needs to be spawned to face the firing direction
@@ -416,11 +422,11 @@ class EffectsLoader(GlobalGameData):
 
                 for key, rot in enumerate((90, 0, -90, 180)):
                     cls.all_effects[name][key] = []
-                    cls.all_effects[name][key].extend(original_frames[:4])
+                    cls.all_effects[name][key].extend(original_frames[:5])
                     if cls.all_effects[name][key][0] is not None:
                         # End_effect needs to be rotated aswell
                         cls.all_effects[name][key][0] = cls.tk_rotateImage(cls.all_effects[name][key][0], rot, rot_rect)      
-                    for frame in original_frames[4:]:
+                    for frame in original_frames[5:]:
                         rot_image = cls.tk_rotateImage(frame, rot, rot_rect)
                         cls.all_effects[name][key].append(rot_image)
 

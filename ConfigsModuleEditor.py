@@ -545,6 +545,10 @@ class GlobalGameDataEditor(object):
                'action_rot': pygame.K_r}
     
     ed_scroll_speed = 768
+    
+    # Enums
+    ed_scroll_wheelup   = 0x4
+    ed_scroll_wheeldown = 0x5
 
 
     @classmethod

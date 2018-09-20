@@ -64,7 +64,8 @@ class LaserSightModule(GlobalGameData):
         # NOTE: Need to change these to use the head base tracking (with these coming from rest of the frames)
 
         # Generate lasersight base offsets
-        # Keep the lasersight front of the left eye when the head bobbles
+        # Keep the lasersight front of the left eye when the head bobbles 
+        # (Hmmm... bad idea for custom animations)
         self.l_offsets = {1: [2,  -16],     
                           2: [1,  -15],
                           3: [0,  -9 ],

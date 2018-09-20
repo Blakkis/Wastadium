@@ -24,7 +24,7 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
         cls.menu_scale = cls.tk_resolution_scale    # Possible add some correction here for the menu items?
 
         # Provide a same background for all the menus
-        cls.menu_background = cls.__ph_createBackground()
+        cls.menu_background = cls.__ph_createBackground(1)
 
         # Provide constant timer for menu effects (uEvent 24 (index 0))
         cls.menu_timer = [cls.tk_uEvent, cls.tk_counter(0)]
@@ -59,22 +59,30 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
 
 
     @classmethod
-    def __ph_createBackground(cls):
+    def __ph_createBackground(cls, op=1):
         """
             Create a common background for all the menus
             Change this function to create you're own or 
             add support for loading custom image as background
 
+            op -> 1: Stripe background
+                  2: Faded background
+
             return -> Surface
 
         """
-        background = cls.tk_surface(cls.tk_resolution)
+        if op & 1: 
+            background = cls.tk_surface(cls.tk_resolution)
 
-        # Access the pixel arrays of the surface for effects
-        background_array = cls.tk_surfarray.pixels3d(background)
+            # Access the pixel arrays of the surface for effects
+            background_array = cls.tk_surfarray.pixels3d(background)
 
-        # Added every second horizontal line as dark red for fitting the theme of the game 
-        background_array[::3, ::2] = 0x40, 0x0, 0x0
+            # Added every second horizontal line as dark red for fitting the theme of the game 
+            background_array[::3, ::2] = 0x40, 0x0, 0x0
+
+        if op & 2:
+            background = cls.tk_surface(cls.tk_resolution, cls.tk_srcalpha)
+            background.fill((0x40, 0x0, 0x0, 0x80))
 
         return background
 
@@ -119,7 +127,7 @@ class MenuIntro(PagesHelp, EventManager):
             surface.fill(self.tk_bg_color)
             
             for event in self.tk_eventDispatch():
-                if event.type == self.tk_event_keydown:
+                if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
                         self.intro_exit = 0
 
@@ -157,7 +165,8 @@ class MenuIntro(PagesHelp, EventManager):
             return -> Surface with the gear image on it
 
         """
-        # Obviously it would easier just to create the image and load that
+        # Obviously it would easier just to create the image and load that 
+        # (But good training)
 
         #clamp = lambda v: max(-16 * self.menu_scale, min(16 * self.menu_scale, v))
         theta = 0
@@ -174,7 +183,7 @@ class MenuIntro(PagesHelp, EventManager):
         old_y = [gear_surf.get_height() / 2 + int(self.tk_sin(theta) * (128 * scale)), 
                  gear_surf.get_height() / 2 + int(self.tk_sin(theta) * (32  * scale))]
 
-        # Generate the outer ring
+        # Generate the outer ring (Do few passes) (Original idea was animated gear draw)
         for r in xrange(360 * 8):
             theta += .005
             teeth += .05
@@ -464,6 +473,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
             return -> None
         """
+        pass
 
     
     def ms_render_weapons(self, surface, **kw):
@@ -507,8 +517,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             return -> None
 
         """
-        px = 16
-        py = kw['py']
+        px, py = 16, kw['py']
 
         # Render and carry x the length of the surface width
         render_carry = lambda src, dest, px, py: dest.blit(src, (px, py)).width
@@ -793,7 +802,7 @@ class MenuOptions(PagesHelp):
             value.rs_updateRect(x, y + row)
             row += value.rs_getSize()[1] + 16         
 
-        self.mo_display_func = 0    # Which menu to display (-1: Root, 0: Volume Control, 1: Controls)
+        self.mo_display_func = -1    # Which menu to display (-1: Root, 0: Volume Control, 1: Controls)
         self.mo_last_select = -1    # Keep the last selected option highlighted even if mouse is not hovering over it
         self.mo_gui_func = {0: self.mo_sound_settings,
                             1: self.mo_userkeys_settings}
@@ -827,18 +836,22 @@ class MenuOptions(PagesHelp):
         # ---- Controls variables
 
 
-    def run(self, surface, snap_shot=False, enable_quit=True):
+    def run(self, surface, snapshot=False, enable_quit=True):
         """
             Run the options menu
 
             surface -> Active screen surface
-            snap_shot -> Take a snapshot of the surface for background(Used as pause background during game)
+            snapshot -> Take a snapshot of the surface for background(Used as pause background during game)
             enable_quit -> Allow quitting during game via menu
 
-            return -> None
+            return -> 'False' when quit
 
         """
-        pause_bg = surface.copy() if snap_shot else None
+        pause_bg = surface.copy() if snapshot else None
+        if pause_bg is not None:
+            # Decorate the options menu during gameplay
+            pause_bg.fill((0x40, 0x0, 0x0, 0x80), special_flags=self.tk_blend_rgba_mult)
+            pause_bg.blit(self.menu_background, (0, 0), special_flags=self.tk_blend_rgba_add)
 
         while 1:
             surface.fill(self.tk_bg_color)
@@ -848,11 +861,10 @@ class MenuOptions(PagesHelp):
             surface.blit(self.menu_background if pause_bg is None else pause_bg, (0, 0))   
 
             click = 0
+            
             for event in self.tk_eventDispatch():
-                
                 if event.type == self.tk_event_mousedown:
                     click = event.button
-
 
                 elif event.type == self.menu_timer[0]: 
                     self.menu_timer_add()
@@ -860,7 +872,7 @@ class MenuOptions(PagesHelp):
                 elif event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
                         if self.mo_display_func == -1:
-                            return None
+                            return False
                         else:
                             self.mo_display_func = -1
 
@@ -869,6 +881,7 @@ class MenuOptions(PagesHelp):
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
             self.tk_display.flip()
+
 
     
     def mo_root_settings(self, surface, mx, my, click, hide_quit=False, **kw):
@@ -988,13 +1001,13 @@ class MenuManager(object):
     def __init__(self):
         PagesHelp.ph_initData()
         
-        self.all_menus = {0: MenuIntro(),
-                          1: MenuMain(),
-                          2: MenuCampaign(),
-                          3: MenuShop(),
-                          4: MenuIntroOutro(),
-                          5: MenuOptions(),
-                          6: MenuReport()}
+        self.all_menus = {'m_intro':   MenuIntro(),
+                          'm_main':    MenuMain(),
+                          'm_episode': MenuCampaign(),
+                          'm_shop':    MenuShop(),
+                          'm_inout':   MenuIntroOutro(),
+                          'm_options': MenuOptions(),
+                          'm_report':  MenuReport()}
 
 
 

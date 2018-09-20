@@ -28,7 +28,7 @@ class Inventory(Weapons, GadgetLoader):
             return -> None
 
         """
-        cls.i_playerStats['weapon'] = 'kghl4'
+        cls.i_playerStats['weapon'] = 'uuz62'
         cls.i_playerStats['health'] = [10, 100]
         cls.i_playerStats['armor']  = [10, 100]
         cls.i_playerStats['credits'] = 19284
