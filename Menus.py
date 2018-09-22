@@ -775,6 +775,7 @@ class MenuOptions(PagesHelp):
     def __init__(self):
         self.mo_font_1 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
         self.mo_font_2 = self.tk_font(self.ElementFonts[1], int(32 * self.menu_scale))
+        self.mo_font_3 = self.tk_font(self.ElementFonts[0], int(40 * self.menu_scale)) 
         
         self.mo_options = self.tk_ordereddict()
 
@@ -833,7 +834,25 @@ class MenuOptions(PagesHelp):
         # Contains current x, y delta and id of the slider being used
         self.mo_snd_delta_id = None
 
+        
         # ---- Controls variables
+        self.mo_uk_prerendered = {}
+        
+        for key in self.tk_user.keys():
+            pre = self.mo_font_3.render(key.upper(), True, (0xff, 0x0, 0x0))
+            pre = RectSurface(pre, snd_hover_over=180)
+            
+            suf = self.mo_font_3.render(self.tk_key_name(self.tk_user[key]), True, (0xff, 0x0, 0x0))
+            suf = RectSurface(suf, snd_hover_over=180)
+
+            self.mo_uk_prerendered[key] = [pre, suf]
+
+        self.mo_uk_prerendered[-1] = self.mo_font_3.render("Assign key", True, (0xff, 0x0, 0x80))
+ 
+        self.mo_uk_layout = {'x': self.tk_res_half[0],
+                             'y': self.tk_res_half[1] - (self.mo_uk_prerendered['esc'][0].rs_getSize()[1] * (len(self.mo_uk_prerendered)) - 1) / 2} 
+
+        self.mo_uk_editme = ''    # Store the last selected key
 
 
     def run(self, surface, snapshot=False, enable_quit=True):
@@ -860,11 +879,15 @@ class MenuOptions(PagesHelp):
 
             surface.blit(self.menu_background if pause_bg is None else pause_bg, (0, 0))   
 
-            click = 0
+            click_down = 0
+            click_up = 0
             
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_mousedown:
-                    click = event.button
+                    click_down = event.button
+
+                elif event.type == self.tk_event_mouseup:
+                    click_up = event.button
 
                 elif event.type == self.menu_timer[0]: 
                     self.menu_timer_add()
@@ -876,7 +899,9 @@ class MenuOptions(PagesHelp):
                         else:
                             self.mo_display_func = -1
 
-            self.mo_functions[self.mo_display_func](surface, mx, my, click, hide_quit=enable_quit)
+            self.mo_functions[self.mo_display_func](surface, mx, my, click_up, 
+                                                    hide_quit=enable_quit, 
+                                                    click_down=click_down)
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
@@ -943,7 +968,7 @@ class MenuOptions(PagesHelp):
             surface.blit(message, (vol['mask'].rs_getPos('centerx') - message.get_width() / 2,
                                    vol['mask'].rs_getPos('bottom'))) 
 
-            if click and vol['mask'].rs_hover_over((mx, my)):
+            if kw['click_down'] and vol['mask'].rs_hover_over((mx, my)):
                 self.mo_snd_delta_id = mx, my, vol['mask'].rs_id
 
             if self.mo_snd_delta_id is not None: 
@@ -963,8 +988,39 @@ class MenuOptions(PagesHelp):
 
             return -> None
 
+        """ 
+        r = 0
+        # Keep the order consistent (Might wanna use orderedDict and manually set the order)
+        for key in sorted([x for x in self.mo_uk_prerendered.keys() if not isinstance(x, int)], key=lambda x: ord(x[-1])):
+
+            pre_f, suf_f = self.mo_uk_prerendered[key] 
+
+            pre_f.rs_updateRect(self.mo_uk_layout['x'] - pre_f.rs_getSize()[0] - 16, self.mo_uk_layout['y'] + r) 
+            surface.blit(*pre_f.rs_renderSurface(position=1))
+
+            suf_f.rs_updateRect(self.mo_uk_layout['x'] + 16, self.mo_uk_layout['y'] + r)
+            surf, pos = suf_f.rs_renderSurface(position=1)
+            if key == self.mo_uk_editme: surf = self.mo_uk_prerendered[-1] 
+            
+            if suf_f.rs_hover_over((mx, my)) or pre_f.rs_hover_over((mx, my)):
+                indicate_selected = 16
+                if click: self.__mo_validate_userkey(surface, key)
+            else:
+                indicate_selected = 0
+            surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer[1]())), pos[1]))
+
+            r += pre_f.rs_getSize()[1]
+
+
+    def __mo_validate_userkey(self, surface, key):
         """
-        pass
+            TBD
+
+            return -> None
+
+        """
+        self.mo_uk_editme = key
+
         
 
 

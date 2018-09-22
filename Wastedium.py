@@ -42,7 +42,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
         self.char_rect.move_ip(self.char_center)
 
         self.player_data = {'speed':  180,            # Speed
-                            'legs':   'legs_black',  # Legs str id
+                            'legs':   'legs_black',   # Legs str id
                             'torso':  'hero',         # Torso str id 
                             'model':  ''}             # Torso + weapon
         
@@ -241,7 +241,9 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
             dir_frames = 4 if keys[self.tk_user['down']] and keys[self.tk_user['right']] else dir_frames
             dir_frames = 6 if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
 
+        
         self.cs_shadow_cast(surface, -px + 16, -py + 16, angle)
+
 
         # Position where the hero will be built on
         x, y = self.char_center
@@ -1600,7 +1602,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.Menus.all_menus['m_intro'].run(self.screen)
+        self.Menus.all_menus['m_options'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
@@ -1616,10 +1618,12 @@ class Main(World, DeltaTimer):
         """
         self.dt_tick()
 
-        paused = False
+        paused = 0          # Pause game
+        ignore_delta = 0    # Delta calculation goes widl after pause
+                            # so ignore the the last one after pause function is done
         
         while 1:
-            self.dt_tick(self.tk_fps)
+            ignore_delta = self.dt_tick(self.tk_fps, ignore_delta=ignore_delta)
 
             self.screen.fill(self.tk_bg_color)
 
@@ -1627,7 +1631,8 @@ class Main(World, DeltaTimer):
                 self.uioverlay.Event_handleEvents(event.type) 
 
                 if event.type == self.tk_event_keyup:
-                    if event.key == self.tk_user['esc']: paused = True     
+                    if event.key == self.tk_user['esc']: 
+                        ignore_delta = paused = 1     
 
             self.render_map(0, self.screen)
             
@@ -1657,12 +1662,10 @@ class Main(World, DeltaTimer):
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
 
-            # Paused is just before flip to get the latest surface
-            if paused: paused = self.Menus.all_menus['m_options'].run(self.screen, snapshot=1)
-
             self.tk_display.flip()
 
-            #for _ in xrange(800000): pass
+            if paused: paused = self.Menus.all_menus['m_options'].run(self.screen, snapshot=1)
+
     
 
 if __name__ == '__main__':

@@ -80,7 +80,7 @@ class SoundMusic(GlobalGameData):
             return -> None
 
         """
-        if not isinstance(_id, int): return None
+        if not isinstance(_id, int) and not sm_volumes[1]: return None
 
         channel = cls.all_sounds[_id].play()
         if channel is None: return

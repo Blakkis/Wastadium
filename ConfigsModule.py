@@ -72,7 +72,7 @@ class GlobalGameData(object):
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 100
+    tk_fps = 8192
     tk_resolution = 1280, 720
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), float(tk_resolution[1]) / float(720))     # Use the smallest as scalar for UI elements
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2
@@ -171,6 +171,7 @@ class GlobalGameData(object):
     tk_flip = pygame.transform.flip
     tk_smoothscale = pygame.transform.smoothscale
     tk_key_pressed = pygame.key.get_pressed
+    tk_key_name = pygame.key.name
     tk_draw_line = pygame.draw.line
     tk_draw_lines = pygame.draw.lines
     tk_draw_aaline = pygame.draw.aaline

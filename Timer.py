@@ -16,12 +16,13 @@ class DeltaTimer(object):
                  'delta_ms': 0}
 
     @classmethod
-    def dt_tick(cls, limit_fps=0):
+    def dt_tick(cls, limit_fps=0, ignore_delta=0):
         dt = cls.__dt_clock.tick(limit_fps) / float(1000)
         #dt = max(0.002, min(0.016, dt))
-        cls.dt_deltas['delta_ms'] = dt
-        
-        return dt
+        if not ignore_delta:
+            cls.dt_deltas['delta_ms'] = dt 
+
+        return 0
 
     @classmethod
     def dt_fps(cls): return cls.__dt_clock.get_fps()
