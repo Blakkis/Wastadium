@@ -4,6 +4,9 @@ import ttk as tk_adv
 
 VERSION = 1.0
 
+class LabelEntry(object):
+	pass
+
 
 class Launcher_Options(tk.Frame, object):
     def __init__(self, *args, **kw):
@@ -14,16 +17,18 @@ class Launcher_Options(tk.Frame, object):
 class Launcher_Main(tk.Frame, object):
     def __init__(self, *args, **kw):
         super(Launcher_Main, self).__init__(*args, **kw)
+        self.config(pady=32)
 
         launch_game = tk.Button(self, text='Launch Wastedium', command=lambda: None)
-        launch_game.config()
-        launch_game.pack(expand=1, fill='both', padx=64, pady=64)
+        launch_game.config(height=2)
+        launch_game.pack(fill='both', padx=64, pady=4)
 
         _sep = tk_adv.Separator(self, orient='horizontal')
-        _sep.pack(fill='x', padx=16)
+        _sep.pack(fill='x', padx=16, pady=16)
         
         launch_editor = tk.Button(self, text='Launch Editor', command=lambda: None)
-        launch_editor.pack(expand=1, fill='both', padx=64, pady=64, side='bottom')
+        launch_editor.config(height=2)
+        launch_editor.pack(fill='both', padx=64, pady=4)
     
     
     def launch_selection(self):

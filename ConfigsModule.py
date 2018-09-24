@@ -11,7 +11,8 @@ import collections
 import os
 from Timer import *
 from datetime import timedelta
-from sys import exit as exitsystem
+from sys import exit as exit_system
+from sys import argv as read_argvs
 from numpy import copyto, roll, zeros, dot
 from numpy import sum as _sum
 #from numpy.linalg import norm as normalize
@@ -72,9 +73,10 @@ class GlobalGameData(object):
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 8192
+    tk_fps = 100
     tk_resolution = 1280, 720
-    tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), float(tk_resolution[1]) / float(720))     # Use the smallest as scalar for UI elements
+    tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), 
+                              float(tk_resolution[1]) / float(720))
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2
     tk_bg_color = 0x0, 0x0, 0x0
     tk_macro_cell_size = 8    # Dont change this.
@@ -96,6 +98,7 @@ class GlobalGameData(object):
     tk_no_shadow_layer = 0
     tk_shadow_quality = 1       # 1: High quality (Experimental and Slow) Actually the entire shadow casting is shit(Needs massive overhaul)
     tk_no_footsteps = 0
+    tk_no_effect_decals = 0
     
     # Lightmap 
     tk_shadow_color = 0x0, 0x0, 0x0, 0xaa
@@ -124,8 +127,8 @@ class GlobalGameData(object):
     tk_hypot = math.hypot
     tk_radians = math.radians
     tk_degrees = math.degrees
-    tk_asin = math.asin     #   Make sure values for this is between -1, 1. Possible clamp every usage?
-    tk_acos = math.acos     #   Make sure values for this is between -1, 1. Possible clamp every usage? 
+    tk_asin = math.asin    
+    tk_acos = math.acos     
     tk_cycle = itertools.cycle
     tk_chain = itertools.chain
     tk_izip_long = itertools.izip_longest
@@ -152,7 +155,8 @@ class GlobalGameData(object):
     tk_np_copyto = copyto
     tk_np_sum = staticmethod(_sum) 
     tk_np_dot = dot
-    tk_quit_system = exitsystem
+    tk_quit_system = exit_system
+    tk_read_args = read_argvs
     tk_counter = TkCounter
     tk_literal_eval = staticmethod(literal_eval)
     tk_iglob =  staticmethod(iglob)
@@ -196,7 +200,10 @@ class GlobalGameData(object):
 
 
     # Player (Allow for customization) 
-    tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d,
+    tk_user = {'up': K_w, 
+               'left': K_a, 
+               'down': K_s, 
+               'right': K_d,
                'esc': K_ESCAPE}
 
     # Event
@@ -242,6 +249,7 @@ class GlobalGameData(object):
 
             return -> None
         """
+        pass
 
 
 

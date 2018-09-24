@@ -1602,7 +1602,8 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.Menus.all_menus['m_options'].run(self.screen)
+        if '-nosplash' not in self.tk_read_args:
+            self.Menus.all_menus['m_intro'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()

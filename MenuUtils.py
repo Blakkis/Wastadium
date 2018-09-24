@@ -23,6 +23,9 @@ class RectSurface(SoundMusic):
         # Execute this function when clicked
         self.rs_function = func
 
+    def rs_updateSurface(self, surf):
+        self.rs_surface = surf
+        self.rs_rect = surf.get_rect()
     
     def rs_renderSurface(self, position=False): return (self.rs_surface, self.rs_rect) if position else self.rs_surface 
     

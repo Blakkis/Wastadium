@@ -894,10 +894,17 @@ class MenuOptions(PagesHelp):
 
                 elif event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
+                        # Quit the options menu entirely
                         if self.mo_display_func == -1:
                             return False
+
+                        # Go back to root
                         else:
+                            if self.mo_display_func == 1: self.mo_uk_editme = ''
                             self.mo_display_func = -1
+
+                    self.__mo_validate_userkey(surface, event.key, stage=2)
+
 
             self.mo_functions[self.mo_display_func](surface, mx, my, click_up, 
                                                     hide_quit=enable_quit, 
@@ -991,6 +998,7 @@ class MenuOptions(PagesHelp):
         """ 
         r = 0
         # Keep the order consistent (Might wanna use orderedDict and manually set the order)
+        # Currently ordered by the last char which puts esc at the top
         for key in sorted([x for x in self.mo_uk_prerendered.keys() if not isinstance(x, int)], key=lambda x: ord(x[-1])):
 
             pre_f, suf_f = self.mo_uk_prerendered[key] 
@@ -1004,24 +1012,49 @@ class MenuOptions(PagesHelp):
             
             if suf_f.rs_hover_over((mx, my)) or pre_f.rs_hover_over((mx, my)):
                 indicate_selected = 16
-                if click: self.__mo_validate_userkey(surface, key)
+                if click: self.__mo_validate_userkey(surface, key, stage=1)
+
             else:
-                indicate_selected = 0
+                indicate_selected = 16 if key == self.mo_uk_editme else 0 
+
             surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer[1]())), pos[1]))
 
             r += pre_f.rs_getSize()[1]
 
 
-    def __mo_validate_userkey(self, surface, key):
+    def __mo_validate_userkey(self, surface, key, stage=0):
         """
-            TBD
+            Validate the new userkey
+
+            surface -> Active screen surface 
+            key -> stage 1: Selected key being modified (Prepare)
+                   stage 2: New key being applied to this keyslot (Validate and apply) 
+            
+            stage -> 1: Enable key edit
+                     2: New key fetched from event queue 
 
             return -> None
 
         """
-        self.mo_uk_editme = key
+        # Prepare input change
+        if stage == 1:
+            self.mo_uk_editme = key
+            self.tk_user[key] = ''  # Enable for edit 
 
-        
+        # Validate input
+        elif stage == 2 and self.mo_uk_editme: 
+            if key in self.tk_user.values(): 
+                # Key already in-use
+                return None
+
+            # Valid
+            self.tk_user[self.mo_uk_editme] = key
+            new = self.mo_font_3.render(self.tk_key_name(key), True, (0xff, 0x0, 0x0))
+            self.mo_uk_prerendered[self.mo_uk_editme][1].rs_updateSurface(new)
+            self.mo_uk_editme = ''
+
+
+            
 
 
 class MenuReport(PagesHelp):
