@@ -62,12 +62,104 @@ class TkRect(pygame.Rect):
         return repr('{},{}'.format(self.x, self.y))
 
 
+class DefaultConfigParser(object):
 
-class GlobalGameData(object):
+    __slots__ = ()
+    
+    __DEFAULT_CONFIG = "default.ini"
+
+    # Read/Write default values
+    def_values = collections.OrderedDict([
+                    ('max_fps',             100),
+                    ('resolution',  (1280, 720)),
+                    ('fullscreen',            0),
+                    ('world_shadows',         1),
+                    ('world_shadows_quality', 1),
+                    ('decals_footstep',       1),
+                    ('decals_effects',        1),
+                    ('key_up',              K_w),
+                    ('key_right',           K_d),
+                    ('key_down',            K_s),
+                    ('key_left',            K_a),
+                    ('key_esc',        K_ESCAPE),
+                    ('ai_rotation_speed',     4),
+                    ('ai_hear_range',        64),
+                    ('ai_alarm_state',      1.5),
+                    ('ai_idle_hunt',        2.5),
+                    ('phy_max_objects',      32),
+                    ('phy_linear_damp',  0.0002),
+                    ('phy_force_max',        16),
+                    ('phy_force_min',         8),
+                    ('audio_max_channels',  256),
+                    ('audio_buffer_size',   512),
+                    ('audio_frequency',   22050),
+                    ('audio_mono_or_stereo',  2)]) 
+
+    @classmethod
+    def tk_readFile(cls, _file, mode='r', comment='#', keyValue_delimiter='='):
+        """
+            Open and handle file reading/writing
+            Skips lines with comment sign and empty lines
+            Handles key/value separation
+
+            _file -> Filename
+            mode -> In which mode the file is being worked on
+            comment -> Skips lines beginning with this comment char
+            keyValue_delimiter -> char which acts as splitter to separate key/value 
+
+            return -> Generator over lines
+
+        """
+        with open(_file, mode) as rcfg:
+            for read in rcfg:
+                # Line starts with comment, skip
+                if read.startswith(comment): continue
+                
+                line = read.strip()
+                # Line is empty, skip
+                if not line: continue
+                
+                # Remove all whitespace in the line and separate the key/value
+                line = line.replace(' ', '').split(keyValue_delimiter)
+
+                yield line
+
+    
+    @classmethod
+    def tk_ParseDefaultConfigs(cls, force_rewrite=False):
+        """
+            Parse configs for the game specific settings
+
+            return -> None
+        """
+        # Check if file exists. If not rebuild it
+        if not os.path.isfile(cls.__DEFAULT_CONFIG) or force_rewrite:
+            with open(cls.__DEFAULT_CONFIG, 'w') as w:
+                for key, value in cls.def_values.iteritems():
+                    w.write("{}={}\n".format(key, value))
+        
+        # Read and parse
+        else:
+            with open(cls.__DEFAULT_CONFIG, 'r') as r:
+                for line in cls.tk_readFile(cls.__DEFAULT_CONFIG):
+                    key, value = line
+                    # Disgard values outside the pre-defined values
+                    if key in cls.def_values:
+                        cls.def_values[key] = literal_eval(value)
+
+
+
+
+
+
+class GlobalGameData(DefaultConfigParser):
     """
         Provide the basegame option variables and most used functions 
     """
     __slots__ = ()
+
+    DefaultConfigParser.tk_ParseDefaultConfigs()
+    # Should capitalize more and separate the enums to different section
     
     # Special 
     tk_name = 'Wastedium'
@@ -83,25 +175,26 @@ class GlobalGameData(object):
     tk_entity_sector_s = 2    # Dont change this.
     
     # Map effect 
-    tk_wall_shadow_color = 0x14, 0x14, 0x14, 0x40
-    tk_blend_rgba_mult = pygame.BLEND_RGBA_MULT
-    tk_blend_rgba_add = pygame.BLEND_RGBA_ADD
-    tk_blend_rgba_sub = pygame.BLEND_RGBA_MAX
+    tk_wall_shadow_color =  0x14, 0x14, 0x14, 0x40
     tk_ambient_color_tone = 0xcc, 0xcc, 0xcc
+    tk_blend_rgba_mult = pygame.BLEND_RGBA_MULT
+    tk_blend_rgba_add =  pygame.BLEND_RGBA_ADD
+    tk_blend_rgba_sub =  pygame.BLEND_RGBA_MAX
 
     # Weapon and casing related
     tk_bullet_trail_color = 0xff, 0xff, 0x0, 0xff
     tk_casing_rleaccel = pygame.RLEACCEL
 
     # Option 
-    tk_no_effect_layer = 0      # Partially used. Explain where/why
-    tk_no_shadow_layer = 0
-    tk_shadow_quality = 1       # 1: High quality (Experimental and Slow) Actually the entire shadow casting is shit(Needs massive overhaul)
-    tk_no_footsteps = 0
+    tk_no_effect_layer  = 0     # Partially used. Explain where/why
+    tk_no_shadow_layer  = 0
+    tk_no_footsteps     = 0
     tk_no_effect_decals = 0
+    tk_shadow_quality   = 1     # 1: High quality (Experimental and Slow) 
+                                # Actually the entire shadow casting is shit(Needs massive overhaul)
     
     # Lightmap 
-    tk_shadow_color = 0x0, 0x0, 0x0, 0xaa
+    tk_shadow_color =      0x0, 0x0, 0x0, 0xaa
     tk_shadow_mask_color = 0x0, 0x0, 0x0, 0xaa
 
     res_x = int(math.ceil(float(float(tk_resolution[0] / 2) / 32)))
@@ -240,17 +333,6 @@ class GlobalGameData(object):
     # Shop
     tk_refill_health_price = 2
     tk_refill_armor_price = 2
-
-    
-    @classmethod
-    def tk_ParseDefaultConfigs(cls):
-        """
-            Parse configs for the game specific settings
-
-            return -> None
-        """
-        pass
-
 
 
     @classmethod
@@ -557,36 +639,6 @@ class GlobalGameData(object):
             alpha_surf[enum, :] = a    
 
         return surf 
-
-
-    @classmethod
-    def tk_readFile(cls, _file, mode='r', comment='#', keyValue_delimiter='='):
-        """
-            Open and handle file reading/writing
-            Skips lines with comment sign and empty lines
-            Handles key/value separation
-
-            _file -> Filename
-            mode -> In which mode the file is being worked on
-            comment -> Skips lines beginning with this comment char
-            keyValue_delimiter -> char which acts as splitter to separate key/value 
-
-            return -> Generator over lines
-
-        """
-        with open(_file, mode) as rcfg:
-            for read in rcfg:
-                # Line starts with comment, skip
-                if read.startswith(comment): continue
-                
-                line = read.strip()
-                # Line is empty, skip
-                if not line: continue
-                
-                # Remove all whitespace in the line and separate the key/value
-                line = line.replace(' ', '').split(keyValue_delimiter)
-
-                yield line
 
 
 if __name__ == '__main__':
