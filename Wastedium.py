@@ -241,9 +241,8 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
             dir_frames = 4 if keys[self.tk_user['down']] and keys[self.tk_user['right']] else dir_frames
             dir_frames = 6 if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
 
-        
+        # Cast character shadows from lights
         self.cs_shadow_cast(surface, -px + 16, -py + 16, angle)
-
 
         # Position where the hero will be built on
         x, y = self.char_center
@@ -898,7 +897,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     @classmethod
     def w_applyStaticShadows(cls):
         """
-            TBD
+            Apply 'sun' casted static shadows
 
             return -> None
 
@@ -1445,7 +1444,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 stain = cls.gs_gib_now(sx, sy, cls.cell_x, cls.cell_y, enemy_vector, 
                                        cls.tk_choice(cls.w_enemies[enemy_id].enemy_gore_profile))
 
-                if stain is not None and inside_world:
+                if stain is not None and inside_world and not cls.tk_no_footsteps:
                     cls.w_micro_cells[cy][cx].w_footstep_stain_id = stain    
                 
             else:
@@ -1454,7 +1453,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 cls.spawn_effect(corpse, (sx, sy), angle=enemy_vector)
 
                 # Make the ground stain player's boots
-                if cls.all_effects[corpse] > 0 and inside_world: 
+                if cls.all_effects[corpse] > 0 and inside_world and not cls.tk_no_footsteps: 
                     cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[corpse][0][3]  # Get the stain index
 
                 cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_death_snd), 1)

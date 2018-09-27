@@ -74,9 +74,10 @@ class DefaultConfigParser(object):
                     ('resolution',  (1280, 720)),
                     ('fullscreen',            0),
                     ('world_shadows',         1),
+                    ('world_char_shadows',    1),
                     ('world_shadows_quality', 1),
-                    ('decals_footstep',       1),
-                    ('decals_effects',        1),
+                    ('world_footsteps',       1),
+                    ('world_effects',         1),
                     ('key_up',              K_w),
                     ('key_right',           K_d),
                     ('key_down',            K_s),
@@ -160,13 +161,14 @@ class GlobalGameData(DefaultConfigParser):
 
     DefaultConfigParser.tk_ParseDefaultConfigs()
     # Should capitalize more and separate the enums to different section
-    
+
+
     # Special 
     tk_name = 'Wastedium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
-    tk_fps = 100
-    tk_resolution = 1280, 720
+    tk_fps = DefaultConfigParser.def_values['max_fps']
+    tk_resolution = DefaultConfigParser.def_values['resolution']
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), 
                               float(tk_resolution[1]) / float(720))
     tk_res_half = tk_resolution[0] / 2, tk_resolution[1] / 2
@@ -178,8 +180,8 @@ class GlobalGameData(DefaultConfigParser):
     tk_wall_shadow_color =  0x14, 0x14, 0x14, 0x40
     tk_ambient_color_tone = 0xcc, 0xcc, 0xcc
     tk_blend_rgba_mult = pygame.BLEND_RGBA_MULT
-    tk_blend_rgba_add =  pygame.BLEND_RGBA_ADD
-    tk_blend_rgba_sub =  pygame.BLEND_RGBA_MAX
+    tk_blend_rgba_add  = pygame.BLEND_RGBA_ADD
+    tk_blend_rgba_sub  = pygame.BLEND_RGBA_MAX
 
     # Weapon and casing related
     tk_bullet_trail_color = 0xff, 0xff, 0x0, 0xff
@@ -189,7 +191,8 @@ class GlobalGameData(DefaultConfigParser):
     tk_no_effect_layer  = 0     # Partially used. Explain where/why
     tk_no_shadow_layer  = 0
     tk_no_footsteps     = 0
-    tk_no_effect_decals = 0
+    tk_no_effects       = 0
+    tk_no_char_shadows  = 1
     tk_shadow_quality   = 1     # 1: High quality (Experimental and Slow) 
                                 # Actually the entire shadow casting is shit(Needs massive overhaul)
     

@@ -1023,7 +1023,8 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                                 self.E_ID_COLLISION: self.__pf_editCollisions,
                                 self.E_ID_LIGHT:     self.__pf_applyLights,
                                 self.E_ID_ENEMY:     self.__pf_applyEnemies,
-                                self.E_ID_PICKUP:    self.__pf_applyPickups}
+                                self.E_ID_PICKUP:    self.__pf_applyPickups,
+                                self.E_ID_WIRE:      self.__pf_applyWires}
 
         # Reserved F keys for the toolbar (If you need more than F12, extend via using bitwise mods + f keys?)
         self.tso_reserved_keys = set([pygame.K_F1 + f for f in xrange(ed_Button.ed_getButtonStates(True))])
@@ -1699,7 +1700,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             x, y -> Cell index position relative to screen topleft
             surface -> Screen surface
             action_key -> Paint or delete
-            set_id ->  Id used to what category is this part of
+            set_id -> Id used to what category is this part of
 
             return -> None
 
@@ -1734,6 +1735,26 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             pcolor = 0xff, 0x0, 0x80    
 
         self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
+    
+
+    #@EditorStatistics.es_update_decorator(_id=6)
+    def __pf_applyWires(self, index, x, y, surface=None, action_key=0, set_id=0):
+        """
+            Place wire endpoints
+
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id -> Id used to what category is this part of
+
+            return -> None
+
+        """
+        cx, cy = index[0] >> 3, index[1] >> 3    
+
+        self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (x, y, 32, 32), 1)
+
     
 
     
