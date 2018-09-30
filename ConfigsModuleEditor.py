@@ -4,6 +4,7 @@ import Tkinter as tk
 import ttk
 import tkMessageBox
 import math
+from functools import partial
 from PIL import Image as pil_image
 from ImageTk import PhotoImage
 from os import environ, path
@@ -18,7 +19,7 @@ from pprint import pprint as prn
 __all__ = ('GlobalGameDataEditor', 'ed_killMe',     'ed_centerWidget', 
            'ed_LabelFrame',        'ed_TopLevel',   'ed_Checkbutton',
            'ed_LabelImagePreview', 'ed_LabelEntry', 'ed_Button',
-           'ed_AutoWallSolver',    'ed_BitToggle')
+           'ed_AutoWallSolver',    'ed_BitToggle',  'ed_WireTool')
 
 
 class ed_BitToggle(object):
@@ -216,6 +217,23 @@ def ed_killMe(func):
         return _id
     
     return innerFunc
+
+
+class ed_WireTool(object):
+
+    def __init__(self, f):
+        self.f = f
+        self.point = {'p_cap': 0,
+                      'p1':    0}
+
+
+    def __call__(self, *args, **kw):
+        kw['point'] = self.point
+        return self.f(*args, **kw)
+    
+    def __get__(self, instance, _):
+        return partial(self.__call__, instance)
+
 
 
 def ed_centerWidget(widget):
@@ -517,6 +535,7 @@ class GlobalGameDataEditor(object):
     ed_hypot = math.hypot
     ed_sqrt = math.sqrt
     ed_radians = math.radians
+    ed_ceil = math.ceil
     ed_floor = math.floor
     ed_pi = math.pi
     ed_deque = deque

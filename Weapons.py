@@ -1,4 +1,4 @@
-from ConfigsModule import GlobalGameData
+from ConfigsModule import GlobalGameData, TkWorldDataShared
 from glob import iglob
 from ast import literal_eval
 
@@ -120,7 +120,7 @@ class Weapons(GlobalGameData):
         return token
 
 
-class WeaponCasings(GlobalGameData):
+class WeaponCasings(GlobalGameData, TkWorldDataShared):
     """
         Handles casings and shells spawned by the weapons
 
@@ -133,8 +133,7 @@ class WeaponCasings(GlobalGameData):
     casings_map = {}
 
     # Common data for the casings
-    casing_data = {'id': 0,             # Provide all casings unique id
-                   'offset': (0, 0)}    # Keep the casings fixed to the position
+    casing_data = {'id': 0}    # Provide all casings unique id
 
     # The number of frames on every casing texture array is based from 360 / deg
     # (Lower = Smoother casings flying animation)
@@ -213,7 +212,9 @@ class WeaponCasings(GlobalGameData):
             return -> None
 
         """
-        cls.casings_map[cls.casing_data['id']] = WeaponCasings(x, y, _id, angle, cls.casing_data['offset'])
+        cls.casings_map[cls.casing_data['id']] = WeaponCasings(x, y, _id, angle, cls.w_share['WorldPosition'])
+
+        # Calculate all casings in the map for after report
         cls.casing_data['id'] += 1
 
     
@@ -270,7 +271,7 @@ class WeaponCasings(GlobalGameData):
                 img, pos, ofs = cls.casings_map[key].render_casing_pos()
                 
                 # Fix the casings in-place
-                diff = ofs[0] - cls.casing_data['offset'][0], ofs[1] - cls.casing_data['offset'][1]
+                diff = ofs[0] - cls.w_share['WorldPosition'][0], ofs[1] - cls.w_share['WorldPosition'][1]
                 x, y = pos[0] - diff[0], pos[1] - diff[1]
     
                 # Store the img and position so we can work with the last frame before it gets destroyed
@@ -294,7 +295,7 @@ class WeaponCasings(GlobalGameData):
             return -> None
 
         """
-        cls.casing_data['id'] = 0; cls.casings_map = {}; cls.casing_data['offset'] = 0, 0 
+        cls.casing_data['id'] = 0; cls.casings_map = {} 
 
 
 if __name__ == '__main__':

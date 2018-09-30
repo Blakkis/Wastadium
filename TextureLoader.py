@@ -1,4 +1,4 @@
-from ConfigsModule import GlobalGameData
+from ConfigsModule import GlobalGameData, TkWorldDataShared
 from SoundModule import SoundMusic
 
 # NOTE:
@@ -185,7 +185,7 @@ class TextureLoader(GlobalGameData):
         
 
 
-class EffectsLoader(SoundMusic, GlobalGameData):
+class EffectsLoader(SoundMusic, GlobalGameData, TkWorldDataShared):
     """
         Handles all effects of the game, spawning, rendering
 
@@ -203,8 +203,8 @@ class EffectsLoader(SoundMusic, GlobalGameData):
     map_effects = {}
 
 
-    effect_data = {'id': 0,             # Provide unique id to each effect
-                   'offset': (0, 0)}    # Keep effects fixed in-place
+    effect_data = {'id': 0}    # Provide unique id to each effect
+                   
     
     def __init__(self, generator, name, _id, pos, ofs_pos, rot, angle):
         self.effect_gen = generator
@@ -267,7 +267,7 @@ class EffectsLoader(SoundMusic, GlobalGameData):
                 index, center, pos, rel, name, rot, angle = cls.map_effects[key].render_effect_pos() 
                 
                 # Relative fix: When firing and moving decals needs to be fixed in-place
-                rel = rel[0] - cls.effect_data['offset'][0], rel[1] - cls.effect_data['offset'][1]
+                rel = rel[0] - cls.w_share['WorldPosition'][0], rel[1] - cls.w_share['WorldPosition'][1]
                 
                 img = cls.all_effects[name][rot][index + 5]
                 
@@ -327,12 +327,12 @@ class EffectsLoader(SoundMusic, GlobalGameData):
         if loop:
             # Create an infinite effect(These are mostly called by the map to decorate the battlefield)
             cls.map_effects[cls.effect_data['id']] = EffectsLoader(cls.tk_cycle(xrange(0, len(cls.all_effects[effect][rot]) - 5, frame_skip)),
-                                                 effect, cls.effect_data['id'], pos, cls.effect_data['offset'][:], 
+                                                 effect, cls.effect_data['id'], pos, cls.w_share['WorldPosition'], 
                                                  rot, angle) 
         else:
             # These are finite effects called by the entities
             cls.map_effects[cls.effect_data['id']] = EffectsLoader(iter(xrange(0, len(cls.all_effects[effect][rot]) - 5, frame_skip)),
-                                                 effect, cls.effect_data['id'], pos, cls.effect_data['offset'][:], 
+                                                 effect, cls.effect_data['id'], pos, cls.w_share['WorldPosition'], 
                                                  rot, angle)
         # Provide each effect unique id 
         cls.effect_data['id'] += 1
@@ -442,7 +442,7 @@ class EffectsLoader(SoundMusic, GlobalGameData):
             return -> None
             
         """
-        cls.effect_data['id'] = 0; cls.map_effects = {}; cls.effect_data['offset'] = 0, 0
+        cls.effect_data['id'] = 0; cls.map_effects = {}
 
 
 

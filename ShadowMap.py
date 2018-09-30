@@ -1,4 +1,4 @@
-from ConfigsModule import GlobalGameData
+from ConfigsModule import GlobalGameData, TkWorldDataShared
 from PreProcessor import PreProcessor
 
 
@@ -10,7 +10,7 @@ from PreProcessor import PreProcessor
 __all__ = 'Shadows', 'CharacterShadows'
 
 
-class Shadows(GlobalGameData):
+class Shadows(GlobalGameData, TkWorldDataShared):
 
     # Shadow table size
     shadow_map_size = 0, 0
@@ -22,12 +22,6 @@ class Shadows(GlobalGameData):
     shadow_map = []
 
     def __init__(self):
-        # Used to align all the layers
-        self.s_offset_align = 0, 0
-        
-        # Extra angle for the shadow casting (Fixes peeking)
-        self.s_extra_angle = 0.02
-        
         self.s_shadow_surf = self.tk_surface(self.tk_resolution)
         if self.tk_shadow_quality: self.s_shadow_surf.set_colorkey(self.tk_shadow_mask_color)
 
@@ -109,23 +103,15 @@ class Shadows(GlobalGameData):
         
         self.s_shadow_dir_map = tuple(self.s_shadow_dir_map)
         
-    
-    def s_fetchDelta(self, ofsx, ofsy):
-        """
-            TBD
-
-            return -> None
-        """
-        # Note: Get rid of this, since the effects layer is no longer in use
-        self.s_offset_align = ofsx, ofsy
-
-
      
     def s_loadSurfaceMap(self, surfaces):
         """
-            TBD
+            Load the ground layer as shadow mask
+
+            surfaces -> All macro surfaces
 
             return -> None
+
         """
         surf_size = 32 * self.tk_macro_cell_size 
         self.s_fade_surf = self.tk_surface((surf_size * len(surfaces[0]),
@@ -141,7 +127,9 @@ class Shadows(GlobalGameData):
     @classmethod
     def s_load_lightmap(cls, lightmap):
         """
-            TBD 
+            Load world map and convert all cells to 2d binary map (Walls=1 else 0) 
+
+            lightmap -> 2d world map
 
             return -> None
             
@@ -165,10 +153,11 @@ class Shadows(GlobalGameData):
 
     
     exec(PreProcessor.parseCode("""
-def s_applyShadows(self, x, y, surface=None):
+def s_applyShadows(self, surface):
 
-    ofsx = x - self.s_offset_align[0]
-    ofsy = y - self.s_offset_align[1]
+    x, y = self.w_share["WorldPosition"]
+    ofsx = x - self.w_share['ShadowOffset'][0]
+    ofsy = y - self.w_share['ShadowOffset'][1]
 
     #-ifdef/tk_shadow_quality
     

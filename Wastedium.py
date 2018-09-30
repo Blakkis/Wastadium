@@ -1,7 +1,7 @@
 import random
 random.seed(0xdeadbeef122)
 
-from ConfigsModule import GlobalGameData
+from ConfigsModule import GlobalGameData, TkWorldDataShared
 from Weapons import *
 from EnemiesModule import Enemies
 from SoundModule import SoundMusic
@@ -30,7 +30,8 @@ from pygame import FULLSCREEN
 #   All classes gets mixed up in the World class, so everyone has access to everything even if not explicitly stated
 
 
-class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, DeltaTimer):
+class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, 
+           CharacterShadows, DeltaTimer, TkWorldDataShared):
     """
         Provide all import data for player character
 
@@ -76,8 +77,8 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
             return -> None
         """
         
-        wx = -int(World.cell_x - 16) >> 5
-        wy = -int(World.cell_y - 16) >> 5
+        wx = -int(self.w_share['WorldPosition'][0] - 16) >> 5
+        wy = -int(self.w_share['WorldPosition'][1] - 16) >> 5
         
         if self.tk_boundaryCheck(wx, wy, World.w_map_size):
             if self.footstep_delay_sound.isReady(): 
@@ -95,8 +96,8 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
                 img, sAngle = self.all_footsteps[self.footstep_id][self.footstep_cycle.next()] 
                 
                 # Move the footstep decals sideways to the character
-                fx, fy = self.tk_PolarToCartesian(World.cell_x - cx, 
-                                                  World.cell_y - cy, 
+                fx, fy = self.tk_PolarToCartesian(self.w_share['WorldPosition'][0] - cx, 
+                                                  self.w_share['WorldPosition'][1] - cy, 
                                                   angle + sAngle, 4) 
 
                 World.solveMess(self.tk_rotateImage(img, self.tk_degrees(angle), 
@@ -148,7 +149,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
         self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
 
-    def hero_handle(self, surface, px, py):
+    def hero_handle(self, surface):
         """
             Handle everything related to player
 
@@ -242,7 +243,8 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
             dir_frames = 6 if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
 
         # Cast character shadows from lights
-        self.cs_shadow_cast(surface, -px + 16, -py + 16, angle)
+        self.cs_shadow_cast(surface, -self.w_share['WorldPosition'][0] + 16, 
+                                     -self.w_share['WorldPosition'][1] + 16, angle)
 
         # Position where the hero will be built on
         x, y = self.char_center
@@ -303,7 +305,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, CharacterShadows, De
 
 class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons, 
             WeaponCasings, DecalGibsHandler, MessSolver, CharacterShadows,
-            FootSteps, uiElements, SoundMusic, GadgetLoader):
+            FootSteps, uiElements, SoundMusic, GadgetLoader, TkWorldDataShared):
     """
         Setup and handle all world related and external modules loading
 
@@ -498,9 +500,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             # Or perhaps don't..?
             x /= cls.tk_sqrt(2)
             y /= cls.tk_sqrt(2)
-
-        # Store before updating to relay the world position for enemies.
-        rel_pos = cls.cell_x, cls.cell_y
         
         # Move the world(Player)
         cls.cell_x += x; cls.cell_y += y
@@ -531,11 +530,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                     if tb_rect.colliderect(check):
                         cls.cell_y -= y; check_y = 0
         
-        # Update all the relative positions (Why the fuck did i put these here? Do the offset calculation by
-        #                                    By passing the cls.cell to the appropriate functions FIX THIS!
-        Enemies.update_relative_pos(rel_pos[0] - cls.cell_x, rel_pos[1] - cls.cell_y)
-        cls.effect_data['offset'] = cls.cell_x, cls.cell_y
-        cls.casing_data['offset'] = cls.cell_x, cls.cell_y 
+        # Share world position
+        cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y 
 
 
     @classmethod
@@ -554,13 +550,14 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.clear_pickups()
 
-        cls.cell_x, cls.cell_y = 0, 0 
-
         player_spawn_pos = 0, 0   # is read from the mapfile
         cls.w_map_size = 64, 64   # is read from the mapfile
 
+        cls.cell_x, cls.cell_y = 0, 0
         cls.cell_x -= 32 * player_spawn_pos[0]
         cls.cell_y -= 32 * player_spawn_pos[1]
+
+        cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y
 
         # Update the player(world) position for enemies
         Enemies.update_relative_pos(32 * player_spawn_pos[0], 32 * player_spawn_pos[1])
@@ -1637,22 +1634,22 @@ class Main(World, DeltaTimer):
             self.render_map(0, self.screen)
             
             if not self.tk_no_shadow_layer:
-                self.shadow_map.s_fetchDelta(self.cell_x, self.cell_y)
+                self.w_share['ShadowOffset'] = self.cell_x, self.cell_y
 
-            self.gib_render_all(self.screen, self.cell_x, self.cell_y)
+            self.gib_render_all(self.screen)
 
-            self.handle_pickups(self.screen, self.cell_x, self.cell_y)
+            self.handle_pickups(self.screen)
             
             self.render_enemies(self.screen)
 
-            self.hero.hero_handle(self.screen, self.cell_x, self.cell_y)
+            self.hero.hero_handle(self.screen)
                     
             self.render_effects(self.screen)
 
             self.render_casings(self.screen)
 
             if not self.tk_no_shadow_layer:
-                self.shadow_map.s_applyShadows(self.cell_x, self.cell_y, self.screen)
+                self.shadow_map.s_applyShadows(self.screen)
 
             self.render_map(2, self.screen)
 

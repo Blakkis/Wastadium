@@ -1,5 +1,6 @@
 from Inventory import Inventory
 from Timer import DeltaTimer
+from ConfigsModule import TkWorldDataShared
 
 
 __all__ = 'Pickups',
@@ -166,16 +167,17 @@ class Pickups(Inventory):
     
 
     @classmethod
-    def handle_pickups(cls, surface, px, py):
+    def handle_pickups(cls, surface):
         """
             Render and handle pickups
 
             surface -> Surface which to render the gibs to
-            px, py -> World position (To keep gibs relative to world position) 
 
             return -> None
 
         """
+        px, py = cls.w_share['WorldPosition']
+
         c_keys = cls.pu_all_world_pickups.keys() 
         for _id in c_keys:
             if _id in cls.pu_all_pickup_msg: continue

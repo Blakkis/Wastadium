@@ -2,12 +2,13 @@ from ConfigsModule import TkCounter
 from TextureLoader import TextureLoader
 from Weapons import Weapons
 from Timer import DeltaTimer
+from ConfigsModule import TkWorldDataShared
 
 import PathFinder
 
 # NOTE: Fix Rotation from player back to waypoint 
 
-class Enemies(TextureLoader, Weapons, DeltaTimer):
+class Enemies(TextureLoader, Weapons, DeltaTimer, TkWorldDataShared):
     """
         TBD
     """
@@ -227,8 +228,8 @@ class Enemies(TextureLoader, Weapons, DeltaTimer):
                         near_walls.add((cx, cy))
 
         cx, cy = self.tk_res_half[0] - 16, self.tk_res_half[1] - 16
-        return [self.tk_rect((cx + 32 * x) - self.enemy_rel_pos[0], 
-                             (cy + 32 * y) - self.enemy_rel_pos[1], 
+        return [self.tk_rect((cx + 32 * x) - (-self.w_share['WorldPosition'][0]), 
+                             (cy + 32 * y) - (-self.w_share['WorldPosition'][1]), 
                               32, 32) for x, y in near_walls]
 
     
@@ -427,8 +428,8 @@ class Enemies(TextureLoader, Weapons, DeltaTimer):
         env_cols.extend(f_cols)
         
         # Position in map  
-        x = self.enemy_pos[0] - self.enemy_rel_pos[0] - self.enemy_mov_pos[0]
-        y = self.enemy_pos[1] - self.enemy_rel_pos[1] - self.enemy_mov_pos[1]
+        x = self.enemy_pos[0] - (-self.w_share['WorldPosition'][0]) - self.enemy_mov_pos[0]
+        y = self.enemy_pos[1] - (-self.w_share['WorldPosition'][1]) - self.enemy_mov_pos[1]
 
         cenx, ceny = x + 16, y + 16
         rcenx, rceny = int(cenx), int(ceny)
@@ -447,8 +448,8 @@ class Enemies(TextureLoader, Weapons, DeltaTimer):
         else:
             if self.enemy_targetInterval.isReady(release=1): self.fetch_target_vector(sx=cenx, sy=ceny, surface=surface)  
 
-            tri_x, tri_y = ((x + self.enemy_rel_target_pos[0] - self.enemy_targetPos[0] + self.enemy_rel_pos[0]), 
-                            (y + self.enemy_rel_target_pos[1] - self.enemy_targetPos[1] + self.enemy_rel_pos[1]))
+            tri_x, tri_y = ((x + self.enemy_rel_target_pos[0] - self.enemy_targetPos[0] + (-self.w_share['WorldPosition'][0])), 
+                            (y + self.enemy_rel_target_pos[1] - self.enemy_targetPos[1] + (-self.w_share['WorldPosition'][1])))
             
             # Debug target waypoint
             #self.tk_draw_circle(surface, (0xff, 0xff, 0x0), (int(cenx - tri_x), 

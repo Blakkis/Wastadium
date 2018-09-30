@@ -561,6 +561,7 @@ class World(VisualResources, MapParser):
             Maintain proper home position at the center of the screen
 
             x, y -> Screen coordinates in which the resolution and world position gets added/subtracted to/from
+            invert -> Same as above but inverted
 
             return -> Offset
 
@@ -1228,7 +1229,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         if index == -1: return None 
         
         # continuously pressing down 
-        if func in (0, 2): # Which actions can use this functionality
+        if func in (self.E_ID_GROUND, self.E_ID_WALL):    # Which actions can use this functionality
             key = self.ed_mouse.get_pressed()
             
             # Stop from continually applying to same cell
@@ -1244,7 +1245,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Needs click once per cell
             action = 1 if mouse_button_id == 1 else 2 if mouse_button_id == 3 else 0    
 
-        self.build_functions[func](index, x, y, self.screen, action, func)
+        self.build_functions[func](index, int(x), int(y), self.screen, action, func)
 
     
     
@@ -1738,7 +1739,8 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     
 
     #@EditorStatistics.es_update_decorator(_id=6)
-    def __pf_applyWires(self, index, x, y, surface=None, action_key=0, set_id=0):
+    @ed_WireTool
+    def __pf_applyWires(self, index, x, y, surface=None, action_key=0, set_id=0, **kw):
         """
             Place wire endpoints
 
@@ -1751,9 +1753,38 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             return -> None
 
         """
-        cx, cy = index[0] >> 3, index[1] >> 3    
+        point_1 = kw['point']['p1'] 
+        cx, cy = index[0] >> 3, index[1] >> 3 
 
-        self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (x, y, 32, 32), 1)
+        mx, my = self.ed_mouse.get_pos() 
+        mx = x + 8 * (((mx - x) - 1) / 8)
+        my = y + 8 * (((my - y) - 1) / 8)
+
+        if point_1:
+            point_1_r = self.w_homePosition(*point_1)
+            self.ed_draw_aaline(surface, (0x0, 0x0, 0x0), point_1_r, (mx + 8, my + 8), 1)
+
+
+        if action_key == 1:
+            if not point_1:
+                px, py = self.w_homePosition(mx + 8, my + 8, invert=1)
+                px, py = int(self.ed_ceil(px)), int(self.ed_ceil(py))
+                kw['point']['p1'] = px, py
+            
+            else:
+                pass
+
+        elif action_key == 2:
+            if point_1:
+                # Undo
+                kw['point']['p1'] = 0 
+
+            else:
+                # Delete
+                pass   
+
+
+        self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (mx, my, 16, 16), 1)
 
     
 

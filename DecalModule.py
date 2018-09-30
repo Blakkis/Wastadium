@@ -1,4 +1,4 @@
-from ConfigsModule import GlobalGameData
+from ConfigsModule import GlobalGameData, TkWorldDataShared
 from SoundModule import SoundMusic
 
 from pprint import pprint as prn
@@ -197,7 +197,7 @@ class GoreSystem(GlobalGameData):
 
 
 
-class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem):
+class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem, TkWorldDataShared):
 
     # All active gibs on the battlefield
     dh_all_PhysicsGibs = None
@@ -391,17 +391,17 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem):
 
     
     @classmethod
-    def gib_render_all(cls, surface, px, py):
+    def gib_render_all(cls, surface):
         """
             Render gibs on the world
 
-            surface -> Surface which to render the gibs to
-            px, py -> World position (To keep gibs relative to world position) 
+            surface -> Surface which to render the gibs to 
 
             return -> None
 
         """
-        # Note: Gibs could be optmized with spatial map to determine which ones to render
+        px, py = cls.w_share['WorldPosition']
+        # Note: Gibs could be optimized with spatial map to determine which ones to render
         # But since there's so few of them active at the same time
         # I didn't bother to implement one. Only optimize is checking if the gib is within screen
 

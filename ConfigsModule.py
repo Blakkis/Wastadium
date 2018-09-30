@@ -21,7 +21,7 @@ from glob import iglob
 from copy import deepcopy
 
 
-__all__ = ('GlobalGameData', 'TkCounter')
+__all__ = ('GlobalGameData', 'TkCounter', 'TkWorldDataShared')
 
 
 # Note: Replace this shit
@@ -47,6 +47,12 @@ class TkCounter(object):
 
     def reset(self): self.__c = self.__init
 
+
+class TkWorldDataShared(object):
+    
+    # Common data shared between classes
+    w_share = {'WorldPosition': (0, 0),     
+               'ShadowOffset':  (0, 0)}    # Used with shadow casting
 
 
 class TkRect(pygame.Rect):
