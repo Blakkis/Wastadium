@@ -95,7 +95,7 @@ class Shadows(GlobalGameData, TkWorldDataShared):
                 # Fixes peeking by lowering the extra angle per wall
                 # as the distance increases
                 dist = self.tk_hypot(x_mid_value - e2, y_mid_value - e1)
-                d.append(max(0, 0.08 - 0.015 * dist))
+                d.append(max(0, 0.08 - 0.010 * dist))
                 
                 row.append(tuple(d))
             

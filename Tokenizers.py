@@ -1,10 +1,10 @@
 from collections import namedtuple
 
 
-__all__ = ('Id_Pickup', 'Id_Enemy', 'Id_Light', 'Id_Entity_Values', 'Id_Decal')
+__all__ = ('Id_Pickup', 'Id_Enemy', 'Id_Light', 'Id_Entity_Values', 'Id_Decal', 'Id_Wire')
 
 
-# Note: Editor should adapt these aswell
+# Note: Adapt more of these to get rid of constant indexing
 
 
 class Id_Pickup(namedtuple('id_pickup', ['x', 'y', 'id', 'content', 'value', 'debug_name'])):
@@ -32,4 +32,8 @@ class Id_Entity_Values(namedtuple('id_entity', ['id', 'content', 'value'])):
 
 
 class Id_Decal(namedtuple('id_decal', ['tex', 'name', 'pos', 'w', 'h'])):
+	pass
+
+
+class Id_Wire(namedtuple('id_wire', ['p1', 'p2', 'color'])):
 	pass

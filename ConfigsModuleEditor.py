@@ -223,8 +223,8 @@ class ed_WireTool(object):
 
     def __init__(self, f):
         self.f = f
-        self.point = {'p_cap': 0,
-                      'p1':    0}
+        self.point = {'p1_index': 0,
+                      'p1': 0}
 
 
     def __call__(self, *args, **kw):

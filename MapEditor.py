@@ -75,7 +75,7 @@ class World(VisualResources, MapParser):
     w_Cells_Layers = {key: [] for key in w_enum.itervalues()}
 
     # Order in which the layers are rendered
-    w_Blit_Order = frozenset((0x0, 0x3, 0x1, 0x2, 0x5, 0x7, 0x8, 0x4))
+    w_Blit_Order = 0x0, 0x3, 0x1, 0x6, 0x2, 0x5, 0x7, 0x8, 0x4
   
     # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
     w_Size = 0, 0, 0, 0, 0, 0
@@ -137,15 +137,20 @@ class World(VisualResources, MapParser):
     cell_link = property(_get_link, _set_link)
 
     
+    
     @classmethod
-    def w_getIterator(cls, data=-1):
+    def w_getWorldData(cls, data_segment='', data_segment_index=-1):
         """
-            return generator over cells data for saving
+            Return data related 
+
 
             return -> None
 
         """
-        pass 
+        if not data_segment: return None
+        
+        if data_segment == 'w_world':
+            return cls.w_Cells_Layers[data_segment_index], cls.w_Size[2:4] 
 
 
     @classmethod
@@ -289,7 +294,8 @@ class World(VisualResources, MapParser):
                        cls.E_ID_COLLISION: set(),
                        cls.E_ID_LIGHT:     set(),
                        cls.E_ID_ENEMY:     set(),
-                       cls.E_ID_PICKUP:    set()}
+                       cls.E_ID_PICKUP:    set(),
+                       cls.E_ID_WIRE:      set()}
         
         #cls.w_render_decals(surface, active_tool, 3)
 
@@ -323,30 +329,7 @@ class World(VisualResources, MapParser):
         # Render extra display info about the current active entities (Based on the current active tool)
         for k, v in disp_extra.iteritems():
             if k == -1: continue
-            
-            elif k == cls.E_ID_DECAL:
-                # Display origin marker (For better visibility)
-                for i in v:
-                    cls.__w_ShowDecalOrigin(surface, *i)      
-
-            elif k == cls.E_ID_COLLISION:
-                # Display collision X
-                for i in v:
-                    cls.__w_ShowCollisionOrigin(surface, *i)    
-
-            elif k == cls.E_ID_LIGHT:
-                # Display light radius
-                for i in v:
-                    cls.ed_draw_aacircle(surface, *i) 
-
-            elif k == cls.E_ID_ENEMY:
-                # Display id of the enemy
-                for i in v:
-                    surface.blit(*i)  
-
-            elif k == cls.E_ID_PICKUP:
-                for i in v:
-                    surface.blit(*i) 
+            if v: cls.w_Display_Layer[k][1](surface=surface, after_data=v)         
 
         # Display the chunk sectors
         if disp_extra[-1]:
@@ -354,7 +337,7 @@ class World(VisualResources, MapParser):
     
 
     @classmethod
-    def w_render_decals(cls, x, y, surface, tool_id):
+    def w_render_decals(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
         """
             Render decals
 
@@ -362,117 +345,173 @@ class World(VisualResources, MapParser):
             surface -> Surface which to render on
             tool_id -> Current active tool id
             layer_id -> Which render layer this is
+            after_data -> Data rendered last on renderstack
 
             return -> None
 
         """
-        extra_info = set()
+        if after_data is not None:
+            for decal in after_data:
+                cls.__w_ShowDecalOrigin(surface, (decal,))  
 
-        for decals in cls.w_Cells_Layers[cls.E_ID_DECAL][y][x]:
-            posx, posy = cls.w_homePosition(*decals.pos) 
-            surface.blit(decals.tex, (posx, posy))
-            # Add origin markers for the decals to be more visible
-            if tool_id == cls.E_ID_DECAL:
-                origin = (int(posx) + decals.w / 2, 
-                          int(posy) + decals.h / 2)
-                extra_info.add(origin) 
+        else:  
+            extra_info = set()
 
-        return tool_id, extra_info
+            for decals in cls.w_Cells_Layers[cls.E_ID_DECAL][y][x]:
+                posx, posy = cls.w_homePosition(*decals.pos) 
+                surface.blit(decals.tex, (posx, posy))
+                # Add origin markers for the decals to be more visible
+                if tool_id == cls.E_ID_DECAL:
+                    origin = (int(posx) + decals.w / 2, 
+                              int(posy) + decals.h / 2)
+                    extra_info.add(origin) 
+
+            return tool_id, extra_info
 
 
     @classmethod
-    def w_render_collisions(cls, x, y, surface, tool_id):
+    def w_render_collisions(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
         """
-            TBD
+            -- || --
 
             return -> None
 
         """
-        if not tool_id == cls.E_ID_COLLISION:
-            return None
+        if after_data is not None:
+            for collision in after_data:
+                cls.__w_ShowCollisionOrigin(surface, *collision)  
+            
+        else:   
+            # Skip rendering any collision unless the tool is active (Move this out from this function
+            #                                                         to save a function call)
+            if not tool_id == cls.E_ID_COLLISION:
+                return None
 
-        extra_info = set()
+            extra_info = set()
 
-        for key in cls.w_Cells_Layers[cls.E_ID_COLLISION][y][x].iterkeys():
-            posx, posy = cls.w_homePosition(*key)
-            posx, posy = int(posx), int(posy) 
-            extra_info.add((posx, posy))
+            for key in cls.w_Cells_Layers[cls.E_ID_COLLISION][y][x].iterkeys():
+                posx, posy = cls.w_homePosition(*key, _round=1)
+                extra_info.add((posx, posy))
 
-        return tool_id, extra_info
+            return tool_id, extra_info
 
 
     @classmethod
-    def w_render_lights(cls, x, y, surface, tool_id):
+    def w_render_lights(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
         """
-            TBD
+            -- || --
 
             return -> None
 
         """
-        extra_info = set()
+        if after_data is not None:
+            for light in after_data:
+                cls.ed_draw_aacircle(surface, *light) 
+            
+        else: 
+            extra_info = set()
 
-        for light in cls.w_Cells_Layers[cls.E_ID_LIGHT][y][x].itervalues():
-            posx, posy = cls.w_homePosition(light.x, light.y)
-            posx, posy = int(posx), int(posy)
-            # Render light radius when the light tool is active
-            if tool_id == cls.E_ID_LIGHT:
-                extra_info.add((posx, posy, light.radius, light.color))
+            for light in cls.w_Cells_Layers[cls.E_ID_LIGHT][y][x].itervalues():
+                posx, posy = cls.w_homePosition(light.x, light.y, _round=1)
+                # Render light radius when the light tool is active
+                if tool_id == cls.E_ID_LIGHT:
+                    extra_info.add((posx, posy, light.radius, light.color))
 
-            surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16)) 
+                surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16)) 
 
-        return tool_id, extra_info
+            return tool_id, extra_info
 
 
     @classmethod
-    def w_render_enemies(cls, x, y, surface, tool_id):
+    def w_render_enemies(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
         """
-            TBD
+            -- || --
 
             return -> None
 
         """
-        extra_info = set()
+        if after_data is not None:
+            for enemy in after_data:
+                surface.blit(*enemy) 
+            
+        else: 
+            extra_info = set()
 
-        for enemy in cls.w_Cells_Layers[cls.E_ID_ENEMY][y][x].itervalues():
-            posx, posy = cls.w_homePosition(enemy.x, enemy.y)
-            posx, posy = int(posx), int(posy)
-            if tool_id == cls.E_ID_ENEMY:
-                extra_info.add((enemy.debug_name,
-                                (posx -  enemy.debug_name.get_width() / 2, 
-                                 posy - (enemy.debug_name.get_height() + 16))))    
+            for enemy in cls.w_Cells_Layers[cls.E_ID_ENEMY][y][x].itervalues():
+                posx, posy = cls.w_homePosition(enemy.x, enemy.y, _round=1)
+                if tool_id == cls.E_ID_ENEMY:
+                    extra_info.add((enemy.debug_name,
+                                    (posx -  enemy.debug_name.get_width() / 2, 
+                                     posy - (enemy.debug_name.get_height() + 16))))    
 
-            surface.blit(cls.ElementTextures[42], (posx - 16, posy - 16)) 
+                surface.blit(cls.ElementTextures[42], (posx - 16, posy - 16)) 
 
-        return tool_id, extra_info
+            return tool_id, extra_info
 
 
     @classmethod
-    def w_render_pickups(cls, x, y, surface, tool_id):
+    def w_render_pickups(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
         """
-            TBD
+            -- || --
 
             return -> None
 
         """
-        extra_info = set()
+        if after_data is not None:
+            for pickup in after_data:
+                surface.blit(*pickup) 
+            
+        else:
+            extra_info = set()
 
-        for pickup in cls.w_Cells_Layers[cls.E_ID_PICKUP][y][x].itervalues():
-            posx, posy = cls.w_homePosition(pickup.x, pickup.y)
-            posx, posy = int(posx), int(posy)
-            if tool_id == cls.E_ID_PICKUP:
-                extra_info.add((pickup.debug_name,
-                                (posx -  pickup.debug_name.get_width() / 2, 
-                                 posy - (pickup.debug_name.get_height() + 16)))) 
+            for pickup in cls.w_Cells_Layers[cls.E_ID_PICKUP][y][x].itervalues():
+                posx, posy = cls.w_homePosition(pickup.x, pickup.y, _round=1)
+                if tool_id == cls.E_ID_PICKUP:
+                    extra_info.add((pickup.debug_name,
+                                    (posx -  pickup.debug_name.get_width() / 2, 
+                                     posy - (pickup.debug_name.get_height() + 16)))) 
 
-            surface.blit(cls.ElementTextures[41], (posx - 16, posy - 16))
+                surface.blit(cls.ElementTextures[41], (posx - 16, posy - 16))
 
-        return tool_id, extra_info
+            return tool_id, extra_info
+
+
+    @classmethod
+    def w_render_wires(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+        """
+            -- || --
+
+            return -> None
+
+        """
+        if after_data is not None:
+            for wire in after_data:
+                cls.__w_ShowDecalOrigin(surface, [wire[x:2+x] for x in xrange(0, len(wire), 2)])    
+            
+        else:
+            # Wires both endpoints can render the same line twice. Stop this
+            lines_done = set()
+
+            extra_info = set()
+
+            for wire in cls.w_Cells_Layers[cls.E_ID_WIRE][y][x]:
+                pos1 = cls.w_homePosition(*wire.p1, _round=1)
+                pos2 = cls.w_homePosition(*wire.p2, _round=1)
+                done = pos1 + pos2
+
+                if done not in lines_done:
+                    cls.ed_draw_aaline(surface, wire.color, pos1, pos2)
+                    lines_done.add(done)
+                    
+                    if tool_id == cls.E_ID_WIRE: extra_info.add(done)  
+
+            return tool_id, extra_info
 
 
     @classmethod
     def w_setupWorldState(cls):
         """
-            TBD
+            Setup world render functions/variables
 
             return -> None
 
@@ -481,11 +520,13 @@ class World(VisualResources, MapParser):
         for key, value in cls.w_enum.iteritems():
             setattr(World, key, value) 
 
+        # Setup the rendering functions
         cls.w_Display_Layer[cls.E_ID_DECAL][1]     = cls.w_render_decals
         cls.w_Display_Layer[cls.E_ID_COLLISION][1] = cls.w_render_collisions
         cls.w_Display_Layer[cls.E_ID_LIGHT][1]     = cls.w_render_lights
         cls.w_Display_Layer[cls.E_ID_ENEMY][1]     = cls.w_render_enemies
         cls.w_Display_Layer[cls.E_ID_PICKUP][1]    = cls.w_render_pickups
+        cls.w_Display_Layer[cls.E_ID_WIRE][1]      = cls.w_render_wires
 
 
     
@@ -526,9 +567,9 @@ class World(VisualResources, MapParser):
 
     
     @classmethod
-    def __w_ShowDecalOrigin(cls, surface, x, y):
+    def __w_ShowDecalOrigin(cls, surface, points):
         """
-            Draw small origin indicator for decals
+            Draw small origin indicator for entities
 
             surface -> ActiveScreen
             x, y -> Pos
@@ -536,8 +577,9 @@ class World(VisualResources, MapParser):
             return -> None
 
         """
-        cls.ed_draw_line(surface, (0xff, 0x0, 0x0), (x, y + 1), (x + 16, y + 1), 1)
-        cls.ed_draw_line(surface, (0x0, 0xff, 0x0), (x - 1, y), (x - 1, y - 16), 1)
+        for x, y in points:
+            cls.ed_draw_line(surface, (0xff, 0x0, 0x0), (x, y + 1), (x + 16, y + 1), 1)
+            cls.ed_draw_line(surface, (0x0, 0xff, 0x0), (x - 1, y), (x - 1, y - 16), 1)
 
     
     @classmethod
@@ -556,7 +598,7 @@ class World(VisualResources, MapParser):
 
 
     @classmethod
-    def w_homePosition(cls, x, y, invert=False):
+    def w_homePosition(cls, x, y, invert=False, _round=False):
         """
             Maintain proper home position at the center of the screen
 
@@ -566,8 +608,11 @@ class World(VisualResources, MapParser):
             return -> Offset
 
         """
-        if invert: return x - (cls.ed_resolution[0] / 2 + cls.w_Pos[0]), y - (cls.ed_resolution[1] / 2 + cls.w_Pos[1]) 
-        else:      return x + (cls.ed_resolution[0] / 2 + cls.w_Pos[0]), y + (cls.ed_resolution[1] / 2 + cls.w_Pos[1])
+        if invert: pos = x - (cls.ed_resolution[0] / 2 + cls.w_Pos[0]), y - (cls.ed_resolution[1] / 2 + cls.w_Pos[1]) 
+        else: pos = x + (cls.ed_resolution[0] / 2 + cls.w_Pos[0]), y + (cls.ed_resolution[1] / 2 + cls.w_Pos[1])
+        if _round: pos = int(pos[0]), int(pos[1])
+
+        return pos
 
 
 
@@ -746,7 +791,7 @@ class BaseFrame(tk.Tk, TkinterResources):
         self.menuMap = tk.Menu(self.menuBar, tearoff=0)
         self.menuMap.add_command(label='New',        command=self.bf_newMap)
         self.menuMap.add_command(label='Open...',    command=lambda: None)
-        self.menuMap.add_command(label='Save',       command=lambda: self.mp_save(World.w_getIterator))
+        self.menuMap.add_command(label='Save',       command=lambda: self.mp_save(World.w_getWorldData))
         self.menuMap.add_command(label='Save as...', command=lambda: None)
         self.menuMap.add_separator()
         self.menuMap.add_command(label='Exit',       command=lambda: self.destroy())
@@ -1753,26 +1798,42 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             return -> None
 
         """
-        point_1 = kw['point']['p1'] 
+        point_1 = kw['point']['p1']
+
         cx, cy = index[0] >> 3, index[1] >> 3 
 
         mx, my = self.ed_mouse.get_pos() 
         mx = x + 8 * (((mx - x) - 1) / 8)
         my = y + 8 * (((my - y) - 1) / 8)
 
+        # Display a guide wire
         if point_1:
             point_1_r = self.w_homePosition(*point_1)
             self.ed_draw_aaline(surface, (0x0, 0x0, 0x0), point_1_r, (mx + 8, my + 8), 1)
 
-
         if action_key == 1:
-            if not point_1:
-                px, py = self.w_homePosition(mx + 8, my + 8, invert=1)
-                px, py = int(self.ed_ceil(px)), int(self.ed_ceil(py))
-                kw['point']['p1'] = px, py
+            px, py = self.w_homePosition(mx + 8, my + 8, invert=1)
+            px, py = int(self.ed_ceil(px)), int(self.ed_ceil(py))
             
+            # Apply the first endpoint
+            if not point_1: 
+                kw['point']['p1'] = px, py
+                kw['point']['p1_index'] = cx, cy
+            
+            # Finish the wire
             else:
-                pass
+                # Discard length 0 wires
+                if (px, py) == point_1: 
+                    pass
+                
+                # Success wire paint
+                else:
+                    # Both endcaps
+                    x1, y1 = kw['point']['p1_index'] 
+                    self.w_Cells_Layers[self.E_ID_WIRE][y1][x1].append(Id_Wire(point_1, (px, py), (0x0, 0x0, 0x0)))
+                    self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].append(Id_Wire(point_1, (px, py), (0x0, 0x0, 0x0)))
+                    kw['point']['p1'] = 0
+
 
         elif action_key == 2:
             if point_1:
@@ -1783,10 +1844,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 # Delete
                 pass   
 
-
         self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (mx, my, 16, 16), 1)
-
-    
 
     
     def __pf_floodFill(self, index, surface, surface_str, surface_rot):

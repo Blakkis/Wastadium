@@ -27,7 +27,8 @@ from pygame import FULLSCREEN
 # NOTES:
 #   Refactor!
 #   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
-#   All classes gets mixed up in the World class, so everyone has access to everything even if not explicitly stated
+#   Replace the current framerate to consumer based framerate ( Need to separate login/render )
+   
 
 
 class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, 
@@ -59,7 +60,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
 
         # Footsteps 
         self.footstep_id = 0    # Id of the footstep left behind
-        self.footstep_cycle = iter(xrange(8, 40))       # First 0 to 7 indexes are data about the footstep and the rest are footstep textures 
+        self.footstep_cycle = iter(xrange(8, 40))        # First 0 to 7 indexes are data about the footstep and the rest are footstep textures 
         self.footstep_delay = self.tk_trigger_const(.1)  # Frames between each footstep +
         self.footstep_delay_sound = self.tk_trigger_const(.001)    # Frames between each footstep soundeffects
 
@@ -1599,7 +1600,7 @@ class Main(World, DeltaTimer):
         World.initVisualsAndExtModules()
 
         if '-nosplash' not in self.tk_read_args:
-            self.Menus.all_menus['m_intro'].run(self.screen)
+            self.Menus.all_menus['m_main'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
