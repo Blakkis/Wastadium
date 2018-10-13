@@ -162,7 +162,6 @@ def s_applyShadows(self, surface):
     #-ifdef/tk_shadow_quality
     
     self.s_shadow_surf.blit(surface, (0, 0))
-    # Lock up, since we are going to make quite a few draw calls
     self.s_shadow_surf.lock()
     
     #-endif

@@ -95,8 +95,7 @@ class World(VisualResources, MapParser):
         self._cell_link = None
 
     
-    def _get_mid(self):
-        return self._cell_midTex
+    def _get_mid(self): return self._cell_midTex
 
     def _set_mid(self, value):
         # Control the collision applying when wall gets added to the world
@@ -116,41 +115,38 @@ class World(VisualResources, MapParser):
     cell_midTex = property(_get_mid, _set_mid)
 
 
-    def _get_obj(self):
-        return self._cell_objTex
+    def _get_obj(self): return self._cell_objTex
 
-    def _set_obj(self, value):
-        
-        self._cell_objTex = value
+    def _set_obj(self, value): self._cell_objTex = value
 
     cell_objTex = property(_get_obj, _set_obj)
 
 
+    def _get_link(self): return self._cell_link
 
-    def _get_link(self):
-        return self._cell_link
-
-    def _set_link(self, value):
-        
-        self._cell_link = value
+    def _set_link(self, value): self._cell_link = value
 
     cell_link = property(_get_link, _set_link)
 
     
-    
     @classmethod
-    def w_getWorldData(cls, data_segment='', data_segment_index=-1):
+    def w_getWorldData(cls, data_segment=''):
         """
             Return data related 
 
+            data_segment -> TBD 
 
             return -> None
 
         """
-        if not data_segment: return None
+        return cls.w_Cells_Layers[cls.w_enum[data_segment]]
         
-        if data_segment == 'w_world':
-            return cls.w_Cells_Layers[data_segment_index], cls.w_Size[2:4] 
+        #if data_segment == 'w_world':
+        #    return cls.w_Cells_Layers[data_segment_index], cls.w_Size[2:4]
+
+        #elif data_segment == 'w_collision': return cls.w_Cells_Layers[cls.E_ID_COLLISION]
+
+        #elif data_segment == 'w_enemy': return cls.w_Cells_Layers[cls.E_ID_ENEMY] 
 
 
     @classmethod
@@ -159,7 +155,7 @@ class World(VisualResources, MapParser):
             Move the world
 
             x, y -> move direction
-            reset -> Reset position to 0
+            reset -> Reset position to origin
 
             return -> None
 
@@ -1756,7 +1752,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         if self.w_Cells_Single[index[1]][index[0]].cell_midTex[0] is None:
             pcolor = 0xff, 0xff, 0x0 
 
-            pos = (index[0] * 32 + 16, index[1] * 32 + 16) 
+            pos = index[0] * 32 + 16, index[1] * 32 + 16 
 
             if action_key == 1:
                 token = EntityPicker.ep_getPacket()

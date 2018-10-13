@@ -283,7 +283,7 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem, TkWorldDataShared):
                     if self.dh_decal_data['dh_world'][iy][ix]:
                         wall_pos = 32 * ix + 16, 32 * iy + 16
                         
-                        # Determine from which side the gib came in (The decimal is 45 in degrees)
+                        # Determine from which side the gib came in
                         angle = (self.tk_atan2(-y - wall_pos[1], -x - wall_pos[0]) + 0.7853981633974483) % self.tk_pi2
 
                         # Get the sector the gib came inside the wall
