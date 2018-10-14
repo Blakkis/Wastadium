@@ -29,11 +29,14 @@ MAP_ENEMY_XML     = 'id_enemies'
 MAP_LIGHT_XML     = 'id_lights'
 MAP_DECAL_XML     = 'id_decals'
 
-
+# ----
 
 class WorldLoadException(Exception):
     pass
 
+
+
+# ----
 
 def dataParser(func): 
     def wrapped(*args, **kw):
@@ -194,13 +197,11 @@ class MapParser(object):
             light = l[1]
             parent = xmlParse.SubElement(segment, name, name='light_{}'.format(enum))
             # Convert rgb tripled to hex
-            _hex = 0
-            _hex |= light.color[0] << 16    # r
-            _hex |= light.color[1] << 8     # g
-            _hex |= light.color[2]          # b
-            _hex = '{0:#0{1}x}'.format(_hex, 8)     # Keep leading/trailing zeroes
+            r, g, b = light.color
+            hex_repr = '{0:#0{1}x}'.format(((r << 16) ^ g << 8) ^ b, 8)    # Keep leading zeroes
 
-            parent.text = '{}.{}.{}.{}'.format(light.x >> 5, light.y >> 5, light.radius, _hex)
+            # Radius is stored, although, not used
+            parent.text = '{}.{}.{}.{}'.format(light.x >> 5, light.y >> 5, light.radius, hex_repr)
 
 
     @classmethod
@@ -214,7 +215,8 @@ class MapParser(object):
         """
         segment = xmlParse.SubElement(xml_root, name)
         # Remember rotate!
-        print data
+        for x in data:
+            print x
 
             
     

@@ -31,7 +31,7 @@ class Id_Entity_Values(namedtuple('id_entity', ['id', 'content', 'value'])):
     pass
 
 
-class Id_Decal(namedtuple('id_decal', ['tex', 'name', 'pos', 'w', 'h'])):
+class Id_Decal(namedtuple('id_decal', ['tex', 'name', 'pos', 'w', 'h', 'orientation'])):
 	pass
 
 

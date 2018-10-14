@@ -1590,7 +1590,8 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                                                                          name=tex_data['name'], 
                                                                          pos=pos, 
                                                                          w=rot_w, 
-                                                                         h=rot_h))
+                                                                         h=rot_h,
+                                                                         orientation=angle))
 
             return 1
 
