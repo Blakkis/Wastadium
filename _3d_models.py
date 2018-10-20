@@ -152,9 +152,9 @@ class Model3D(GlobalGameData):
     @classmethod
     def m_create_BulletCasing(cls):
         """
-            TBD
+            Create a 3d bullet casing
 
-            return -> None
+            return -> Instance
 
         """
         r_scale = cls.tk_resolution_scale
@@ -192,9 +192,11 @@ class Model3D(GlobalGameData):
     @classmethod
     def m_create_Box(cls, scale):
         """
-            TBD
+            Create a 3d wireframe cube
 
-            return -> None
+            scale -> Scale of the cube
+
+            return -> Instance
 
         """ 
         r_scale = cls.tk_resolution_scale

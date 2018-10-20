@@ -6,7 +6,7 @@ from TextureLoader import TextureLoader, uiElements
 from TextureHandlerEditor import TextureSelectOverlay
 from DecalModule import DecalGibsHandler
 from LightEditor import Lights
-from MapParser import MapParser, WorldLoadException
+from MapParser import MapParser
 from StatisticsEditor import EditorStatistics
 from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
@@ -60,22 +60,14 @@ class World(VisualResources, MapParser):
     # 2d array containing all single cells(32 x 32)
     w_Cells_Single = []
 
-    w_enum = {
-    'E_ID_GROUND'   : 0x0,    
-    'E_ID_OBJECT'   : 0x1,    
-    'E_ID_WALL'     : 0x2,    
-    'E_ID_DECAL'    : 0x3,    
-    'E_ID_COLLISION': 0x4,    
-    'E_ID_LIGHT'    : 0x5,    
-    'E_ID_WIRE'     : 0x6,
-    'E_ID_ENEMY'    : 0x7,
-    'E_ID_PICKUP'   : 0x8}
+    # Copy the layer enums from the MapParser
+    locals()['w_enum'] = MapParser.w_enum
 
     # Holds all textures layers in separated list/dictionaries
     w_Cells_Layers = {key: [] for key in w_enum.itervalues()}
 
     # Order in which the layers are rendered
-    w_Blit_Order = 0x0, 0x3, 0x1, 0x6, 0x2, 0x5, 0x7, 0x8, 0x4
+    w_Blit_Order = None
   
     # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
     w_Size = 0, 0, 0, 0, 0, 0
@@ -130,23 +122,20 @@ class World(VisualResources, MapParser):
 
     
     @classmethod
-    def w_getWorldData(cls, data_segment=''):
+    def w_getWorldData(cls, data_segment='', layers=True):
         """
             Return data related 
 
             data_segment -> TBD 
+            layers -> Get anything else otherthan layer data if 'False'
 
             return -> None
 
         """
-        return cls.w_Cells_Layers[cls.w_enum[data_segment]]
-        
-        #if data_segment == 'w_world':
-        #    return cls.w_Cells_Layers[data_segment_index], cls.w_Size[2:4]
-
-        #elif data_segment == 'w_collision': return cls.w_Cells_Layers[cls.E_ID_COLLISION]
-
-        #elif data_segment == 'w_enemy': return cls.w_Cells_Layers[cls.E_ID_ENEMY] 
+        if layers:
+            return cls.w_Cells_Layers[data_segment]
+        else:
+            return getattr(cls, data_segment) 
 
 
     @classmethod
@@ -513,8 +502,13 @@ class World(VisualResources, MapParser):
 
         """
         # Convert from dict to class variables
-        for key, value in cls.w_enum.iteritems():
-            setattr(World, key, value) 
+        #for key, value in cls.w_enum.iteritems():
+        #    setattr(World, key, value)
+
+        # Setup order in which the layers are rendered in
+        cls.w_Blit_Order = (cls.E_ID_GROUND, cls.E_ID_DECAL,  cls.E_ID_OBJECT,
+                            cls.E_ID_WIRE,   cls.E_ID_WALL,   cls.E_ID_LIGHT,
+                            cls.E_ID_ENEMY,  cls.E_ID_PICKUP, cls.E_ID_COLLISION)  
 
         # Setup the rendering functions
         cls.w_Display_Layer[cls.E_ID_DECAL][1]     = cls.w_render_decals
@@ -1591,7 +1585,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                                                                          pos=pos, 
                                                                          w=rot_w, 
                                                                          h=rot_h,
-                                                                         orientation=angle))
+                                                                         orient=angle))
 
             return 1
 
@@ -1825,7 +1819,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 
                 # Success wire paint
                 else:
-                    # Both endcaps
+                    # Both endcaps(So it can be rendered from both ends)
                     x1, y1 = kw['point']['p1_index'] 
                     self.w_Cells_Layers[self.E_ID_WIRE][y1][x1].append(Id_Wire(point_1, (px, py), (0x0, 0x0, 0x0)))
                     self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].append(Id_Wire(point_1, (px, py), (0x0, 0x0, 0x0)))

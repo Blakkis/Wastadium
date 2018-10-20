@@ -24,7 +24,7 @@ __all__ = ('GlobalGameDataEditor', 'ed_killMe',     'ed_centerWidget',
 
 class ed_BitToggle(object):
     """
-        Provide capsulated toggle bit for inside lambdas
+        Provide capsulated toggle *bit for inside lambdas
     """
     def __init__(self):
         self._bit = 0
@@ -199,7 +199,7 @@ def ed_killMe(func):
 
         func -> Function to decorate
 
-        return -> Innerfunc
+        return -> Function
 
     """
     def innerFunc(*args, **kw):
@@ -220,7 +220,8 @@ def ed_killMe(func):
 
 
 class ed_WireTool(object):
-
+    # This hooks directly to wiretool function as decorator
+    # to provide basic functionality and encapsulation for the data
     def __init__(self, f):
         self.f = f
         self.point = {'p1_index': 0,
@@ -255,7 +256,6 @@ def ed_centerWidget(widget):
 
 
 # Note: Mostly used Tkinter widgets are subclassed to hide the options and settings from cluttering the maincode
-# Note: Since ill be using pretty much similar styled widgets across the editor, this fits well.
 # Note: All the arguments these takes are Tkinter basic arguments with slightly different name 
 
 class ed_Checkbutton(tk.Checkbutton):

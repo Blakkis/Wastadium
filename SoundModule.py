@@ -85,7 +85,7 @@ class SoundMusic(GlobalGameData):
         channel = cls.all_sounds[_id].play()
         if channel is None: return
         
-        channel.set_volume(cls.sm_volumes[1] / 8.0 if distanced else cls.sm_volumes[1])
+        channel.set_volume(cls.sm_volumes[1] / 2.0 if distanced else cls.sm_volumes[1])
 
 
     
