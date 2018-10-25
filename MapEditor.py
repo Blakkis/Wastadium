@@ -72,6 +72,9 @@ class World(VisualResources, MapParser):
     # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
     w_Size = 0, 0, 0, 0, 0, 0
 
+    # Spawn place for the player (And optional goal)
+    w_SpawnEnd = [None, None]
+
     # Holds which layers to display and the display function for it
     w_Display_Layer = {key: [1, None] for key in w_enum.itervalues()}
     w_Display_Layer[-1] = [0, None]     # Display sectors (Special)
@@ -152,7 +155,7 @@ class World(VisualResources, MapParser):
         if reset: cls.w_Pos = [0, 0]
         else: cls.w_Pos[0] += x; cls.w_Pos[1] += y
 
-        cls.es_update(1, '({}, {})'.format(-round(cls.w_Pos[0], 1), -round(cls.w_Pos[1], 1)), 0) 
+        cls.es_update('id_camera', '({}, {})'.format(-round(cls.w_Pos[0], 1), -round(cls.w_Pos[1], 1)), 0) 
 
 
     @classmethod
@@ -182,6 +185,8 @@ class World(VisualResources, MapParser):
         cls.es_initVariables(reset=True)
 
         cls.w_moveWorld(reset=True)
+
+        cls.w_SpawnEnd = [None, None]
 
         # Reset entity containers (Ignore the first 3)
         for reset_enum in sorted(cls.w_Cells_Layers.keys())[3:]:
@@ -218,7 +223,7 @@ class World(VisualResources, MapParser):
                     cls.w_Cells_Single[y][x].cell_midTex = wall_set_id, ori / 90, _id
                     fullWorld.blit(cls.ed_transform.rotate(cls.mid_textures[wall_set_id][_id], ori), (32 * x, 32 * y))
 
-                cls.es_update(4, count)
+                cls.es_update('id_wall_cnt', count)
             
             # Chop the world into chunks
             cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, fullWorld.subsurface(chunk * x, chunk * y, chunk, chunk)) 
@@ -474,21 +479,18 @@ class World(VisualResources, MapParser):
                 cls.__w_ShowDecalOrigin(surface, [wire[x:2+x] for x in xrange(0, len(wire), 2)])    
             
         else:
-            # Wires both endpoints can render the same line twice. Stop this
-            lines_done = set()
-
+            # Renders the line twice from both ends
             extra_info = set()
 
             for wire in cls.w_Cells_Layers[cls.E_ID_WIRE][y][x]:
                 pos1 = cls.w_homePosition(*wire.p1, _round=1)
                 pos2 = cls.w_homePosition(*wire.p2, _round=1)
-                done = pos1 + pos2
-
-                if done not in lines_done:
-                    cls.ed_draw_aaline(surface, wire.color, pos1, pos2)
-                    lines_done.add(done)
-                    
-                    if tool_id == cls.E_ID_WIRE: extra_info.add(done)  
+                w = pos1 + pos2
+                
+                cls.ed_draw_line(surface, wire.color, pos1, pos2)
+                
+                if tool_id == cls.E_ID_WIRE: 
+                    extra_info.add(w)  
 
             return tool_id, extra_info
 
@@ -636,6 +638,7 @@ class TkinterResources(VisualResources):
         cls.bf_disp_dec   = cls.ed_bool()
         cls.bf_disp_objs  = cls.ed_bool()
         cls.bf_disp_wall  = cls.ed_bool()
+        cls.bf_disp_wire  = cls.ed_bool()
         cls.bf_snap_dec   = cls.ed_bool()
         cls.bf_autowalls  = cls.ed_bool()
 
@@ -768,9 +771,11 @@ class BaseFrame(tk.Tk, TkinterResources):
         self.resizable(0, 0)
         
         TkinterResources.bf_initVariables()
-
-        #                               #   Update the title when newmap is being created via variable tracing
-        self.title("None - MapEditor"); self.bf_mapname.trace('w', lambda *args: self.title('{} - MapEditor'.format(self.bf_mapname.get())))
+                              
+        self.title("None - MapEditor"); 
+        #   Update the title when newmap is being created via variable tracing
+        self.bf_mapname.trace('w', lambda *args: self.title('{} - MapEditor'.format(self.bf_mapname.get())))
+        
         #self.resizable(False, False)
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -780,7 +785,7 @@ class BaseFrame(tk.Tk, TkinterResources):
 
         self.menuMap = tk.Menu(self.menuBar, tearoff=0)
         self.menuMap.add_command(label='New',        command=self.bf_newMap)
-        self.menuMap.add_command(label='Open...',    command=lambda: None)
+        self.menuMap.add_command(label='Open...',    command=lambda: None)      # Create new map with *load* arguement to read from mapfile
         self.menuMap.add_command(label='Save',       command=lambda: self.mp_save(World.w_getWorldData))
         self.menuMap.add_command(label='Save as...', command=lambda: None)
         self.menuMap.add_separator()
@@ -810,6 +815,7 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         ed_Checkbutton(self, 'Hide Ground',  self.bf_disp_gnd,   1, 0)
         ed_Checkbutton(self, 'Hide Objects', self.bf_disp_objs,  1, 1)
         ed_Checkbutton(self, 'Hide Walls',   self.bf_disp_wall,  2, 0)
+        ed_Checkbutton(self, 'Hide Wires',   self.bf_disp_wire,  2, 1)
         
         self.ed_separator(self, orient='horizontal')\
         .grid(row=3, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
@@ -959,8 +965,7 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
 
         # Wire
         cls.h_helpstrings[6] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
-                                                "Use 'ScrollWheel' to change size of the light(min: 64, max: 256)",
-                                                "Use the Tools menu to change the color of the light"))
+                                                "Use the Tools menu to change the color of the wire"))
 
         # Enemy
         cls.h_helpstrings[7] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
@@ -1027,10 +1032,11 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.ed_mouse.set_visible(0)        # Pygame default cursor is messed up with the SDL window. Disable it
 
         # Add traces to the layers
-        self.bf_disp_gnd.trace(  'w', lambda *args: self.w_toggleLayers(self.E_ID_GROUND))
-        self.bf_disp_objs.trace( 'w', lambda *args: self.w_toggleLayers(self.E_ID_OBJECT))
-        self.bf_disp_wall.trace( 'w', lambda *args: self.w_toggleLayers(self.E_ID_WALL))
-        self.bf_disp_dec.trace(  'w', lambda *args: self.w_toggleLayers(self.E_ID_DECAL))
+        self.bf_disp_gnd.trace('w',   lambda *args: self.w_toggleLayers(self.E_ID_GROUND))
+        self.bf_disp_objs.trace('w',  lambda *args: self.w_toggleLayers(self.E_ID_OBJECT))
+        self.bf_disp_wall.trace('w',  lambda *args: self.w_toggleLayers(self.E_ID_WALL))
+        self.bf_disp_wire.trace('w',  lambda *args: self.w_toggleLayers(self.E_ID_WIRE))
+        self.bf_disp_dec.trace('w',   lambda *args: self.w_toggleLayers(self.E_ID_DECAL))
         self.bf_disp_chunk.trace('w', lambda *args: self.w_toggleLayers(-1))
 
         
@@ -1190,7 +1196,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         
         self.screen.fill(self.ed_bg_color)
 
-        self.es_update(0, round(self.dt_fps(), 1))
+        self.es_update('id_framerate', round(self.dt_fps(), 1))
 
     
 
@@ -1316,7 +1322,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     
     
 
-    @EditorStatistics.es_update_decorator(_id=2)
+    @EditorStatistics.es_update_decorator(_id='id_object_cnt')
     def __pf_applyObject(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             Apply objects to the world
@@ -1426,7 +1432,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
     
 
 
-    @EditorStatistics.es_update_decorator(_id=4)
+    @EditorStatistics.es_update_decorator(_id='id_wall_cnt')
     def __pf_applyWallset(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             Apply walls in manual or auto mode 
@@ -1515,7 +1521,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             return -1
 
         
-    @EditorStatistics.es_update_decorator(_id=3)
+    @EditorStatistics.es_update_decorator(_id='id_decal_cnt')
     def __pf_applyDecals(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             Paint decals
@@ -1632,7 +1638,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
 
 
-    @EditorStatistics.es_update_decorator(_id=5)
+    @EditorStatistics.es_update_decorator(_id='id_light_cnt')
     def __pf_applyLights(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             Apply lights
@@ -1680,7 +1686,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
 
 
-    @EditorStatistics.es_update_decorator(_id=7)
+    @EditorStatistics.es_update_decorator(_id='id_pickup_cnt')
     def __pf_applyPickups(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             Apply pickups 
@@ -1728,7 +1734,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
 
     
-    @EditorStatistics.es_update_decorator(_id=6)
+    @EditorStatistics.es_update_decorator(_id='id_enemy_cnt')
     def __pf_applyEnemies(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
             Place enemies
@@ -1774,7 +1780,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
     
 
-    #@EditorStatistics.es_update_decorator(_id=6)
+    @EditorStatistics.es_update_decorator(_id='id_wire_cnt')
     @ed_WireTool
     def __pf_applyWires(self, index, x, y, surface=None, action_key=0, set_id=0, **kw):
         """
@@ -1797,15 +1803,15 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         mx = x + 8 * (((mx - x) - 1) / 8)
         my = y + 8 * (((my - y) - 1) / 8)
 
+        px, py = self.w_homePosition(mx + 8, my + 8, invert=1)
+        px, py = int(self.ed_ceil(px)), int(self.ed_ceil(py))
+
         # Display a guide wire
         if point_1:
             point_1_r = self.w_homePosition(*point_1)
             self.ed_draw_aaline(surface, (0x0, 0x0, 0x0), point_1_r, (mx + 8, my + 8), 1)
 
         if action_key == 1:
-            px, py = self.w_homePosition(mx + 8, my + 8, invert=1)
-            px, py = int(self.ed_ceil(px)), int(self.ed_ceil(py))
-            
             # Apply the first endpoint
             if not point_1: 
                 kw['point']['p1'] = px, py
@@ -1820,10 +1826,14 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 # Success wire paint
                 else:
                     # Both endcaps(So it can be rendered from both ends)
-                    x1, y1 = kw['point']['p1_index'] 
-                    self.w_Cells_Layers[self.E_ID_WIRE][y1][x1].append(Id_Wire(point_1, (px, py), (0x0, 0x0, 0x0)))
-                    self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].append(Id_Wire(point_1, (px, py), (0x0, 0x0, 0x0)))
+                    x1, y1 = kw['point']['p1_index']
+                    wire_ = Id_Wire(p1=point_1, p2=(px, py), color=self.l_current_color[0])
+
+                    self.w_Cells_Layers[self.E_ID_WIRE][y1][x1].append(wire_)
+                    self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].append(wire_)
                     kw['point']['p1'] = 0
+
+                    return 1
 
 
         elif action_key == 2:
@@ -1832,8 +1842,22 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 kw['point']['p1'] = 0 
 
             else:
-                # Delete
-                pass   
+                pop_this = None
+                for enum, dwire in enumerate(self.w_Cells_Layers[self.E_ID_WIRE][cy][cx]):
+                    # Check which endpoint the mouse is clicking
+                    if (px, py) in (dwire.p1, dwire.p2):
+                        pop_this = dwire
+                        break  
+
+                if pop_this is not None:
+                    # Find and delete both endpoints
+                    for x, y in (pop_this.p1, pop_this.p2):
+                        # Note: This might cause problems (pushing back the index division by 1)
+                        cx, cy = max(0, x - 1 >> 8), max(0, y - 1 >> 8)
+                        index = self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].index(pop_this)
+                        self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].pop(index)
+
+                    return -1  
 
         self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (mx, my, 16, 16), 1)
 

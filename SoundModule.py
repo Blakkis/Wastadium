@@ -13,12 +13,15 @@ class SoundMusic(GlobalGameData):
     sm_volumes = {0: 1.0,   # Music
                   1: 1.0}   # Effects
 
-    sm_volume_drop = 0.02
+    # Max distance at which effects can be heard at
+    __sm_volume_max_dist = 320.0
+
+    # Initial left side value should match the initial effect volume
+    __sm_volume_falloff = 1.0 / __sm_volume_max_dist
 
     def __init__(self):
         pass
 
-    
     @classmethod
     def readSoundMusic(cls):
         """
@@ -29,7 +32,6 @@ class SoundMusic(GlobalGameData):
         """
         # Source path for the sound assets
         src_path_cfg = cls.tk_path.join('configs', 'sound')
-
 
         # Sounds
         for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'sounds.cfg')):
@@ -65,27 +67,38 @@ class SoundMusic(GlobalGameData):
             # Effects
             elif volume_id == 1 and volume != cls.sm_volumes[volume_id]:
                 cls.sm_volumes[volume_id] = volume
-                if play_sound_cue: cls.playSoundEffect(188)
+                if play_sound_cue: 
+                	cls.playSoundEffect(188)
+
+                # Re-calculate the volume falloff
+            	cls.__sm_volume_falloff = cls.sm_volumes[volume_id] / cls.__sm_volume_max_dist     
 
 
     @classmethod
-    def playSoundEffect(cls, _id, distanced=False):
+    def playSoundEffect(cls, _id, distance=0):
         """
             Play sound-effect by id
 
             _id -> int id of the needed soundeffect (See sounds.cfg for the sounds by id)
-            distanced -> Play the sound effect half the current volume
-                         (Possible calculate actual distance to the sound location and use that) 
+            distance -> Screen position to calculate volume falloff from the center(Player perspective) 
             
             return -> None
 
         """
-        if not isinstance(_id, int) and not sm_volumes[1]: return None
+        if not isinstance(_id, int) and not sm_volumes[1]: 
+        	return None
+
+        if distance:
+        	dist = cls.tk_hypot(cls.tk_res_half[0] - distance[0], cls.tk_res_half[1] - distance[1]) 
+        	distance = cls.__sm_volume_falloff * min(cls.__sm_volume_max_dist, dist)
 
         channel = cls.all_sounds[_id].play()
-        if channel is None: return
+        # No available channel to play on
+        if channel is None: 
+        	return None
         
-        channel.set_volume(cls.sm_volumes[1] / 2.0 if distanced else cls.sm_volumes[1])
+        # Set the volume for the channel
+        channel.set_volume(max(0, min(1, cls.sm_volumes[1] - distance)))
 
 
     

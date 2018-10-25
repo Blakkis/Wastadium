@@ -48,6 +48,7 @@ class Lights(tk.Frame, GlobalGameDataEditor):
             return -> None
 
         """
+        raise NotImplemented
         cls.l_current_size += level
         cls.l_current_size = max(32, min(128, cls.l_current_size))
 

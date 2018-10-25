@@ -77,9 +77,6 @@ def dataParseCheck(func):
     
 
 class MapParser(object):
-
-    # Store cleaned data here for others to use if needed
-    __Parser_storage = {}
     
     w_enum = {'E_ID_GROUND'   : 0x0,    
               'E_ID_OBJECT'   : 0x1,    
@@ -93,19 +90,28 @@ class MapParser(object):
 
     locals().update(w_enum)
 
+    # Store cleaned data here for others to use if needed
+    __DataStorage = {}
+
     
     @classmethod
     def mp_save(cls, data_fetcher):
         """
-            TBD
+            Save map
+
+            data_fetched -> Data fetch function from the world class
 
             return -> None
 
         """
         mapname = cls.bf_mapname.get()
 
-        filename = mp_file.asksaveasfilename(initialdir=MAP_PATH_BASE, filetypes=(MAP_FORMAT_EXT_FULL, ))
-        if not filename: return None
+        filename = mp_file.asksaveasfilename(initialdir=MAP_PATH_BASE,
+                                             initialfile=mapname,
+                                             filetypes=(MAP_FORMAT_EXT_FULL, ))
+        if not filename: 
+            return None
+
 
         # Create directory for the map in the target base path
         map_path = path.join(getcwd(), MAP_PATH_BASE, filename)
@@ -132,14 +138,13 @@ class MapParser(object):
         final_tree = xmlParse.ElementTree(root)
         final_tree.write(path.join(map_path, MAP_DATA_EXT))
 
-        
         # Turn in to archive 
-        #make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
-        #rmtree(map_path)   # Delete original mapfolder(now archived and copied)
+        make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
+        rmtree(map_path)   # Delete original mapfolder(now archived and copied)
 
         # Rename the extension to game specific format
-        #tmp_path_base = path.join(getcwd(), MAP_PATH_BASE, '{}.{}'.format(filename, MAP_PACK_PREFERRED_EXT))
-        #rename(tmp_path_base, ''.join(tmp_path_base.split('.')[:-1]) + MAP_FORMAT_EXT_EXT)
+        tmp_path_base = path.join(getcwd(), MAP_PATH_BASE, '{}.{}'.format(filename, MAP_PACK_PREFERRED_EXT))
+        rename(tmp_path_base, ''.join(tmp_path_base.split('.')[:-1]) + MAP_FORMAT_EXT_EXT)
 
     
     @classmethod
@@ -164,8 +169,8 @@ class MapParser(object):
                 base.blit(surf, (x, y))
 
         if layer_index == cls.E_ID_GROUND:
-            if cls.E_ID_DECAL in cls.__Parser_storage:  
-                for r_decal in cls.__Parser_storage[cls.E_ID_DECAL]:
+            if cls.E_ID_DECAL in cls.__DataStorage:  
+                for r_decal in cls.__DataStorage[cls.E_ID_DECAL]:
                     base.blit(r_decal.tex, r_decal.pos)
 
         image.save(base, path.join(final_path, name_id + MAP_SURFACE_EXT))
@@ -264,7 +269,7 @@ class MapParser(object):
             parent.text = '{}.{}.{orient}'.format(*decal.pos, orient=decal.orient)
 
         # Store the decals for the world parser
-        cls.__Parser_storage[cls.E_ID_DECAL] = data
+        cls.__DataStorage[cls.E_ID_DECAL] = data
 
 
     @classmethod
@@ -332,4 +337,10 @@ class MapParser(object):
             return -> None
 
         """
-        pass
+        filename = mp_file.askopenfilename(initialdir=MAP_PATH_BASE, filetypes=(MAP_FORMAT_EXT_FULL, ))
+        print filename
+
+
+if __name__ == '__main__':
+    pass
+    #MapParser.mp_load()

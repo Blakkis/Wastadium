@@ -1,5 +1,6 @@
 import Tkinter as tk
 from ConfigsModuleEditor import GlobalGameDataEditor 
+from collections import OrderedDict
 
 
 class EditorStatistics(tk.Frame, GlobalGameDataEditor):
@@ -7,9 +8,8 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
         Provide realtime stats about the editor/world
     """
     # Holds the Tkinter variables by id
-    __es_stats = {}
+    __es_stats = OrderedDict()
                     
-
     def __init__(self, base, row, column):
         super(EditorStatistics, self).__init__(base)
 
@@ -18,17 +18,15 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
         tk.Label(self, text='Editor & World Info').grid(row=0, column=0, padx=5, 
                                                         sticky=self.ed_sticky_w)
 
-        for enum in xrange(0, len(self.__es_stats)):
-            k, v = self.__es_stats[enum] 
+        for enum, k in enumerate(self.__es_stats.iterkeys()):
+            k, v = self.__es_stats[k] 
             tk.Label(self, text=k).grid(row=enum + 1, column=0, ipadx=5, sticky=self.ed_sticky_w)
-            tk.Label(self, textvariable=v).grid(row=enum + 1, column=1, sticky=self.ed_sticky_w)    
+            tk.Label(self, textvariable=v).grid(row=enum + 1, column=1,  sticky=self.ed_sticky_w)    
 
     
     @classmethod
     def es_initVariables(cls, reset=False):
         """
-
-
             values -> List of tuples containing (Label Name, Tkinter 'int' variable)
             reset -> Reset all the Tkinter variables to 0
 
@@ -43,14 +41,15 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
                 r[1].set(rv) 
         else:
             # Stats on the statistics frame
-            cls.__es_stats[0] = ('Framerate:',       cls.ed_int())
-            cls.__es_stats[1] = ('Camera Position:', cls.ed_str()); cls.__es_stats[1][1].set('-') 
-            cls.__es_stats[2] = ('Object Count:',    cls.ed_int())
-            cls.__es_stats[3] = ('Decal Count:',     cls.ed_int())
-            cls.__es_stats[4] = ('Wall Segments:',   cls.ed_int())
-            cls.__es_stats[5] = ('Light Count:',     cls.ed_int())
-            cls.__es_stats[6] = ('Enemy Count',      cls.ed_int())
-            cls.__es_stats[7] = ('Pickup Count',     cls.ed_int())
+            cls.__es_stats['id_framerate']  = ('Framerate:',  cls.ed_int())
+            cls.__es_stats['id_camera']     = ('Camera Pos:', cls.ed_str()); cls.__es_stats['id_camera'][1].set('-') 
+            cls.__es_stats['id_object_cnt'] = ('Objects:',    cls.ed_int())
+            cls.__es_stats['id_wall_cnt']   = ('Walls:',      cls.ed_int())
+            cls.__es_stats['id_decal_cnt']  = ('Decals',      cls.ed_int())
+            cls.__es_stats['id_light_cnt']  = ('Lights:',     cls.ed_int())
+            cls.__es_stats['id_wire_cnt']   = ('Wires:',      cls.ed_int())
+            cls.__es_stats['id_enemy_cnt']  = ('Enemies:',    cls.ed_int())
+            cls.__es_stats['id_pickup_cnt'] = ('Pickups:',    cls.ed_int())
 
 
     @classmethod

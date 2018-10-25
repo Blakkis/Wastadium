@@ -8,7 +8,7 @@ from functools import partial
 from PIL import Image as pil_image
 from ImageTk import PhotoImage
 from os import environ, path
-from collections import deque, namedtuple
+from collections import deque, namedtuple, OrderedDict
 from compiler.ast import flatten
 from copy import copy
 
@@ -539,6 +539,7 @@ class GlobalGameDataEditor(object):
     ed_floor = math.floor
     ed_pi = math.pi
     ed_deque = deque
+    ed_ordereddict = OrderedDict
     ed_namedtuple = staticmethod(namedtuple) 
     ed_flatten = staticmethod(flatten)
     ed_copy = staticmethod(copy) 

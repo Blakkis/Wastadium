@@ -322,7 +322,7 @@ class EffectsLoader(SoundMusic, GlobalGameData, TkWorldDataShared):
         if cls.tk_no_effects: return None
 
         if cls.all_effects[effect][0][4] is not None:
-            cls.playSoundEffect(cls.tk_choice(cls.all_effects[effect][0][4]), 1)
+            cls.playSoundEffect(cls.tk_choice(cls.all_effects[effect][0][4]), distance=pos)
 
         if loop:
             # Create an infinite effect(These are mostly called by the map to decorate the battlefield)

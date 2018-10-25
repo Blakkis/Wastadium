@@ -85,6 +85,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
             if self.footstep_delay_sound.isReady(): 
                 # Get the ground material sound effect for walking over it
                 self.playSoundEffect(self.tk_choice(World.w_micro_cells[wy][wx].w_sound_walk)) 
+            
             # Get the id for the bloody foot texture
             stain_id = World.w_micro_cells[wy][wx].w_footstep_stain_id 
             if stain_id > 0:
@@ -687,9 +688,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_applyEdgeGradient(frag_w, frag_h)
  
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 32
-        enemies = [(cls.tk_randrange(1, cls.w_map_size[0] - 1), 
-                    cls.tk_randrange(1, cls.w_map_size[1] - 1), 'rifleman') for _ in xrange(num_of_enemies)]
+        num_of_enemies = 1
+        enemies = [(5, 
+                    5, 'rifleman') for _ in xrange(num_of_enemies)]
 
         enemies = [Id_Enemy(*e) for e in enemies]
         cls.w_spawnEnemies(enemies)
@@ -1096,7 +1097,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
         # Note: Break this down to smaller functions
 
-        cls.playSoundEffect(cls.tk_choice(cls.all_weapons[weapon]['w_fire_sound']), not player)
+        cls.playSoundEffect(cls.tk_choice(cls.all_weapons[weapon]['w_fire_sound']), distance=(x, y))
 
         # Handle effects spawned by the weapon
         efx, efy = cls.tk_PolarToCartesian(x, y, angle - cls.all_weapons[weapon]['w_effect_angle'][dual_index], 
@@ -1176,7 +1177,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                             
                             hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
                             if cls.w_micro_cells[ey][ex].w_sound_hit is not None: 
-                                cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 1)
+                                cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit))
                             
                             if hit_effect is not None:
                                 # Choose random effect from the list of effect from the wall/object
@@ -1237,7 +1238,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                                              angle=f_angle)
 
                         if cls.w_micro_cells[gy][gx].w_sound_hit is not None:
-                            cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[gy][gx].w_sound_hit), 1)
+                            cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[gy][gx].w_sound_hit))
 
                 else:
                     # Energy dispatched went out from this world
@@ -1424,9 +1425,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_enemies[enemy_id].enemy_health -= cls.all_weapons[weapon]['w_damage']
         
         if cls.tk_randrange(0, 100) > 60:
-            cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd), 1)
+            cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd))
 
-        cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_hit_snd), 1)
+        cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_hit_snd))
 
         if cls.w_enemies[enemy_id].enemy_health <= 0:
             enemy_vector = cls.w_enemies[enemy_id].enemy_targetAngleDeg 
@@ -1454,7 +1455,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 if cls.all_effects[corpse] > 0 and inside_world and not cls.tk_no_footsteps: 
                     cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[corpse][0][3]  # Get the stain index
 
-                cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_death_snd), 1)
+                cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_death_snd))
  
             # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped)
             w = cls.w_enemies[enemy_id].enemy_weapon 
