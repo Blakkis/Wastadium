@@ -319,7 +319,8 @@ class EffectsLoader(SoundMusic, GlobalGameData, TkWorldDataShared):
 
         """
         # Note: Come up with better solution than calling the function but not executing the body
-        if cls.tk_no_effects: return None
+        if cls.tk_no_effects: 
+            return None
 
         if cls.all_effects[effect][0][4] is not None:
             cls.playSoundEffect(cls.tk_choice(cls.all_effects[effect][0][4]), distance=pos)

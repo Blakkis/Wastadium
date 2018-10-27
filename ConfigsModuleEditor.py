@@ -561,8 +561,8 @@ class GlobalGameDataEditor(object):
 
     # User
     ed_keys = {'up': pygame.K_w, 'down':pygame.K_s, 'left':pygame.K_a, 'right':pygame.K_d, 
-               'shift_l':1, 'action_1': pygame.K_1, 'action_2': pygame.K_2, 'action_3': pygame.K_3, 
-               'action_rot': pygame.K_r}
+               'shift_l':pygame.KMOD_LSHIFT, 'action_1': pygame.K_1, 'action_2': pygame.K_2, 
+               'action_3': pygame.K_3, 'action_rot': pygame.K_r, 'ctrl_l': pygame.KMOD_LCTRL}
     
     ed_scroll_speed = 768
     

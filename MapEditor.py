@@ -11,6 +11,7 @@ from StatisticsEditor import EditorStatistics
 from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
 from Tokenizers import *
+from Tokenizers import Ed_PostPoint
 
 
 # NOTE
@@ -324,6 +325,14 @@ class World(VisualResources, MapParser):
         # Display the chunk sectors
         if disp_extra[-1]:
             for sector in disp_extra[-1]: cls.ed_draw_rect(surface, (0xff, 0xff, 0x0), sector, 1)
+
+        # Keep spawn/end point render iconst last on the render stack
+        for flag in cls.w_SpawnEnd:
+            if flag is None: continue
+            pos = cls.w_homePosition(flag.x * 32, flag.y * 32) 
+
+            surface.blit(cls.ElementTextures[43 if flag.id == 'id_spawn' else 44], pos)
+
     
 
     @classmethod
@@ -875,11 +884,11 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
 
         # Floors
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[20]), 1, 1,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Floor")   
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Paint Floor")   
         
         # Objects
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[21]), 1, 2,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Object")  
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Objects")  
         
         # Walls
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[22]), 1, 3,
@@ -887,7 +896,7 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         
         # Decals
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[23]), 1, 4,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Apply Decal")
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Apply Decals")
 
         self.ed_separator(self, orient='vertical').grid(row=1, column=5, padx=10, 
                                                         sticky=self.ed_sticky_hori) 
@@ -898,19 +907,19 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         
         # Lights
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[25]), 1, 7,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Light")
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Lights")
 
         # Wire
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[26]), 1, 8,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Wire")    
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Wires")    
 
         # Enemies
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[27]), 1, 9,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Enemy")
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Enemies")
 
         # Pickups
         ed_Button(self, self.ed_pygameToTkinter(self.ElementTextures[28]), 1, 10,
-                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Pickup")
+                  tool_h_l=self.ft_tool_hint_str, tool_h_t="Place Pickups")
 
         self.h_initHelpStrings()
 
@@ -930,7 +939,9 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         h_createStrings = lambda strs: [helpstrFont.render(s, 1, (0xff, 0xff, 0xff)) for s in strs] 
 
         # Convert user keys to string representation
-        str_key = {name : cls.ed_key.name(rep) for name, rep in cls.ed_keys.iteritems()}
+        str_key = {name : cls.ed_key.name(rep).upper() for name, rep in cls.ed_keys.iteritems()}
+
+        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place Spawn - 'LMB', Finish - 'RMB'".format('L_CTRL'),))
 
         # Ground
         cls.h_helpstrings[0] = h_createStrings(("'LMB' - Apply",
@@ -968,14 +979,10 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
                                                 "Use the Tools menu to change the color of the wire"))
 
         # Enemy
-        cls.h_helpstrings[7] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
-                                                "'{}' / '{}', shift between enemy type (left/right)".format(str_key['action_2'], 
-                                                                                                            str_key['action_3'])))
+        cls.h_helpstrings[7] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",))
 
         # Pickup
-        cls.h_helpstrings[8] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",
-                                                "'{}' / '{}', shift between pickups (left/right)".format(str_key['action_2'], 
-                                                                                                         str_key['action_3'])))
+        cls.h_helpstrings[8] = h_createStrings(("'LMB' - Apply / 'RMB' - Delete",))
 
     
     @classmethod
@@ -1077,7 +1084,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
     def pf_RunPygameLogic(self):
         """
-            This is the basic pygame 'loop'
+            pygame loop
 
             return -> None
 
@@ -1105,7 +1112,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         #           Fix here is to block events being processed when mouse cursor 
         #           Has exited the SDL frame
 
-        mouse_button_id = 0
+        mouse_btn_id = 0
 
         if mouse_focus and not self.extra_options['event_stop']:
             # -- Hack --
@@ -1152,7 +1159,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                     #    elif event.button == 4: self.l_changeSize(32) 
 
                     # Store which button was pressed
-                    mouse_button_id = event.button
+                    mouse_btn_id = event.button
 
 
         else:
@@ -1182,13 +1189,19 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             else: self.w_moveWorld(x=speed) 
 
         # Apply Objects/Textures
-        if mouse_focus and not self.tso_textureSelectMode and self.toolbar_action != -1: 
-            self.pf_decorateWorld(self.pf_mouseSpatialPos(mx, my), self.screen, self.toolbar_action, mouse_button_id)  
+        if mouse_focus and not self.tso_textureSelectMode:
+            index = self.pf_mouseSpatialPos(mx, my) 
+            
+            if self.toolbar_action != -1: 
+                self.pf_decorateWorld(index, self.screen, self.toolbar_action, mouse_btn_id) 
+            else:
+                # Control setting spawn/end point
+                self.__pf_setSpawnEnd(index, self.screen, mods, mouse_btn_id)    
 
         # Render the texture/object selection frames when needed
-        self.tso_toolBarHandler(self.screen, self.toolbar_action, mouse_button_id)
+        self.tso_toolBarHandler(self.screen, self.toolbar_action, mouse_btn_id)
 
-        if self.toolbar_action != -1: self.pygameBaseToolBar.h_render(self.screen, self.toolbar_action)
+        self.pygameBaseToolBar.h_render(self.screen, self.toolbar_action)
 
         if mouse_focus: self.screen.blit(self.ElementCursors[1][0], (mx, my))
 
@@ -1229,6 +1242,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         """
         self.ed_draw_rect(self.w_Cells_Layers[layer][chunk_index[1]][chunk_index[0]][-1], 
                           clean_color, rect)
+        #
     
     
     
@@ -1254,13 +1268,14 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             return -1           
 
     
-    def pf_decorateWorld(self, index=None, surface=None, func=None, mouse_button_id=0):
+    def pf_decorateWorld(self, index, surface, func, mouse_btn_id):
         """
             Main handler for the world edit functions
 
             index -> Cell index 
             surface -> Screen surface
             func ->
+            mouse_btn_id -> Id of mouse button key
 
             return -> None
 
@@ -1284,15 +1299,45 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         
         else:
             # Needs click once per cell
-            action = 1 if mouse_button_id == 1 else 2 if mouse_button_id == 3 else 0    
+            action = 1 if mouse_btn_id == 1 else 2 if mouse_btn_id == 3 else 0    
 
         self.build_functions[func](index, int(x), int(y), self.screen, action, func)
 
+
+    def __pf_setSpawnEnd(self, index, surface, kmods, mouse_btn_id):
+        """
+            Set player Spawn/(End <- Optional) point
+
+            index -> world index
+            kmods -> keyboard mods
+            mouse_bnt_id -> mouse button key id
+
+            return -> None
+
+        """
+        index, x, y = index if index != -1 else (-1, -1, -1)
+        if index == -1: 
+            return None
+
+        if kmods & self.ed_keys['ctrl_l']:
+            # Convert mouse button id's 1 & 3 to 0 & 1
+            action = 0 if mouse_btn_id == 1 else 1 if mouse_btn_id == 3 else -1
+
+            self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (x, y, 32, 32), 1)
+            if action in (0, 1):
+                post_type = 'id_spawn' if action == 0 else 'id_finish' 
+                self.w_SpawnEnd[action] = Ed_PostPoint(*index, id=post_type)
     
     
     def __pf_applyGround(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
-            TBD
+            Paint ground
+
+            index -> World cell index
+            x, y -> Cell index position relative to screen topleft
+            surface -> Screen surface
+            action_key -> Paint or delete
+            set_id ->  Id used to what category is this part of
 
             return -> None
 

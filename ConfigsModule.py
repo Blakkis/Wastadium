@@ -199,7 +199,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_no_footsteps     = 0
     tk_no_effects       = 0
     tk_no_char_shadows  = 1
-    tk_shadow_quality   = 0     # 1: High quality (Experimental and Slow) 
+    tk_shadow_quality   = 1     # 1: High quality (Experimental and Slow) 
                                 # Actually the entire shadow casting is shit(Needs massive overhaul)
     
     # Lightmap 

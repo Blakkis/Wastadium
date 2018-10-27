@@ -159,11 +159,12 @@ class GoreSystem(GlobalGameData):
     @classmethod
     def gs_gib_now(cls, sx, sy, wx, wy, enemy_vector, g_profile):
         """
+            Create gibbed mess
+
             sx, sy -> Screen coords
             wx, wy -> World coords
             enemy_vector -> Enemy view vector(in degrees)
             g_profile -> gore profile id
-
 
             return -> None
 

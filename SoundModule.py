@@ -16,8 +16,8 @@ class SoundMusic(GlobalGameData):
     # Max distance at which effects can be heard at
     __sm_volume_max_dist = 320.0
 
-    # Initial left side value should match the initial effect volume
-    __sm_volume_falloff = 1.0 / __sm_volume_max_dist
+    # Volume falloff scalar
+    __sm_volume_falloff = sm_volumes[1] / __sm_volume_max_dist
 
     def __init__(self):
         pass
@@ -98,7 +98,7 @@ class SoundMusic(GlobalGameData):
         	return None
         
         # Set the volume for the channel
-        channel.set_volume(max(0, min(1, cls.sm_volumes[1] - distance)))
+        channel.set_volume(cls.tk_clamp(cls.sm_volumes[1] - distance, 0, 1))
 
 
     
