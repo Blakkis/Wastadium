@@ -416,6 +416,7 @@ class World(VisualResources, MapParser):
                 if tool_id == cls.E_ID_LIGHT:
                     extra_info.add((posx, posy, light.radius, light.color))
 
+                # Display the light icon
                 surface.blit(cls.ElementTextures[40], (posx - 16, posy - 16)) 
 
             return tool_id, extra_info
@@ -842,7 +843,7 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         .grid(row=7, column=0, padx=5, sticky=self.ed_sticky_w)
         
         ed_Checkbutton(self, 'AutoWalling',  self.bf_autowalls,  8, 0)
-        ed_Checkbutton(self, 'Show Chunks',  self.bf_disp_chunk, 9, 0)
+        ed_Checkbutton(self, 'Show Sectors',  self.bf_disp_chunk, 9, 0)
 
         self.ed_separator(self, orient='horizontal')\
         .grid(row=10, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
@@ -941,7 +942,7 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         # Convert user keys to string representation
         str_key = {name : cls.ed_key.name(rep).upper() for name, rep in cls.ed_keys.iteritems()}
 
-        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place Spawn - 'LMB', Finish - 'RMB'".format('L_CTRL'),))
+        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place ('LMB' - Spawnpoint, 'RMB' - Optional Endpoint)".format('L_CTRL'),))
 
         # Ground
         cls.h_helpstrings[0] = h_createStrings(("'LMB' - Apply",
@@ -1324,7 +1325,15 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             action = 0 if mouse_btn_id == 1 else 1 if mouse_btn_id == 3 else -1
 
             self.ed_draw_rect(surface, (0xff, 0xff, 0x0), (x, y, 32, 32), 1)
+
             if action in (0, 1):
+                # Block from applying the flags to same position
+                inv_action = action ^ 1
+                if self.w_SpawnEnd[inv_action] is not None:
+                    if index[0] == self.w_SpawnEnd[inv_action].x and \
+                       index[1] == self.w_SpawnEnd[inv_action].y:
+                        return None 
+
                 post_type = 'id_spawn' if action == 0 else 'id_finish' 
                 self.w_SpawnEnd[action] = Ed_PostPoint(*index, id=post_type)
     

@@ -15,9 +15,10 @@ class SoundMusic(GlobalGameData):
 
     # Max distance at which effects can be heard at
     __sm_volume_max_dist = 320.0
+    __sm_fade_out_tuning = 1.5	# Fine-tune for the max distance fadeout 
 
     # Volume falloff scalar
-    __sm_volume_falloff = sm_volumes[1] / __sm_volume_max_dist
+    __sm_volume_falloff = (sm_volumes[1] * __sm_fade_out_tuning) / __sm_volume_max_dist
 
     def __init__(self):
         pass
@@ -71,7 +72,7 @@ class SoundMusic(GlobalGameData):
                 	cls.playSoundEffect(188)
 
                 # Re-calculate the volume falloff
-            	cls.__sm_volume_falloff = cls.sm_volumes[volume_id] / cls.__sm_volume_max_dist     
+            	cls.__sm_volume_falloff = (cls.sm_volumes[volume_id] * __sm_fade_out_tuning) / cls.__sm_volume_max_dist     
 
 
     @classmethod

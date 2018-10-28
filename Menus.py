@@ -1,5 +1,6 @@
 from TextureLoader import uiElements
 from ConfigsModule import GlobalGameData
+from ConfigsModuleEditor import ed_BitToggle
 from EventManager import EventManager
 from SoundModule import SoundMusic
 from Inventory import Inventory
@@ -25,6 +26,8 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
 
         # Provide a same background for all the menus
         cls.menu_background = cls.__ph_createBackground(1)
+
+        # --- Replace this shit. It's hard to use ---
 
         # Provide constant timer for menu effects (uEvent 24 (index 0))
         cls.menu_timer = [cls.tk_uEvent, cls.tk_counter(0)]
@@ -96,13 +99,14 @@ class MenuIntro(PagesHelp, EventManager):
     """
     def __init__(self):
         self.intro_time = 3000  # ms
-        self.intro_exit = 1
+        self.intro_exit_flag = ed_BitToggle(1)
+        # Quit the intro takes 2 escape presses
+        # First step finishes the fadein animation
+        # Second quits the full intro (Or timer kills the intro)
+        self.intro_exit_proceed = 0     
 
         # Gear surface
         self.dsurf = self.__mi_generateGear()
-
-        # Fader surface
-        self.fade = self.tk_surface(self.tk_resolution, self.tk_srcalpha) 
 
         # Font
         self.font = self.tk_font(self.ElementFonts[0], int(128 * self.menu_scale))
@@ -113,7 +117,7 @@ class MenuIntro(PagesHelp, EventManager):
 
         # Quitting the intro either via quit key or timer
         EventManager.__init__(self)
-        self.Event_newEvent(self.intro_time, self.__mi_clearExit)
+        self.Event_newEvent(self.intro_time, lambda: self.intro_exit_flag.bit_toggle(force_value=0))
 
     
     def run(self, surface):
@@ -123,39 +127,38 @@ class MenuIntro(PagesHelp, EventManager):
             return -> None
 
         """
-        while self.intro_exit:
+        gear_rotate = 0
+        while self.intro_exit_flag:
             surface.fill(self.tk_bg_color)
             
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
-                        self.intro_exit = 0
+                        if self.intro_exit_proceed:
+                            # Quit the intro
+                            self.intro_exit_flag.bit_toggle(force_value=0)
+                        else:
+                            # Stop the fadein animation
+                            self.intro_exit_proceed = 1
+
+                if event.type == self.menu_timer[0]: self.menu_timer_add()
 
                 self.Event_handleEvents(event.type) 
+
+
+            r_gear = self.tk_rotateImage(self.dsurf, self.menu_timer[1]() * 16, self.dsurf.get_rect())
 
             # Find the center position for the gear and text
             dsurf_pos = (self.tk_res_half[0] - ((self.dsurf.get_width()  / 2 + self.fsurf.get_width())  / 2),
                          self.tk_res_half[1] - ((self.dsurf.get_height() / 2 + self.fsurf.get_height()) / 2))
             
-            surface.blit(self.dsurf, dsurf_pos)
+            surface.blit(r_gear, dsurf_pos)
 
             surface.blit(self.fsurf, (dsurf_pos[0] + self.dsurf.get_width()  / 2,
                                       dsurf_pos[1] + self.dsurf.get_height() / 2 - self.fsurf.get_height()))
 
 
             self.tk_display.flip()
-
-
-    def __mi_clearExit(self):
-        """
-            Exit intro once the intro timer has been reached
-
-            return -> None
-
-        """
-        # Note: Possible clean the intro stuff when quitting it?
-
-        self.intro_exit = 0
 
     
     def __mi_generateGear(self):
@@ -271,7 +274,8 @@ class MenuMain(PagesHelp, EventManager):
             for event in self.tk_eventDispatch():
                 self.Event_handleEvents(event.type)
 
-                if event.type == self.menu_timer[0]: self.menu_timer_add(); tick = 1
+                if event.type == self.menu_timer[0]: 
+                    self.menu_timer_add(); tick = 1
 
                 if event.type == self.tk_event_mouseup: click = 1
 
@@ -893,14 +897,15 @@ class MenuOptions(PagesHelp):
                     self.menu_timer_add()
 
                 elif event.type == self.tk_event_keyup:
-                    if event.key == self.tk_user['esc']:
+                    if event.key == self.tk_user['esc'] and not self.mo_uk_editme:
                         # Quit the options menu entirely
                         if self.mo_display_func == -1:
                             return False
 
                         # Go back to root
                         else:
-                            if self.mo_display_func == 1: self.mo_uk_editme = ''
+                            if self.mo_display_func == 1: 
+                                self.mo_uk_editme = ''
                             self.mo_display_func = -1
 
                     self.__mo_validate_userkey(surface, event.key, stage=2)
@@ -1008,7 +1013,8 @@ class MenuOptions(PagesHelp):
 
             suf_f.rs_updateRect(self.mo_uk_layout['x'] + 16, self.mo_uk_layout['y'] + r)
             surf, pos = suf_f.rs_renderSurface(position=1)
-            if key == self.mo_uk_editme: surf = self.mo_uk_prerendered[-1] 
+            if key == self.mo_uk_editme: 
+                surf = self.mo_uk_prerendered[-1] 
             
             if suf_f.rs_hover_over((mx, my)) or pre_f.rs_hover_over((mx, my)):
                 indicate_selected = 16
@@ -1018,6 +1024,8 @@ class MenuOptions(PagesHelp):
                 indicate_selected = 16 if key == self.mo_uk_editme else 0 
 
             surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer[1]())), pos[1]))
+
+            print 'Yeah?'
 
             r += pre_f.rs_getSize()[1]
 

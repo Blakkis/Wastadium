@@ -44,9 +44,15 @@ MAP_PICKUP_XML    = 'id_pickup'
 
 # ----
 
-class WastadiumEditorException(Exception):
-    pass
+# Exception classes
 
+class WastadiumEditorException(Exception):
+    pass 
+
+# Error names(+ codes if needed for parsing?)
+
+MAP_PLAYER_MISSING = "Player Missing! - 0x{}".format(0x1 << 1)
+MAP_ASSERT_ERROR   = "Assert Error! - 0x{}"  .format(0x1 << 2)
 
 
 # ----
@@ -71,7 +77,7 @@ def dataParseCheck(func):
             r = func(*args, **kw)
         # Should not happen. But just incase
         except Exception as e:
-            mp_error.showerror("", e)
+            mp_error.showerror(MAP_ASSERT_ERROR, e)
  
     return wrapped
     
@@ -104,14 +110,19 @@ class MapParser(object):
             return -> None
 
         """
-        mapname = cls.bf_mapname.get()
+        # Check that the player spawn point has been set
+        w_spawn_end = data_fetcher('w_SpawnEnd', layers=False)
+        if w_spawn_end[0] is None:
+            mp_error.showerror(MAP_PLAYER_MISSING, "Player Spawn-point missing!")
+            return None
+
+        w_mapname = cls.bf_mapname.get()
 
         filename = mp_file.asksaveasfilename(initialdir=MAP_PATH_BASE,
-                                             initialfile=mapname,
+                                             initialfile=w_mapname,
                                              filetypes=(MAP_FORMAT_EXT_FULL, ))
         if not filename: 
             return None
-
 
         # Create directory for the map in the target base path
         map_path = path.join(getcwd(), MAP_PATH_BASE, filename)

@@ -302,11 +302,8 @@ class GlobalGameData(DefaultConfigParser):
 
 
     # Player (Allow for customization) 
-    tk_user = {'up': K_w, 
-               'left': K_a, 
-               'down': K_s, 
-               'right': K_d,
-               'esc': K_ESCAPE}
+    tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d, 'esc': K_ESCAPE, 
+               'slot1': K_1, 'slot2': K_2, 'slot3': K_3, 'slot4': K_4, 'slot5': K_5}
 
     # Event
     tk_event = pygame.event

@@ -26,13 +26,17 @@ class ed_BitToggle(object):
     """
         Provide capsulated toggle *bit for inside lambdas
     """
-    def __init__(self):
-        self._bit = 0
+    def __init__(self, default=0):
+        self._bit = default
     
     @property
     def bit(self): return self._v
 
-    def bit_toggle(self): self._bit ^= 1
+    def bit_toggle(self, force_value=None):
+        if force_value is not None:
+            self._bit = force_value
+        else:
+            self._bit ^= 1
 
     def __nonzero__(self): return self._bit
 
