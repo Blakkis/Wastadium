@@ -72,7 +72,7 @@ class SoundMusic(GlobalGameData):
                 	cls.playSoundEffect(188)
 
                 # Re-calculate the volume falloff
-            	cls.__sm_volume_falloff = (cls.sm_volumes[volume_id] * __sm_fade_out_tuning) / cls.__sm_volume_max_dist     
+            	cls.__sm_volume_falloff = (cls.sm_volumes[volume_id] * cls.__sm_fade_out_tuning) / cls.__sm_volume_max_dist     
 
 
     @classmethod
@@ -100,6 +100,8 @@ class SoundMusic(GlobalGameData):
         
         # Set the volume for the channel
         channel.set_volume(cls.tk_clamp(cls.sm_volumes[1] - distance, 0, 1))
+
+        return channel
 
 
     

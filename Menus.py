@@ -6,6 +6,7 @@ from SoundModule import SoundMusic
 from Inventory import Inventory
 from MenuUtils import * 
 from _3d_models import Model3D
+from Tokenizers import MenuEventDispatch
 
 
 __all__ = ('MenuManager')
@@ -27,13 +28,14 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
         # Provide a same background for all the menus
         cls.menu_background = cls.__ph_createBackground(1)
 
-        # --- Replace this shit. It's hard to use ---
+        # Provide common timer for every menu class
+        cls.menu_timer = MenuEventDispatch(get_event=cls.tk_uEvent, 
+                                           get_ticks=cls.tk_counter(0)) 
+        # Call this function when the menu_timer event is caught in event handling
+        cls.menu_timer_inc = lambda cls: cls.menu_timer.get_ticks.m_add(.05) 
 
-        # Provide constant timer for menu effects (uEvent 24 (index 0))
-        cls.menu_timer = [cls.tk_uEvent, cls.tk_counter(0)]
-        cls.menu_timer_add = lambda cls: cls.menu_timer[1].m_add(.05) 
-
-        cls.tk_time.set_timer(cls.menu_timer[0], 10)
+        # Start the common event timer
+        cls.tk_time.set_timer(cls.menu_timer.get_event, 10)
 
     
     @classmethod
@@ -50,8 +52,8 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
         vx, vy = surface.get_size()
 
         # Wiggle the selected option around
-        surface = cls.tk_rotozoom(surface, 8 * cls.tk_sin(cls.menu_timer[1]()), 
-                                  1.0 + (0.2 * abs(cls.tk_sin(cls.menu_timer[1]()))))
+        surface = cls.tk_rotozoom(surface, 8 * cls.tk_sin(cls.menu_timer.get_ticks()), 
+                                  1.0 + (0.2 * abs(cls.tk_sin(cls.menu_timer.get_ticks()))))
         
         # Fix the surface in-place
         vx = surface.get_width()  - vx
@@ -98,15 +100,12 @@ class MenuIntro(PagesHelp, EventManager):
 
     """
     def __init__(self):
-        self.intro_time = 3000  # ms
+        self.intro_time = 4500  # ms
         self.intro_exit_flag = ed_BitToggle(1)
         # Quit the intro takes 2 escape presses
         # First step finishes the fadein animation
         # Second quits the full intro (Or timer kills the intro)
         self.intro_exit_proceed = 0     
-
-        # Gear surface
-        self.dsurf = self.__mi_generateGear()
 
         # Font
         self.font = self.tk_font(self.ElementFonts[0], int(128 * self.menu_scale))
@@ -114,6 +113,17 @@ class MenuIntro(PagesHelp, EventManager):
         w, h = self.font.size(self.tk_dev_name)
         self.fsurf = self.tk_surface((w, h))
         self.fsurf.blit(self.font.render(self.tk_dev_name, 1, (0xff, 0x0, 0x0)), (0, 0))
+
+        # Generate the logo gear (Because why not?)
+        self.dsurf = self.__mi_generateGear()
+        self.dsurf_pos = (self.tk_res_half[0] - ((self.dsurf.get_width()  / 2 + self.fsurf.get_width())  / 2),
+                          self.tk_res_half[1] - ((self.dsurf.get_height() / 2 + self.fsurf.get_height()) / 2)) 
+
+        self.fsurf_pos = (self.dsurf_pos[0] + self.dsurf.get_width()  / 2,
+                          self.dsurf_pos[1] + self.dsurf.get_height() / 2 - self.fsurf.get_height())
+
+        self.fader_surf = self.tk_surface(self.tk_resolution, self.tk_srcalpha)
+        self.fader_surf.fill((0x0, 0x0, 0x0, 0xff)) 
 
         # Quitting the intro either via quit key or timer
         EventManager.__init__(self)
@@ -124,10 +134,13 @@ class MenuIntro(PagesHelp, EventManager):
         """
             Run the Intro
 
+            surface -> Active screen surface
+
             return -> None
 
         """
-        gear_rotate = 0
+        self.playSoundEffect(400)
+        
         while self.intro_exit_flag:
             surface.fill(self.tk_bg_color)
             
@@ -141,22 +154,25 @@ class MenuIntro(PagesHelp, EventManager):
                             # Stop the fadein animation
                             self.intro_exit_proceed = 1
 
-                if event.type == self.menu_timer[0]: self.menu_timer_add()
+                if event.type == self.menu_timer.get_event: self.menu_timer_inc()
 
                 self.Event_handleEvents(event.type) 
-
-
-            r_gear = self.tk_rotateImage(self.dsurf, self.menu_timer[1]() * 16, self.dsurf.get_rect())
-
-            # Find the center position for the gear and text
-            dsurf_pos = (self.tk_res_half[0] - ((self.dsurf.get_width()  / 2 + self.fsurf.get_width())  / 2),
-                         self.tk_res_half[1] - ((self.dsurf.get_height() / 2 + self.fsurf.get_height()) / 2))
             
-            surface.blit(r_gear, dsurf_pos)
+            tick_t = self.menu_timer.get_ticks() 
+            # Render gear
+            surface.blit(self.tk_rotateImage(self.dsurf, self.menu_timer.get_ticks() * (32 - tick_t), 
+                                             self.dsurf.get_rect()), self.dsurf_pos)
+            # Render name
+            surface.blit(self.fsurf, self.fsurf_pos)
 
-            surface.blit(self.fsurf, (dsurf_pos[0] + self.dsurf.get_width()  / 2,
-                                      dsurf_pos[1] + self.dsurf.get_height() / 2 - self.fsurf.get_height()))
-
+            # Render Fader
+            surface.blit(self.fader_surf, (0, 0))
+            # Since im not using any pre-rendered intro video
+            # All these values are chosen based on the intro soundeffect
+            fade_alpha = int(self.tk_clamp(0xff - tick_t * (32 - tick_t * 1.5), 0x0, 0xff)) \
+                         if not self.intro_exit_proceed else 0x54
+     
+            self.fader_surf.fill((0x0, 0x0, 0x0, fade_alpha))
 
             self.tk_display.flip()
 
@@ -274,8 +290,8 @@ class MenuMain(PagesHelp, EventManager):
             for event in self.tk_eventDispatch():
                 self.Event_handleEvents(event.type)
 
-                if event.type == self.menu_timer[0]: 
-                    self.menu_timer_add(); tick = 1
+                if event.type == self.menu_timer.get_event: 
+                    self.menu_timer_inc(); tick = 1
 
                 if event.type == self.tk_event_mouseup: click = 1
 
@@ -310,7 +326,7 @@ class MenuMain(PagesHelp, EventManager):
                 if self.options[key][0].rs_hover_over((mx, my)):
                     if self.last_select != key:
                         self.last_select = key    
-                        self.menu_timer[1].reset()
+                        self.menu_timer.get_ticks.reset()
 
                     #if self.tk_mouse_pressed()[0]:
                     #    self.options[key][1]()
@@ -452,7 +468,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             click = 0
 
             for event in self.tk_eventDispatch():
-                if event.type == self.menu_timer[0]: self.menu_timer_add() 
+                if event.type == self.menu_timer.get_event: self.menu_timer_inc() 
 
                 if event.type == self.tk_event_mouseup: click = 1
 
@@ -655,7 +671,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
             if self.i_playerStats[stat][0] < self.i_playerStats[stat][1]:
                 re_text = self.tk_renderText(self.ms_font_16, 'Replenish!', 1, 
-                                            (0xff, 0x0, 0x40 + 0x80 * abs(self.tk_sin(self.menu_timer[1]()))), shadow=1)
+                                            (0xff, 0x0, 0x40 + 0x80 * abs(self.tk_sin(self.menu_timer.get_ticks()))), shadow=1)
 
                 surface.blit(re_text, (bar.rs_getPos('left') + 2, bar.rs_getPos('top') - re_text.get_height() / 2))
 
@@ -686,7 +702,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             return -> None
 
         """
-        t = abs(self.tk_sin(self.menu_timer[1]()))
+        t = abs(self.tk_sin(self.menu_timer.get_ticks()))
         x1, y1 = x - 2 * t, y - 2 * t
         x2, y2 = (x + icon_d[0] - 1) + 2 * t, (y + icon_d[1] - 1) + 2 * t
 
@@ -893,8 +909,8 @@ class MenuOptions(PagesHelp):
                 elif event.type == self.tk_event_mouseup:
                     click_up = event.button
 
-                elif event.type == self.menu_timer[0]: 
-                    self.menu_timer_add()
+                elif event.type == self.menu_timer.get_event: 
+                    self.menu_timer_inc()
 
                 elif event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc'] and not self.mo_uk_editme:
@@ -943,7 +959,7 @@ class MenuOptions(PagesHelp):
             if value.rs_hover_over((mx, my)):
                 if self.mo_last_select != key:
                     self.mo_last_select = key    
-                    self.menu_timer[1].reset()  # Just to stop snapping of the elements being highlighted
+                    self.menu_timer.get_ticks.reset()  # Just to stop snapping of the elements being highlighted
 
             if key == self.mo_last_select:
                 surf, x, y = self.ph_flash_effect(surf, (x, y))
@@ -1023,7 +1039,7 @@ class MenuOptions(PagesHelp):
             else:
                 indicate_selected = 16 if key == self.mo_uk_editme else 0 
 
-            surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer[1]())), pos[1]))
+            surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer.get_ticks())), pos[1]))
 
             print 'Yeah?'
 

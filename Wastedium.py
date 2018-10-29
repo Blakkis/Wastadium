@@ -1602,7 +1602,7 @@ class Main(World, DeltaTimer):
         World.initVisualsAndExtModules()
 
         if '-nosplash' not in self.tk_read_args:
-            self.Menus.all_menus['m_intro'].run(self.screen)
+            self.Menus.all_menus['m_main'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
