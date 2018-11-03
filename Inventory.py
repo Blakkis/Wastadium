@@ -18,6 +18,25 @@ class Inventory(Weapons, GadgetLoader):
     # Max amout of ammo player can hold for each ammo type
     _i_max_ammo = 99999
 
+    
+    @classmethod
+    def inv_changeWeapon(cls, key):
+        """
+            Rotate the weapon wheel classes and return the first one
+
+            key -> Weapon wheel id
+
+            return -> None
+
+        """
+        k = 'w_{}'.format(cls.tk_key_name(key))
+        weapon_tag = cls.i_playerStats[k][0]
+        cls.i_playerStats['weapon'] = weapon_tag
+
+        # Rotate next weapon in wheel
+        cls.i_playerStats[k].rotate(1)
+
+        return weapon_tag
 
     
     @classmethod
@@ -34,9 +53,21 @@ class Inventory(Weapons, GadgetLoader):
         cls.i_playerStats['credits'] = 19284
         
         # Setup gadgets booleans
-        for key in cls.gl_gadgets: cls.i_playerStats[key] = 1
+        for key in cls.gl_gadgets: 
+            cls.i_playerStats[key] = 1
 
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count
             cls.i_playerAmmo[key] = cls._i_max_ammo
+
+        # Setup weapon wheels
+        for key, value in cls.all_weapons.iteritems():
+            k = 'w_{}'.format(value['w_class'])
+            
+            if k not in cls.i_playerStats:
+                cls.i_playerStats[k] = cls.tk_deque()
+            
+            cls.i_playerStats[k].append(key)
+
+        print cls.i_playerStats
      

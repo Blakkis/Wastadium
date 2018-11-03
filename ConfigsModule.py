@@ -12,7 +12,7 @@ import os
 from Timer import *
 from datetime import timedelta
 from sys import exit as exit_system
-from sys import argv as read_argvs
+from sys import argv as read_argv
 from numpy import copyto, roll, zeros, dot
 from numpy import sum as _sum
 #from numpy.linalg import norm as normalize
@@ -258,7 +258,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_np_sum = staticmethod(_sum) 
     tk_np_dot = dot
     tk_quit_system = exit_system
-    tk_read_args = read_argvs
+    tk_read_args = read_argv
     tk_counter = TkCounter
     tk_literal_eval = staticmethod(literal_eval)
     tk_iglob =  staticmethod(iglob)
@@ -301,9 +301,13 @@ class GlobalGameData(DefaultConfigParser):
     tk_font = pygame.font.Font
 
 
+    # Expand more slots for 1 - 9 keys (Don't go overbound)
+    tk_slots_available = ('slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6')
+    
     # Player (Allow for customization) 
-    tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d, 'esc': K_ESCAPE, 
-               'slot1': K_1, 'slot2': K_2, 'slot3': K_3, 'slot4': K_4, 'slot5': K_5}
+    tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d, 'esc': K_ESCAPE}
+    tk_user.update({key: globals()['K_{}'.format(enum)] for enum, key in enumerate(tk_slots_available, start=1)})
+
 
     # Event
     tk_event = pygame.event

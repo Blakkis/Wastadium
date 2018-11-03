@@ -1,7 +1,6 @@
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from SoundModule import SoundMusic
-
-from pprint import pprint as prn
+from Timer import DeltaTimer
 
 __all__ = ('MessSolver', 'DecalGibsHandler')
 

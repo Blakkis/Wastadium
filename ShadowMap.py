@@ -356,4 +356,7 @@ class CharacterShadows(GlobalGameData):
         # Shadow attenuation (Distance from the light)
         cls.cs_data['falloff_mult'] = 255 / float(128) * 2
 
+        # Build static character shadow surface
+        cls.cs_data['char_static_shadow'] = None
+
 

@@ -150,12 +150,36 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         self.fire_anim_len = self.tk_deque(l)
         self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
+    
 
-    def hero_handle(self, surface):
+    def __heroControlSchemeTank(self):
+        """
+            TBD
+
+            return -> None
+
+        """
+        pass
+
+    
+    
+    def __heroControlSchemeAxis(self):
+        """
+            TBD
+
+            return -> None
+
+        """
+        pass
+
+
+    
+    def hero_handle(self, surface, key_event=-1):
         """
             Handle everything related to player
 
             surface -> Active screen surface
+            key_event -> Pass top most event handling keyboard events
 
             return -> None
 
@@ -178,15 +202,23 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         
         fire_key = self.tk_mouse_pressed()[0] 
 
+        # No firing animation going. Weapon change free
+        if key_event != - 1 and not self.fire_anim_len[0]:
+            if any([key_event == self.tk_user[s] for s in self.tk_slots_available]):
+                self.player_data['model'] = '_'.join((self.player_data['torso'], 
+                                                      self.inv_changeWeapon(key_event))) 
+                self.hero_load_animation(torso_name=self.player_data['model'])
+                self.playSoundEffect(184)
+
         # Handle weapon firing
         if self.weaponfire_delay.isReady(release=fire_key):
             ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
             
             if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
-                World.fire_weapon(self.tk_res_half[0], self.tk_res_half[1],
-                                  angle, 
-                                  radToAngle, 
-                                  self.i_playerStats['weapon'], 
+                World.fire_weapon(*self.tk_res_half,
+                                  angle=angle, 
+                                  f_angle=radToAngle, 
+                                  weapon=self.i_playerStats['weapon'], 
                                   dual_index=self.weapon_dual_cycle[1],
                                   surface=surface,
                                   player=1) 
@@ -210,6 +242,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         keys = self.tk_key_pressed()
         delta = self.dt_getDelta()
 
+        # TANK CONTROLS
         if keys[self.tk_user['up']]:
             dir_frames = 1
             World.move_map(x * delta, y * delta, obj_col=self.char_rect)
@@ -224,7 +257,26 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
 
         elif keys[self.tk_user['left']]:
             dir_frames = 7
-            World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect) 
+            World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect)
+
+        # AXIS ALIGN CONTROL
+        # if keys[self.tk_user['up']]:
+        #     #dir_frames = 1
+        #     World.move_map(x * delta, y * delta, obj_col=self.char_rect)
+
+        # elif keys[self.tk_user['down']]:
+        #     #dir_frames = 5
+        #     World.move_map(-(x - x / 4) * delta, -(y - y / 4) * delta, obj_col=self.char_rect)
+
+        # if keys[self.tk_user['right']]:
+        #     #dir_frames = 3
+        #     World.move_map(-(y - y / 4) * delta, (x - x / 4) * delta, obj_col=self.char_rect)
+
+        # elif keys[self.tk_user['left']]:
+        #     #dir_frames = 7
+        #     World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect)
+
+
 
         # Character is moving. Fetch the next animation frame when ready and check for diagonal movements
         if dir_frames:
@@ -344,8 +396,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     # Used to sync world layers together since player movement (which alters the world position) 
     # might throw them off eachother 
     w_offset = 0, 0
-
-    w_test = {0: []}
 
 
     def __init__(self, x, y, low_id='', mid_id=''):
@@ -1155,58 +1205,59 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             if pair is not None:
                 if pair[1] == -1:
                     # Hitscan
-                    if cls.all_weapons[weapon]['w_type'] == 1 and cls.all_weapons[weapon]['w_hitwall']:
-                        #if cls.all_weapons[weapon]['w_hitwall']:
-                            # Collision found, find the closest surface normal we struck
-                        orx, ory = test_rect.center
+                    if cls.all_weapons[weapon]['w_type'] == 1:
+                        if cls.all_weapons[weapon]['w_hitwall']:
+                            #if cls.all_weapons[weapon]['w_hitwall']:
+                                # Collision found, find the closest surface normal we struck
+                            orx, ory = test_rect.center
 
-                        normals = [pair[0].midleft,  pair[0].midtop,
-                                   pair[0].midright, pair[0].midbottom]
+                            normals = [pair[0].midleft,  pair[0].midtop,
+                                       pair[0].midright, pair[0].midbottom]
 
-                        # Calculate distance to each surface normal midpoint (Find the normal we most likely hit)
-                        dists = [round(cls.tk_hypot(orx - x, ory - y), 1) for x, y in normals]
-                        
-                        # Get the index of the closest surface normal
-                        index = dists.index(min(dists))
-                    
-                        # Get the hit effect of the Wall/Object we got, if it has one
-                        # Pinpoint the location of the wall so we can examine its data
-                        ex = (int(pair[0].x - cls.tk_res_half[0] - cls.cell_x) >> 5) + 1
-                        ey = (int(pair[0].y - cls.tk_res_half[1] - cls.cell_y) >> 5) + 1
-                        
-                        hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
-                        if cls.w_micro_cells[ey][ex].w_sound_hit is not None:
-                            cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 
-                                                distance=(orx, ory))
-                        
-                        if hit_effect is not None:
-                            # Choose random effect from the list of effect from the wall/object
-                            hit_effect = cls.tk_choice(hit_effect)
+                            # Calculate distance to each surface normal midpoint (Find the normal we most likely hit)
+                            dists = [round(cls.tk_hypot(orx - x, ory - y), 1) for x, y in normals]
                             
-                            # Get the origin of the effect
-                            offset = cls.all_effects[hit_effect][0][1]
+                            # Get the index of the closest surface normal
+                            index = dists.index(min(dists))
+                        
+                            # Get the hit effect of the Wall/Object we got, if it has one
+                            # Pinpoint the location of the wall so we can examine its data
+                            ex = (int(pair[0].x - cls.tk_res_half[0] - cls.cell_x) >> 5) + 1
+                            ey = (int(pair[0].y - cls.tk_res_half[1] - cls.cell_y) >> 5) + 1
                             
-                            # Trying to spawn an effect with no all_side variable creates an KeyError since its not rotated
-                            # to face each side, so default the side/face to key 0
-                            dface = 0 if len(cls.all_effects[hit_effect].keys()) == 1 else index 
-                            pos = normals[index]
+                            hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
+                            if cls.w_micro_cells[ey][ex].w_sound_hit is not None:
+                                cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 
+                                                    distance=(orx, ory))
                             
-                            if index == 0:
-                                # Left side of the wall
-                                l = normals[index][1] - ory 
-                                cls.spawn_effect(hit_effect, (pos[0] - offset[0], pos[1] - l), dface)
-                            elif index == 1:
-                                # Top
-                                l = normals[index][0] - orx
-                                cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] - offset[1]), dface)
-                            elif index == 2:
-                                # Right
-                                l = normals[index][1] - ory
-                                cls.spawn_effect(hit_effect, (pos[0] + offset[0] - 2, pos[1] - l), dface)
-                            else:
-                                # Down
-                                l = normals[index][0] - orx 
-                                cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] + offset[1] - 2), dface)
+                            if hit_effect is not None:
+                                # Choose random effect from the list of effect from the wall/object
+                                hit_effect = cls.tk_choice(hit_effect)
+                                
+                                # Get the origin of the effect
+                                offset = cls.all_effects[hit_effect][0][1]
+                                
+                                # Trying to spawn an effect with no all_side variable creates an KeyError since its not rotated
+                                # to face each side, so default the side/face to key 0
+                                dface = 0 if len(cls.all_effects[hit_effect].keys()) == 1 else index 
+                                pos = normals[index]
+                                
+                                if index == 0:
+                                    # Left side of the wall
+                                    l = normals[index][1] - ory 
+                                    cls.spawn_effect(hit_effect, (pos[0] - offset[0], pos[1] - l), dface)
+                                elif index == 1:
+                                    # Top
+                                    l = normals[index][0] - orx
+                                    cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] - offset[1]), dface)
+                                elif index == 2:
+                                    # Right
+                                    l = normals[index][1] - ory
+                                    cls.spawn_effect(hit_effect, (pos[0] + offset[0] - 2, pos[1] - l), dface)
+                                else:
+                                    # Down
+                                    l = normals[index][0] - orx 
+                                    cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] + offset[1] - 2), dface)
 
                     else:
                         # Run damage check to see if projectile weapon Area-of-effect hit anything
@@ -1602,7 +1653,7 @@ class Main(World, DeltaTimer):
         World.initVisualsAndExtModules()
 
         if '-nosplash' not in self.tk_read_args:
-            self.Menus.all_menus['m_main'].run(self.screen)
+            self.Menus.all_menus['m_intro'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
@@ -1627,12 +1678,15 @@ class Main(World, DeltaTimer):
 
             self.screen.fill(self.tk_bg_color)
 
+            key_event = -1      # Pass key events to fuctions
             for event in self.tk_eventDispatch():
                 self.uioverlay.Event_handleEvents(event.type) 
 
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']: 
-                        ignore_delta = paused = 1     
+                        ignore_delta = paused = 1 
+
+                    key_event = event.key   
 
             self.render_map(0, self.screen)
             
@@ -1645,7 +1699,7 @@ class Main(World, DeltaTimer):
             
             self.render_enemies(self.screen)
 
-            self.hero.hero_handle(self.screen)
+            self.hero.hero_handle(self.screen, key_event)
                     
             self.render_effects(self.screen)
 
