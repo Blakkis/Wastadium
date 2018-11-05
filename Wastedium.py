@@ -150,210 +150,202 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         self.fire_anim_len = self.tk_deque(l)
         self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
+
+    exec(PreProcessor.parseCode("""
+def hero_handle(self, surface, key_event=-1):
+    \"""
+        Handle everything related to player
     
-
-    def __heroControlSchemeTank(self):
-        """
-            TBD
-
-            return -> None
-
-        """
-        pass
-
+        surface -> Active screen surface
+        key_event -> Pass top most event handling keyboard events
     
+        return -> None
+     
+    \"""
+    m_pos = self.tk_mouse_pos()
     
-    def __heroControlSchemeAxis(self):
-        """
-            TBD
-
-            return -> None
-
-        """
-        pass
-
-
+    angle = self.tk_atan2(self.tk_res_half[0] - m_pos[0],
+                          self.tk_res_half[1] - m_pos[1])
     
-    def hero_handle(self, surface, key_event=-1):
-        """
-            Handle everything related to player
+    radToAngle = self.tk_degrees(angle)
 
-            surface -> Active screen surface
-            key_event -> Pass top most event handling keyboard events
+    baseAx, baseAy = self.tk_sin(angle), self.tk_cos(angle) 
 
-            return -> None
+    # Used to control how firing and animation playback is handled (Bitwise)
+    play_fire_frame = 0
+    
+    fire_key = self.tk_mouse_pressed()[0] 
 
-        """
-        m_pos = self.tk_mouse_pos()
+    # No firing animation going. Weapon change free
+    if key_event != - 1 and not self.fire_anim_len[0]:
+        if any([key_event == self.tk_user[s] for s in self.tk_slots_available]):
+            self.player_data['model'] = '_'.join((self.player_data['torso'], 
+                                                  self.inv_changeWeapon(key_event))) 
+            self.hero_load_animation(torso_name=self.player_data['model'])
+            self.playSoundEffect(184)
+
+    # Handle weapon firing
+    if self.weaponfire_delay.isReady(release=fire_key):
+        ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
         
-        angle = self.tk_atan2(self.tk_res_half[0] - m_pos[0],
-                              self.tk_res_half[1] - m_pos[1])
-        
-        radToAngle = self.tk_degrees(angle)
-
-        baseAx, baseAy = self.tk_sin(angle), self.tk_cos(angle) 
-
-        # Movement direction and magnitude
-        x = baseAx * self.player_data['speed']
-        y = baseAy * self.player_data['speed']
-
-        # Used to control how firing and animation playback is handled (Bitwise)
-        play_fire_frame = 0
-        
-        fire_key = self.tk_mouse_pressed()[0] 
-
-        # No firing animation going. Weapon change free
-        if key_event != - 1 and not self.fire_anim_len[0]:
-            if any([key_event == self.tk_user[s] for s in self.tk_slots_available]):
-                self.player_data['model'] = '_'.join((self.player_data['torso'], 
-                                                      self.inv_changeWeapon(key_event))) 
-                self.hero_load_animation(torso_name=self.player_data['model'])
-                self.playSoundEffect(184)
-
-        # Handle weapon firing
-        if self.weaponfire_delay.isReady(release=fire_key):
-            ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
+        if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
+            World.fire_weapon(*self.tk_res_half,
+                              angle=angle, 
+                              f_angle=radToAngle, 
+                              weapon=self.i_playerStats['weapon'], 
+                              dual_index=self.weapon_dual_cycle[1],
+                              surface=surface,
+                              player=1) 
             
-            if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
-                World.fire_weapon(*self.tk_res_half,
-                                  angle=angle, 
-                                  f_angle=radToAngle, 
-                                  weapon=self.i_playerStats['weapon'], 
-                                  dual_index=self.weapon_dual_cycle[1],
-                                  surface=surface,
-                                  player=1) 
-                
-                play_fire_frame |= 1
-                
-                if ammo_id != -1: self.i_playerAmmo[ammo_id] -= 1
-                self.weapon_dual_cycle.rotate(1)    # Switch hand
-                self.fire_anim_len.rotate(1)        # Begin the fire animation
+            play_fire_frame |= 1
+            
+            if ammo_id != -1: self.i_playerAmmo[ammo_id] -= 1
+            self.weapon_dual_cycle.rotate(1)    # Switch hand
+            self.fire_anim_len.rotate(1)        # Begin the fire animation
 
-            else:
-                # Trying to fire an empty weapon
-                self.playSoundEffect(self.all_weapons[self.i_playerStats['weapon']]['w_fire_sound_empty'])    
+        else:
+            # Trying to fire an empty weapon
+            self.playSoundEffect(self.all_weapons[self.i_playerStats['weapon']]['w_fire_sound_empty'])    
 
-        # Player is moving while holding firekey down display the point weapon animation
-        if fire_key: play_fire_frame |= 2 
+    # Player is moving while holding firekey down display the point weapon animation
+    if fire_key: play_fire_frame |= 2 
 
-        dir_frames = 0    # Animation key to load from correct animation set
+    dir_frames = 0    # Animation key to load from correct animation set
+    
+    # Handle the player movement(Moving Back/Side gets slowed to 3/4 of the speed)
+    keys = self.tk_key_pressed()
+    delta = self.dt_getDelta()
+
+
+    #TANK CONTROLS
+    #-ifndef/tk_control_scheme
+    x = baseAx * self.player_data['speed']
+    y = baseAy * self.player_data['speed']
+
+    if keys[self.tk_user['up']]:
+        dir_frames = 1
+        World.move_map(x * delta, y * delta, obj_col=self.char_rect)
+
+    elif keys[self.tk_user['down']]:
+        dir_frames = 5
+        World.move_map(-(x - x / 4) * delta, -(y - y / 4) * delta, obj_col=self.char_rect)
+
+    if keys[self.tk_user['right']]:
+        dir_frames = 3
+        World.move_map(-(y - y / 4) * delta, (x - x / 4) * delta, obj_col=self.char_rect)
+
+    elif keys[self.tk_user['left']]:
+        dir_frames = 7
+        World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect)
+
+    dir_frames = 2 if keys[self.tk_user['up']]   and keys[self.tk_user['right']] else dir_frames
+    dir_frames = 8 if keys[self.tk_user['up']]   and keys[self.tk_user['left']]  else dir_frames
+    dir_frames = 4 if keys[self.tk_user['down']] and keys[self.tk_user['right']] else dir_frames
+    dir_frames = 6 if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
+    #-endif
+    
+    #AXIS ALIGN CONTROL
+    #-ifdef/tk_control_scheme
+    x = self.player_data['speed']
+    y = self.player_data['speed']
+
+    vec_sector = int(((radToAngle + 22.5) % 360) / 45)
+    vec_deque = self.tk_deque(range(1, 9))
+    vec_deque.rotate(-vec_sector)
+
+    if keys[self.tk_user['up']]:
+        dir_frames = vec_deque[0]
+        World.move_map(0, y * delta, obj_col=self.char_rect)
+
+    elif keys[self.tk_user['down']]:
+        dir_frames = vec_deque[4]
+        World.move_map(0, -y * delta, obj_col=self.char_rect)
+
+    if keys[self.tk_user['right']]:
+        dir_frames = vec_deque[2]
+        World.move_map(-x * delta, 0, obj_col=self.char_rect)
+
+    elif keys[self.tk_user['left']]:
+        dir_frames = vec_deque[6]
+        World.move_map(x * delta, 0, obj_col=self.char_rect)
+
+    # Diagonal movement
+    dir_frames = vec_deque[1] if keys[self.tk_user['up']]   and keys[self.tk_user['right']] else dir_frames
+    dir_frames = vec_deque[7] if keys[self.tk_user['up']]   and keys[self.tk_user['left']]  else dir_frames
+    dir_frames = vec_deque[3] if keys[self.tk_user['down']] and keys[self.tk_user['right']] else dir_frames
+    dir_frames = vec_deque[5] if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
+    #-endif
+    
+    # Character is moving. Fetch the next animation frame when ready and check for diagonal movements
+    if dir_frames:
+        if self.animation_delay.isReady():
+            # Update the animation index keys for the next frame
+            self.legs_frame_index = self.legs_frame_cycle.next()
+            self.torso_frame_index = self.torso_frame_cycle.next()
+
+        # Leave footsteps behind 
+        if self.footstep_delay.isReady():
+            self.hero_footstep(angle)      
+
+    # Cast character shadows from lights
+    self.cs_shadow_cast(surface, -self.w_share['WorldPosition'][0] + 16, 
+                                 -self.w_share['WorldPosition'][1] + 16, angle)
+
+    # Position where the hero will be built on
+    x, y = self.char_center
+    
+    # Rotate the layers to view direction and render (This should be flatten if no more layers are needed)
+    for enum, f in enumerate(self.figure):
+        # ---- Legs
+        if not enum:
+            # Get the texture offset fixes (The origin which upon to center the texture)
+            offset = self.legs_textures[f[0]][0][2]  
+            image = self.legs_textures[f[0]][dir_frames][0 if not dir_frames else self.legs_frame_index]
         
-        # Handle the player movement(Moving Back/Side gets slowed to 3/4 of the speed)
-        keys = self.tk_key_pressed()
-        delta = self.dt_getDelta()
+        # ---- Torso
+        else:
+            # Get the torso offsets to push back/forward the torso to keep them top of the legs
+            offset = self.torso_textures[f[0]][0][4]
+            
+            # Handle if player is (moving and shooting) or
+            #                     (standing and shooting) or
+            #                     (just moving) and keep attack posture between firing weapon
+            mov = 0 if not dir_frames or not play_fire_frame & 2 else 1
 
-        # TANK CONTROLS
-        if keys[self.tk_user['up']]:
-            dir_frames = 1
-            World.move_map(x * delta, y * delta, obj_col=self.char_rect)
+            # Take proper action/animation if the player has fired the weapon
+            #action = play_fire_frame & 1
+            
+            action = self.fire_anim_len[0]
+            if self.fire_anim_timer.isReady() and self.fire_anim_len[0]: self.fire_anim_len.rotate(1)
 
-        elif keys[self.tk_user['down']]:
-            dir_frames = 5
-            World.move_map(-(x - x / 4) * delta, -(y - y / 4) * delta, obj_col=self.char_rect)
-
-        if keys[self.tk_user['right']]:
-            dir_frames = 3
-            World.move_map(-(y - y / 4) * delta, (x - x / 4) * delta, obj_col=self.char_rect)
-
-        elif keys[self.tk_user['left']]:
-            dir_frames = 7
-            World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect)
-
-        # AXIS ALIGN CONTROL
-        # if keys[self.tk_user['up']]:
-        #     #dir_frames = 1
-        #     World.move_map(x * delta, y * delta, obj_col=self.char_rect)
-
-        # elif keys[self.tk_user['down']]:
-        #     #dir_frames = 5
-        #     World.move_map(-(x - x / 4) * delta, -(y - y / 4) * delta, obj_col=self.char_rect)
-
-        # if keys[self.tk_user['right']]:
-        #     #dir_frames = 3
-        #     World.move_map(-(y - y / 4) * delta, (x - x / 4) * delta, obj_col=self.char_rect)
-
-        # elif keys[self.tk_user['left']]:
-        #     #dir_frames = 7
-        #     World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect)
-
-
-
-        # Character is moving. Fetch the next animation frame when ready and check for diagonal movements
-        if dir_frames:
-            if self.animation_delay.isReady():
-                # Update the animation index keys for the next frame
-                self.legs_frame_index = self.legs_frame_cycle.next()
-                self.torso_frame_index = self.torso_frame_cycle.next()
-
-            # Leave footsteps behind 
-            if self.footstep_delay.isReady():
-                self.hero_footstep(angle)      
-
-            # Diagonal movement
-            dir_frames = 2 if keys[self.tk_user['up']]   and keys[self.tk_user['right']] else dir_frames
-            dir_frames = 8 if keys[self.tk_user['up']]   and keys[self.tk_user['left']]  else dir_frames
-            dir_frames = 4 if keys[self.tk_user['down']] and keys[self.tk_user['right']] else dir_frames
-            dir_frames = 6 if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
-
-        # Cast character shadows from lights
-        self.cs_shadow_cast(surface, -self.w_share['WorldPosition'][0] + 16, 
-                                     -self.w_share['WorldPosition'][1] + 16, angle)
-
-        # Position where the hero will be built on
-        x, y = self.char_center
+            if mov:
+                # Moving and shooting (Keep the attack posture between executing attack) 
+                image = self.torso_textures[f[0]][0][(action + self.weapon_dual_cycle[0]) if self.fire_anim_len[0] else action]
+                
+            else: 
+                if action:
+                    # Standing still and shooting
+                    image = self.torso_textures[f[0]][0][action + self.weapon_dual_cycle[0]]
+                
+                else:
+                    # Standing still or moving but not firing (Display normal moving animations or idle standing frame)    
+                    image = self.torso_textures[f[0]][dir_frames][0 if not dir_frames else self.torso_frame_index]
+            
+            # Torso is 64 x 64 so it needs to be fixed inplace 
+            x -= 16; y -= 16
         
-        # Rotate the layers to view direction and render (This should be flatten if no more layers are needed)
-        for enum, f in enumerate(self.figure):
-            # ---- Legs
-            if not enum:
-                # Get the texture offset fixes (The origin which upon to center the texture)
-                offset = self.legs_textures[f[0]][0][2]  
-                image = self.legs_textures[f[0]][dir_frames][0 if not dir_frames else self.legs_frame_index]
-            
-            # ---- Torso
-            else:
-                # Get the torso offsets to push back/forward the torso to keep them top of the legs
-                offset = self.torso_textures[f[0]][0][4]
-                
-                # Handle if player is (moving and shooting) or
-                #                     (standing and shooting) or
-                #                     (just moving) and keep attack posture between firing weapon
-                mov = 0 if not dir_frames or not play_fire_frame & 2 else 1
+        # Move the texture forward or backward based on the offset origin
+        if offset: x += baseAx * offset; y += baseAy * offset 
+        
+        surface.blit(self.tk_rotateImage(image, radToAngle, f[1]), (x, y))
 
-                # Take proper action/animation if the player has fired the weapon
-                #action = play_fire_frame & 1
-                
-                action = self.fire_anim_len[0]
-                if self.fire_anim_timer.isReady() and self.fire_anim_len[0]: self.fire_anim_len.rotate(1)
- 
-                if mov:
-                    # Moving and shooting (Keep the attack posture between executing attack) 
-                    image = self.torso_textures[f[0]][0][(action + self.weapon_dual_cycle[0]) if self.fire_anim_len[0] else action]
-                    
-                else: 
-                    if action:
-                        # Standing still and shooting
-                        image = self.torso_textures[f[0]][0][action + self.weapon_dual_cycle[0]]
-                    
-                    else:
-                        # Standing still or moving but not firing (Display normal moving animations or idle standing frame)    
-                        image = self.torso_textures[f[0]][dir_frames][0 if not dir_frames else self.torso_frame_index]
-                
-                # Torso is 64 x 64 so it needs to be fixed inplace 
-                x -= 16; y -= 16
-            
-            # Move the texture forward or backward based on the offset origin
-            if offset: x += baseAx * offset; y += baseAy * offset 
-            
-            surface.blit(self.tk_rotateImage(image, radToAngle, f[1]), (x, y))
-
-        # Cast constant lasersight ray if player owns the goggles
-        if self.i_playerStats['mod_laser'] and self.all_weapons[self.i_playerStats['weapon']]['w_range'] > 64:
-            self.lmodule.cast_lasersight(surface, angle, 
-                                         self.all_weapons[self.i_playerStats['weapon']]['w_range'],
-                                         self.torso_textures[self.player_data['model']][0][-1], 
-                                         dir_frames, play_fire_frame, delta)
-
+    # Cast constant lasersight ray if player owns the goggles
+    if self.i_playerStats['mod_laser'] and self.all_weapons[self.i_playerStats['weapon']]['w_range'] > 64:
+        self.lmodule.cast_lasersight(surface, angle, 
+                                     self.all_weapons[self.i_playerStats['weapon']]['w_range'],
+                                     self.torso_textures[self.player_data['model']][0][-1], 
+                                     dir_frames, play_fire_frame, delta)
+        """, tk_control_scheme=GlobalGameData.tk_control_scheme))
 
 
 class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons, 
