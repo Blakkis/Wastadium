@@ -3,12 +3,14 @@ from TextureLoader import TextureLoader
 from Weapons import Weapons
 from Timer import DeltaTimer
 from ConfigsModule import TkWorldDataShared
+from SoundModule import SoundMusic
+from Tokenizers import EnemyDeathSeq 
 
 import PathFinder
 
 # NOTE: Fix Rotation from player back to waypoint 
 
-class Enemies(TextureLoader, Weapons, DeltaTimer, TkWorldDataShared):
+class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared):
     """
         TBD
     """
@@ -73,8 +75,69 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, TkWorldDataShared):
         self.rl_rect = self.tk_rect(0, 0, 4, 28)
         self.tb_rect = self.tk_rect(0, 0, 28, 4)
 
-    
 
+    def __repr__(self):
+        """
+            Easier for debugging
+            
+            return -> repr(pos, id)
+
+        """
+        return repr('(pos:{}, id:{})'.format(self.enemy_pos, self.enemy_id))
+
+
+    
+    def enemy_getHit(self, dmg_taken, self_pos, target_pos):
+        """
+            Calculate damage taken
+
+            dmg_taken -> Damage taken
+            self_pos ->
+            target_pos -> 
+
+            return -> current health
+
+        """
+        # Calculate the angle between shooter and target, and give it small offset
+        e_angle = self.tk_atan2(target_pos[0] - self_pos[0], 
+                                target_pos[1] - self_pos[1]) + self.tk_uniform(-.5, .5)
+
+        # Wake up enemy to engage (If still alive)
+        self.enemy_state = 1
+
+        # Subtract damage from health pool (Armor calculation can go here if needed)
+        self.enemy_health -= dmg_taken
+
+        # That shot definitely hurt
+        if self.tk_randrange(0, 100) > 60:
+            self.playSoundEffect(self.tk_choice(self.enemy_pain_snd))
+
+        # Minor weapon hit sounds
+        self.playSoundEffect(self.tk_choice(self.enemy_hit_snd))
+
+        return self.enemy_health, (self.tk_choice(self.enemy_blood_frames),
+                                   (self_pos[0] - self.tk_sin(e_angle) * 20, 
+                                    self_pos[1] - self.tk_cos(e_angle) * 20),
+                                   self.tk_degrees(e_angle))
+    
+    def enemy_killed(self):
+        """
+            Call this to init enemy death sequence and get a token
+
+            return -> Token
+
+        """
+        # Removed during next enemy render iteration (In mainloop)
+        self.enemy_delete = 1
+        
+        return EnemyDeathSeq(angle_deg=self.enemy_targetAngleDeg, 
+                             g_profile=self.tk_choice(self.enemy_gore_profile),
+                             d_frame=self.tk_choice(self.enemy_dead_frames),
+                             d_snd=self.tk_choice(self.enemy_death_snd),
+                             e_weapon=self.enemy_weapon) 
+
+
+    
     def load_enemy_animation(self):
         """
             Load and setup animations for the enemy
@@ -115,16 +178,6 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, TkWorldDataShared):
         
         self.enemy_fire_anim_len = self.tk_deque(l)
         self.enemy_fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.enemy_fire_anim_len))) 
-          
-
-    def __repr__(self):
-        """
-            Easier for debugging
-            
-            return -> repr(pos, id)
-
-        """
-        return repr('(pos:{}, id:{})'.format(self.enemy_pos, self.enemy_id))
 
 
     def active_enemy(self, x, y, spatial_index):

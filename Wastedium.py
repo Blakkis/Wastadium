@@ -345,7 +345,7 @@ def hero_handle(self, surface, key_event=-1):
                                      self.all_weapons[self.i_playerStats['weapon']]['w_range'],
                                      self.torso_textures[self.player_data['model']][0][-1], 
                                      dir_frames, play_fire_frame, delta)
-        """, tk_control_scheme=GlobalGameData.tk_control_scheme))
+    """, tk_control_scheme=GlobalGameData.tk_control_scheme))
 
 
 class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons, 
@@ -1449,72 +1449,48 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
              
         """
-        # NOTE: Move this inside enemy class and return all the bullshit needed for the world class
-
-        srx, sry = sx, sy
-
-        # Calculate the angle between shooter and target, and give it small offset angle
-        e_angle = cls.tk_atan2(tx - srx, ty - sry) + cls.tk_uniform(-.5, .5)
-
-        srx -= cls.tk_sin(e_angle) * 20; sry -= cls.tk_cos(e_angle) * 20
-
-        # Spawn blood on hit
-        cls.spawn_effect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_blood_frames), (srx, sry), 
-                         angle=cls.tk_degrees(e_angle))
-
-        # Wake up enemy to hunt for player
-        cls.w_enemies[enemy_id].enemy_state = 1
+        health, token = cls.w_enemies[enemy_id].enemy_getHit(cls.all_weapons[weapon]['w_damage'], (sx, sy), (tx, ty))
+        cls.spawn_effect(token[0], token[1], angle=token[2])  
         
-        # Decrease weapon damage from the enemy health pool
-        cls.w_enemies[enemy_id].enemy_health -= cls.all_weapons[weapon]['w_damage']
-        
-        if cls.tk_randrange(0, 100) > 60:
-            cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_pain_snd))
-
-        cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_hit_snd))
-
-        if cls.w_enemies[enemy_id].enemy_health <= 0:
-            enemy_vector = cls.w_enemies[enemy_id].enemy_targetAngleDeg 
-
-            # Delete the enemy from the map
-            cls.w_enemies[enemy_id].enemy_delete = 1
+        if health <= 0:
+            # Begin enemy death sequency
+            token = cls.w_enemies[enemy_id].enemy_killed()
 
             cx, cy = cls.get_spatial_pos(sx, sy)
             inside_world = cls.tk_boundaryCheck(cx, cy, cls.w_map_size) 
 
             # Spawn body or gib the corpse based on weapons chance
             if cls.tk_randrange(0, 100) < cls.all_weapons[weapon]['w_gibchance']:
-                stain = cls.gs_gib_now(sx, sy, cls.cell_x, cls.cell_y, enemy_vector, 
-                                       cls.tk_choice(cls.w_enemies[enemy_id].enemy_gore_profile))
+                stain = cls.gs_gib_now(sx, sy, cls.cell_x, cls.cell_y, token.angle_deg, 
+                                       token.g_profile)
 
                 if stain is not None and inside_world and not cls.tk_no_footsteps:
                     cls.w_micro_cells[cy][cx].w_footstep_stain_id = stain    
                 
             else:
-                # Spawn normal dead corpse animation
-                corpse = cls.tk_choice(cls.w_enemies[enemy_id].enemy_dead_frames) 
-                cls.spawn_effect(corpse, (sx, sy), angle=enemy_vector)
+                # Spawn animated corpse
+                cls.spawn_effect(token.d_frame, (sx, sy), angle=token.angle_deg)
 
                 # Make the ground stain player's boots
-                if cls.all_effects[corpse] > 0 and inside_world and not cls.tk_no_footsteps: 
-                    cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[corpse][0][3]  # Get the stain index
+                if cls.all_effects[token.d_frame] > 0 and inside_world and not cls.tk_no_footsteps: 
+                    cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[token.d_frame][0][3]  # Get the stain index
 
-                cls.playSoundEffect(cls.tk_choice(cls.w_enemies[enemy_id].enemy_death_snd))
+                # Getting killed yelling
+                cls.playSoundEffect(token.d_snd)
  
-            # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped)
-            w = cls.w_enemies[enemy_id].enemy_weapon 
-            if cls.all_weapons[w]['w_buyable']:
-                w = w.split('-')    # Use the '-dual' suffix to spawn 2 guns 
+            # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped) 
+            if cls.all_weapons[token.e_weapon]['w_buyable']:
+                w = token.e_weapon.split('-')    # Use the '-dual' suffix to spawn 2 guns 
 
                 for _ in xrange(len(w)):
                     # Give some randomness for the weapon drops (Angle and distance)
-                    drop_vector = cls.tk_radians(enemy_vector) + cls.tk_uniform(-cls.tk_pi, cls.tk_pi) 
-                    drop_dist = cls.tk_randrange(16, 32) 
+                    drop_vector = cls.tk_radians(token.angle_deg) + cls.tk_uniform(-cls.tk_pi, cls.tk_pi) 
+                    drop_dist = cls.tk_randrange(24, 32) 
                     
                     cls.spawn_effect('{}_drop'.format(w[0]), 
                                     (sx - cls.tk_sin(drop_vector) * drop_dist, 
                                      sy - cls.tk_cos(drop_vector) * drop_dist), 
-                                     angle=enemy_vector)
+                                     angle=token.angle_deg)
 
         if not ignore_after:
             # Add Aoe damage top of the normal hit damage if projectile weapon
@@ -1663,7 +1639,7 @@ class Main(World, DeltaTimer):
 
         paused = 0          # Pause game
         ignore_delta = 0    # Delta calculation goes widl after pause
-                            # so ignore the the last one after pause function is done
+                            # so ignore the the last tick after pause function is done
         
         while 1:
             ignore_delta = self.dt_tick(self.tk_fps, ignore_delta=ignore_delta)

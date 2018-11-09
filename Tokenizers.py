@@ -44,5 +44,11 @@ class Ed_PostPoint(namedtuple('ed_postpoint', ['x', 'y', 'id'])):
 	pass
 
 
+# ----
+
 class MenuEventDispatch(namedtuple('MenuEventDispatch', ['get_event', 'get_ticks'])):
+	pass
+
+
+class EnemyDeathSeq(namedtuple('enemydeathseq', ['angle_deg', 'g_profile', 'd_frame', 'd_snd', 'e_weapon'])):
 	pass
