@@ -88,7 +88,25 @@ class World(VisualResources, MapParser):
         self._cell_objTex = None,   0
         
         # Objects might occupy multiple cells. Keep a link between the cells
+        # pointing to the topleft cell as origin point
         self._cell_link = None
+
+    
+    def get_set_CellToken(self, token=None):
+        """
+            Get/Set a token of cell variable states
+
+            return -> Dict
+
+        """
+        if token is None:
+            return {'low': self.cell_lowTex,
+                    'mid': self._cell_midTex,
+                    'obj': self._cell_objTex,
+                    'link': self._cell_link}
+        
+        else:
+            pass
 
     
     def _get_mid(self): return self._cell_midTex

@@ -1131,7 +1131,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             dual_index -> If the weapon has 2 different firing frames, you can toggle this between 0, 1 to control
                           Which one to spawn
             player -> Controls who is firing the weapon and what collisions to check for
-            ignore_id -> Enemy id to ignore when firing the weapon (So enemy doesn't shoot itself)
+            ignore_id -> Enemy id to ignore when firing the weapon (So enemy doesn't shoot itself) 
+                                                                   (Or maybe they could by chance?)
 
             return -> None
             
@@ -1168,7 +1169,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         baseAx, baseAy = cls.tk_sin(angle), cls.tk_cos(angle)
         
-        # NOTE: All the ray intersection task are done using raycasting (Possible change to DDA)
+        # NOTE: All the ray intersection task are done using raycasting (Change to DDA for faster and more precise)
 
         # Convert the set to dict with the rects being keys
         collisions = dict.fromkeys(cls.get_ray_env_collisions(x, y, baseAx, baseAy, w_range), -1)
@@ -1449,12 +1450,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
              
         """
+
         health, token = cls.w_enemies[enemy_id].enemy_getHit(cls.all_weapons[weapon]['w_damage'], (sx, sy), (tx, ty))
         cls.spawn_effect(token[0], token[1], angle=token[2])  
         
         if health <= 0:
             # Begin enemy death sequency
-            token = cls.w_enemies[enemy_id].enemy_killed()
+            token = cls.w_enemies[enemy_id].enemy_killed((sx, sy))
 
             cx, cy = cls.get_spatial_pos(sx, sy)
             inside_world = cls.tk_boundaryCheck(cx, cy, cls.w_map_size) 
@@ -1474,9 +1476,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 # Make the ground stain player's boots
                 if cls.all_effects[token.d_frame] > 0 and inside_world and not cls.tk_no_footsteps: 
                     cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[token.d_frame][0][3]  # Get the stain index
-
-                # Getting killed yelling
-                cls.playSoundEffect(token.d_snd)
  
             # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped) 
             if cls.all_weapons[token.e_weapon]['w_buyable']:
@@ -1621,7 +1620,7 @@ class Main(World, DeltaTimer):
         World.initVisualsAndExtModules()
 
         if '-nosplash' not in self.tk_read_args:
-            self.Menus.all_menus['m_intro'].run(self.screen)
+            self.Menus.all_menus['m_main'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()
@@ -1638,7 +1637,7 @@ class Main(World, DeltaTimer):
         self.dt_tick()
 
         paused = 0          # Pause game
-        ignore_delta = 0    # Delta calculation goes widl after pause
+        ignore_delta = 0    # Delta calculation goes wild after pause
                             # so ignore the the last tick after pause function is done
         
         while 1:

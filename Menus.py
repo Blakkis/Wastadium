@@ -160,7 +160,7 @@ class MenuIntro(PagesHelp, EventManager):
             
             tick_t = self.menu_timer.get_ticks() 
             # Render gear
-            surface.blit(self.tk_rotateImage(self.dsurf, self.menu_timer.get_ticks() * (64 - tick_t * 1.5), 
+            surface.blit(self.tk_rotateImage(self.dsurf, tick_t * (64 - tick_t * 1.5), 
                                              self.dsurf.get_rect()), self.dsurf_pos)
             # Render name
             surface.blit(self.fsurf, self.fsurf_pos)

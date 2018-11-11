@@ -50,5 +50,5 @@ class MenuEventDispatch(namedtuple('MenuEventDispatch', ['get_event', 'get_ticks
 	pass
 
 
-class EnemyDeathSeq(namedtuple('enemydeathseq', ['angle_deg', 'g_profile', 'd_frame', 'd_snd', 'e_weapon'])):
+class EnemyDeathSeq(namedtuple('enemydeathseq', ['angle_deg', 'g_profile', 'd_frame', 'e_weapon'])):
 	pass

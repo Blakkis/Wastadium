@@ -40,6 +40,8 @@ MAP_LIGHT_XML     = 'id_lights'
 MAP_DECAL_XML     = 'id_decals'
 MAP_WIRE_XML      = 'id_wires'
 MAP_PICKUP_XML    = 'id_pickup'
+MAP_PSTARTEND_XML = 'id_p_start_end'
+MAP_CELL_XML      = 'id_cell_data'
 
 
 # ----
@@ -116,7 +118,8 @@ class MapParser(object):
             mp_error.showerror(MAP_PLAYER_MISSING, "Player Spawn-point missing!")
             return None
 
-        w_mapname = cls.bf_mapname.get()
+        w_mapname = cls.bf_mapname.get()    # If we decide to change mapname during saving
+                                            # Update it as the default name
 
         filename = mp_file.asksaveasfilename(initialdir=MAP_PATH_BASE,
                                              initialfile=w_mapname,
@@ -129,6 +132,9 @@ class MapParser(object):
         makedirs(map_path)
 
         root = xmlParse.Element('root')
+        
+        cls.__parsePlayerPosition(root, data_fetcher('w_SpawnEnd', layers=False), name=MAP_PSTARTEND_XML)
+
         cls.__parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML)
 
         cls.__parseEnemies(root, data=data_fetcher(cls.E_ID_ENEMY), name=MAP_ENEMY_XML)
@@ -141,25 +147,27 @@ class MapParser(object):
 
         cls.__parsePickups(root, data=data_fetcher(cls.E_ID_PICKUP), name=MAP_PICKUP_XML)
 
+        cls.__parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
+
         # Build all the layers and save them
         ws = data_fetcher('w_Size', layers=False)[2:4]
         for l_id, name_id in ((cls.E_ID_GROUND, MAP_GROUND), (cls.E_ID_OBJECT, MAP_OBJECTS), (cls.E_ID_WALL, MAP_WALLS)):
-            cls.__parseWorld(data_fetcher(l_id), name_id, map_path, ws, l_id) 
+            cls.__parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, ws, l_id) 
 
         final_tree = xmlParse.ElementTree(root)
         final_tree.write(path.join(map_path, MAP_DATA_EXT))
 
         # Turn in to archive 
-        make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
-        rmtree(map_path)   # Delete original mapfolder(now archived and copied)
+        #make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
+        #rmtree(map_path)   # Delete original mapfolder(now archived and copied)
 
         # Rename the extension to game specific format
-        tmp_path_base = path.join(getcwd(), MAP_PATH_BASE, '{}.{}'.format(filename, MAP_PACK_PREFERRED_EXT))
-        rename(tmp_path_base, ''.join(tmp_path_base.split('.')[:-1]) + MAP_FORMAT_EXT_EXT)
+        #tmp_path_base = path.join(getcwd(), MAP_PATH_BASE, '{}.{}'.format(filename, MAP_PACK_PREFERRED_EXT))
+        #rename(tmp_path_base, ''.join(tmp_path_base.split('.')[:-1]) + MAP_FORMAT_EXT_EXT)
 
     
     @classmethod
-    def __parseWorld(cls, data, name_id, final_path, final_size, layer_index=-1):
+    def __parseWorldSurfaces(cls, data, name_id, final_path, final_size, layer_index=-1):
         """
             Clue all the subsurfaces together to form a full surface image
             for storing
@@ -186,7 +194,45 @@ class MapParser(object):
 
         image.save(base, path.join(final_path, name_id + MAP_SURFACE_EXT))
 
+    
+    @classmethod
+    def __parseWorldData(cls, xml_root, data, name=''):
+        """
+            TBD
 
+            return -> None
+
+        """
+        segment = xmlParse.SubElement(xml_root, name)
+
+        # Store ground data
+        for y, row in enumerate(data):
+            for x, cell in enumerate(row):
+                parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
+                parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
+
+   
+    
+    @classmethod
+    def __parsePlayerPosition(cls, xml_root, data, name=''):
+        """
+            TBD
+
+            return -> None
+
+        """
+        segment = xmlParse.SubElement(xml_root, name)
+        # Start position (Required!)
+        parent_p = xmlParse.SubElement(segment, name, name=data[0].id)
+        parent_p.text = "{}.{}".format(data[0].x, data[0].y)
+
+        # End goal (Optional!)
+        if data[1] is not None:
+            parent_e = parent_p = xmlParse.SubElement(segment, name, name=data[1].id)
+            parent_e.text = "{}.{}".format(data[1].x, data[1].y)
+
+
+    
     @classmethod
     @dataParseCheck
     def __parseCollisions(cls, xml_root, data, name=''):
@@ -201,11 +247,9 @@ class MapParser(object):
         
         """
         segment = xmlParse.SubElement(xml_root, name)
-
         parent = xmlParse.SubElement(segment, name)
-        
         # Collision data is single array of x, y pairs 
-        # Compress the data by shifting the position closer to cell index positions 
+        # Compress the data by shifting the position closer to cell index positions (Should fix this in editor too) 
         parent.text = '.'.join([str(pos >> 5) for token, _ in data for pos in token])
     
 

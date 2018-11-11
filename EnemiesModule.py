@@ -87,20 +87,20 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
 
 
     
-    def enemy_getHit(self, dmg_taken, self_pos, target_pos):
+    def enemy_getHit(self, dmg_taken, scr_enemy, scr_player):
         """
             Calculate damage taken
 
             dmg_taken -> Damage taken
-            self_pos ->
-            target_pos -> 
+            scr_enemy -> Enemy screen position
+            scr_player -> Player screen position
 
             return -> current health
 
         """
         # Calculate the angle between shooter and target, and give it small offset
-        e_angle = self.tk_atan2(target_pos[0] - self_pos[0], 
-                                target_pos[1] - self_pos[1]) + self.tk_uniform(-.5, .5)
+        e_angle = self.tk_atan2(scr_player[0] - scr_enemy[0], 
+                                scr_player[1] - scr_enemy[1]) + self.tk_uniform(-.5, .5)
 
         # Wake up enemy to engage (If still alive)
         self.enemy_state = 1
@@ -110,30 +110,35 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
 
         # That shot definitely hurt
         if self.tk_randrange(0, 100) > 60:
-            self.playSoundEffect(self.tk_choice(self.enemy_pain_snd))
+            self.playSoundEffect(self.tk_choice(self.enemy_pain_snd), distance=scr_enemy)
 
         # Minor weapon hit sounds
-        self.playSoundEffect(self.tk_choice(self.enemy_hit_snd))
+        self.playSoundEffect(self.tk_choice(self.enemy_hit_snd), distance=scr_enemy)
 
         return self.enemy_health, (self.tk_choice(self.enemy_blood_frames),
-                                   (self_pos[0] - self.tk_sin(e_angle) * 20, 
-                                    self_pos[1] - self.tk_cos(e_angle) * 20),
+                                   (scr_enemy[0] - self.tk_sin(e_angle) * 20, 
+                                    scr_enemy[1] - self.tk_cos(e_angle) * 20),
                                    self.tk_degrees(e_angle))
     
-    def enemy_killed(self):
+
+    def enemy_killed(self, scr_enemy):
         """
             Call this to init enemy death sequence and get a token
+
+            scr_enemy -> Enemy screen position
 
             return -> Token
 
         """
         # Removed during next enemy render iteration (In mainloop)
         self.enemy_delete = 1
+
+        # Play death sound
+        self.playSoundEffect(self.tk_choice(self.enemy_death_snd), distance=scr_enemy)
         
         return EnemyDeathSeq(angle_deg=self.enemy_targetAngleDeg, 
                              g_profile=self.tk_choice(self.enemy_gore_profile),
                              d_frame=self.tk_choice(self.enemy_dead_frames),
-                             d_snd=self.tk_choice(self.enemy_death_snd),
                              e_weapon=self.enemy_weapon) 
 
 
