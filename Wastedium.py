@@ -174,38 +174,45 @@ def hero_handle(self, surface, key_event=-1):
     # Used to control how firing and animation playback is handled (Bitwise)
     play_fire_frame = 0
     
-    fire_key = self.tk_mouse_pressed()[0] 
+    fire_key = self.tk_mouse_pressed()[0]
+    
+    # Player requesting to change weapon
+    if key_event != -1: 
+        fire_key = 2 if any([key_event == self.tk_user[s] for s in self.tk_slots_available]) else 0
 
-    # No firing animation going. Weapon change free
-    if key_event != - 1 and not self.fire_anim_len[0]:
-        if any([key_event == self.tk_user[s] for s in self.tk_slots_available]):
-            self.player_data['model'] = '_'.join((self.player_data['torso'], 
-                                                  self.inv_changeWeapon(key_event))) 
-            self.hero_load_animation(torso_name=self.player_data['model'])
-            self.playSoundEffect(184)
-
-    # Handle weapon firing
+    # Handle weapon firing (Also weapon switching when action is free)
     if self.weaponfire_delay.isReady(release=fire_key):
-        ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
-        
-        if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
-            World.fire_weapon(*self.tk_res_half,
-                              angle=angle, 
-                              f_angle=radToAngle, 
-                              weapon=self.i_playerStats['weapon'], 
-                              dual_index=self.weapon_dual_cycle[1],
-                              surface=surface,
-                              player=1) 
-            
-            play_fire_frame |= 1
-            
-            if ammo_id != -1: self.i_playerAmmo[ammo_id] -= 1
-            self.weapon_dual_cycle.rotate(1)    # Switch hand
-            self.fire_anim_len.rotate(1)        # Begin the fire animation
+
+        # Switch weapon
+        if fire_key & 2:
+            self.player_data['model'] = '_'.join((self.player_data['torso'], 
+                                                  self.inv_changeWeapon(key_event)))
+            self.hero_load_animation(torso_name=self.player_data['model'])
+            self.playSoundEffect(184)   # Switch weapon sound    
 
         else:
-            # Trying to fire an empty weapon
-            self.playSoundEffect(self.all_weapons[self.i_playerStats['weapon']]['w_fire_sound_empty'])    
+            ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
+            
+            # Infinite ammo or ammo available?
+            if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
+                World.fire_weapon(*self.tk_res_half,
+                                  angle=angle, 
+                                  f_angle=radToAngle, 
+                                  weapon=self.i_playerStats['weapon'], 
+                                  dual_index=self.weapon_dual_cycle[1],
+                                  surface=surface,
+                                  player=1) 
+                
+                play_fire_frame |= 1
+                
+                if ammo_id != -1: self.i_playerAmmo[ammo_id] -= 1
+                self.weapon_dual_cycle.rotate(1)    # Switch hand
+                self.fire_anim_len.rotate(1)        # Begin the fire animation
+
+            else:
+                # Trying to fire an empty weapon
+                self.playSoundEffect(self.all_weapons[self.i_playerStats['weapon']]['w_fire_sound_empty']) 
+      
 
     # Player is moving while holding firekey down display the point weapon animation
     if fire_key: play_fire_frame |= 2 
@@ -215,7 +222,7 @@ def hero_handle(self, surface, key_event=-1):
     # Handle the player movement(Moving Back/Side gets slowed to 3/4 of the speed)
     keys = self.tk_key_pressed()
     delta = self.dt_getDelta()
-
+    wx, wy = 0, 0
 
     #TANK CONTROLS
     #-ifndef/tk_control_scheme
@@ -224,19 +231,23 @@ def hero_handle(self, surface, key_event=-1):
 
     if keys[self.tk_user['up']]:
         dir_frames = 1
-        World.move_map(x * delta, y * delta, obj_col=self.char_rect)
+        wx = x * delta
+        wy = y * delta
 
     elif keys[self.tk_user['down']]:
         dir_frames = 5
-        World.move_map(-(x - x / 4) * delta, -(y - y / 4) * delta, obj_col=self.char_rect)
+        wx = -(x - x / 4) * delta
+        wy = -(y - y / 4) * delta
 
     if keys[self.tk_user['right']]:
         dir_frames = 3
-        World.move_map(-(y - y / 4) * delta, (x - x / 4) * delta, obj_col=self.char_rect)
+        wx += -(y - y / 4) * delta
+        wy += (x - x / 4) * delta
 
     elif keys[self.tk_user['left']]:
         dir_frames = 7
-        World.move_map((y - y / 4) * delta, -(x - x / 4) * delta, obj_col=self.char_rect)
+        wx += (y - y / 4) * delta
+        wy += -(x - x / 4) * delta
 
     dir_frames = 2 if keys[self.tk_user['up']]   and keys[self.tk_user['right']] else dir_frames
     dir_frames = 8 if keys[self.tk_user['up']]   and keys[self.tk_user['left']]  else dir_frames
@@ -249,25 +260,24 @@ def hero_handle(self, surface, key_event=-1):
     x = self.player_data['speed']
     y = self.player_data['speed']
 
-    vec_sector = int(((radToAngle + 22.5) % 360) / 45)
     vec_deque = self.tk_deque(range(1, 9))
-    vec_deque.rotate(-vec_sector)
+    vec_deque.rotate(-int(((radToAngle + 22.5) % 360) / 45))
 
     if keys[self.tk_user['up']]:
         dir_frames = vec_deque[0]
-        World.move_map(0, y * delta, obj_col=self.char_rect)
+        wy = y * delta
 
     elif keys[self.tk_user['down']]:
         dir_frames = vec_deque[4]
-        World.move_map(0, -y * delta, obj_col=self.char_rect)
+        wy = -y * delta
 
     if keys[self.tk_user['right']]:
         dir_frames = vec_deque[2]
-        World.move_map(-x * delta, 0, obj_col=self.char_rect)
+        wx += -x * delta
 
     elif keys[self.tk_user['left']]:
         dir_frames = vec_deque[6]
-        World.move_map(x * delta, 0, obj_col=self.char_rect)
+        wx += x * delta
 
     # Diagonal movement
     dir_frames = vec_deque[1] if keys[self.tk_user['up']]   and keys[self.tk_user['right']] else dir_frames
@@ -275,6 +285,8 @@ def hero_handle(self, surface, key_event=-1):
     dir_frames = vec_deque[3] if keys[self.tk_user['down']] and keys[self.tk_user['right']] else dir_frames
     dir_frames = vec_deque[5] if keys[self.tk_user['down']] and keys[self.tk_user['left']]  else dir_frames
     #-endif
+
+    if wx or wy: World.move_map(wx, wy, obj_col=self.char_rect)
     
     # Character is moving. Fetch the next animation frame when ready and check for diagonal movements
     if dir_frames:
@@ -1620,7 +1632,7 @@ class Main(World, DeltaTimer):
         World.initVisualsAndExtModules()
 
         if '-nosplash' not in self.tk_read_args:
-            self.Menus.all_menus['m_main'].run(self.screen)
+            self.Menus.all_menus['m_intro'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
         World.build_map()

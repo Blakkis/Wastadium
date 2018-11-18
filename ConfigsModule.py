@@ -551,7 +551,7 @@ class GlobalGameData(DefaultConfigParser):
 
     
     @classmethod
-    def tk_draw_rounded_rect(cls, w, h, r, color, alpha, anti_aliasing=True):
+    def tk_draw_rounded_rect(cls, w, h, r, color, alpha, anti_aliasing=True, ipad=0, anchor_pos=None):
         """
             Draw rect with rounded edges
 
@@ -560,13 +560,13 @@ class GlobalGameData(DefaultConfigParser):
             r -> radius of the corners
             color -> color of the rect 
             alpha -> alpha level of the rect
-            anti_aliasing -> Add antialiasing to the r_rect NOTE: Keep the dimensions small! It's unoptimized
+            anti_aliasing -> Add antialiasing to the r_rect NOTE: Keep the dimensions small! It's un-optimized
 
             return -> Surface
 
         """
         # Final output surface
-        surf = cls.tk_surface((w + r, h + r), cls.tk_srcalpha)
+        surf = cls.tk_surface((w + ipad + r, h + ipad + r), cls.tk_srcalpha)
 
         # Draw 4 circles in each corner to create the rounded edges
         [cls.tk_draw_circle(surf, color, (x, y), r) \
@@ -584,7 +584,11 @@ class GlobalGameData(DefaultConfigParser):
 
         if anti_aliasing: surf = cls.tk_blur_surface(surf, alpha)
 
-        return surf
+        if anchor_pos is not None:
+            padded_anchor = anchor_pos[0] + ipad, anchor_pos[1] + ipad
+            return surf, anchor_pos, padded_anchor
+        else:
+            return surf
 
     
     @classmethod

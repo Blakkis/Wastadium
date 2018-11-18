@@ -160,10 +160,8 @@ def s_applyShadows(self, surface):
     ofsy = y - self.w_share['ShadowOffset'][1]
 
     #-ifdef/tk_shadow_quality
-    
     self.s_shadow_surf.blit(surface, (0, 0))
     self.s_shadow_surf.lock()
-    
     #-endif
 
     rounded_x, rounded_y = int(x), int(y)
@@ -214,7 +212,6 @@ def s_applyShadows(self, surface):
                                     (ep1, end_p_1, end_p_2, ep2))
 
     #-ifdef/tk_shadow_quality 
-
     self.s_shadow_surf.unlock()
 
     mapPos = -x, -y     # Convert the worldpos (which by default is negative) to positive
@@ -245,7 +242,6 @@ def s_applyShadows(self, surface):
     
     # Blit the visible area
     surface.blit(self.s_shadow_surf, (0, 0))
-   
     #-endif
 
     """.format(surface='self.s_shadow_surf' if GlobalGameData.tk_shadow_quality else 'surface'),
@@ -271,20 +267,22 @@ class CharacterShadows(GlobalGameData):
 
             surface -> Active screen surface
             px, py -> World coordinates
-            pAngle -> Not used currently (Idea was to rotate the shadow based on the angle of the casting object)
-                      Might add in the future  
+            pAngle -> Angle of the character casting the shadow  
 
             return -> None
 
         """
+        # Final polygon points
         points = []
         
         ix, iy = int(px) >> 8, int(py) >> 8
         try:
+            # Get all lights near the character
             for x, y in cls.cs_data['index_points'][(ix, iy)]:
                 for l in cls.cs_data['world'][y][x].itervalues():
+                    # Calculate distance to the light
                     dist = max(10, cls.tk_hypot(px - l.x, py - l.y)) 
-                    if dist < l.radius / 2:
+                    if dist < l.radius >> 1:
                         dist = min(64, dist)
                         angle = cls.tk_atan2(py - l.y, px - l.x) 
                         
@@ -292,6 +290,9 @@ class CharacterShadows(GlobalGameData):
                         ty = cls.tk_sin(angle)
 
                         for cos, sin in cls.cs_data['end_points']:
+                            #w = max(6, abs(12 * cls.tk_cos(pAngle))) 
+                            #h = max(6, abs(12 * cls.tk_sin(pAngle)))
+
                             lx = int((cls.tk_res_half[0] + dist * cos * tx - 10 * sin * ty) + tx * (dist - 10)) 
                             ly = int((cls.tk_res_half[1] + 10 * sin * tx + dist * cos * ty) + ty * (dist - 10)) 
                             points.append((lx, ly))

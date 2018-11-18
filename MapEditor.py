@@ -189,17 +189,23 @@ class World(VisualResources, MapParser):
 
 
     @classmethod
-    def w_createMap(cls, width, height, floor_id='', wall_set_id=''):
+    def w_createMap(cls, width=0, height=0, floor_id='', wall_set_id='', load_from_disk=False):
         """
             Worldbuild
 
             width, height -> Map Dimensions
             floor_id -> str id for the default floor texture
             wall_set_id -> str id for the default wallset textures
+            load_from_disk -> Load and parse map from the disk
 
             return -> None
 
         """
+        if load_from_disk:
+            filename = cls.mp_load(editor_loader=load_from_disk)
+            if filename == -1:
+                return None
+
         # Reset Statistic values
         cls.es_initVariables(reset=True)
 
@@ -207,7 +213,7 @@ class World(VisualResources, MapParser):
 
         cls.w_SpawnEnd = [None, None]
 
-        # Reset entity containers (Ignore the first 3)
+        # Reset entity containers (Ignore the first 3: Ground, Object, Wall)
         for reset_enum in sorted(cls.w_Cells_Layers.keys())[3:]:
             _type = dict if reset_enum in (cls.E_ID_COLLISION, cls.E_ID_LIGHT, 
                                            cls.E_ID_ENEMY,     cls.E_ID_PICKUP) else list
@@ -215,7 +221,10 @@ class World(VisualResources, MapParser):
                                                        for y in xrange(0, height, cls.ed_chunk_size)]
 
         # Store the world size in multiple formats
-        cls.w_Size = width  / cls.ed_chunk_size, height / cls.ed_chunk_size, width * 32, height * 32, width, height  
+        cls.w_Size = (width / cls.ed_chunk_size, height / cls.ed_chunk_size, 
+                      width * 32, height * 32,  
+                      width, height)    
+        
         chunk = 32 * cls.ed_chunk_size 
 
         cls.w_Cells_Single = []
@@ -661,14 +670,17 @@ class TkinterResources(VisualResources):
         cls.bf_mapwall_tex = cls.ed_str()
 
         # Display
-        cls.bf_disp_chunk = cls.ed_bool()
-        cls.bf_disp_gnd   = cls.ed_bool()
-        cls.bf_disp_dec   = cls.ed_bool()
-        cls.bf_disp_objs  = cls.ed_bool()
-        cls.bf_disp_wall  = cls.ed_bool()
-        cls.bf_disp_wire  = cls.ed_bool()
-        cls.bf_snap_dec   = cls.ed_bool()
-        cls.bf_autowalls  = cls.ed_bool()
+        cls.bf_disp_chunk  = cls.ed_bool()
+        cls.bf_disp_gnd    = cls.ed_bool()
+        cls.bf_disp_dec    = cls.ed_bool()
+        cls.bf_disp_objs   = cls.ed_bool()
+        cls.bf_disp_wall   = cls.ed_bool()
+        cls.bf_disp_wire   = cls.ed_bool()
+        cls.bf_disp_light  = cls.ed_bool()
+        cls.bf_disp_enemy  = cls.ed_bool()
+        cls.bf_disp_pickup = cls.ed_bool()
+        cls.bf_snap_dec    = cls.ed_bool()
+        cls.bf_autowalls   = cls.ed_bool()
 
         # General
         cls.bf_disablePygameEvents = cls.ed_bool()      # -- Hack -- Disable pygame event handling when creating
@@ -676,7 +688,7 @@ class TkinterResources(VisualResources):
 
     
     @ed_killMe
-    def bf_newMap(self):
+    def bf_newMap(self, root=None):
         """
             Create New Map
 
@@ -689,7 +701,11 @@ class TkinterResources(VisualResources):
         
         # Note: The code is structured in the same way as the gui is displaying it
         nm_frame = ed_TopLevel('Map Details', w_takefocus=True)
+        nm_frame.attributes('-topmost', 'true')
+        nm_frame.grab_set()
+        nm_frame.transient(root)
 
+        # Hijack the X quit protocol
         nm_frame.protocol('WM_DELETE_WINDOW', lambda: (self.bf_disablePygameEvents.set(False), 
                                                        nm_frame.destroy(), self.bf_mapname.set('None')))
         
@@ -812,8 +828,8 @@ class BaseFrame(tk.Tk, TkinterResources):
         self.config(padx=5, pady=5, menu=self.menuBar)
 
         self.menuMap = tk.Menu(self.menuBar, tearoff=0)
-        self.menuMap.add_command(label='New',        command=self.bf_newMap)
-        self.menuMap.add_command(label='Open...',    command=lambda: None)      # Create new map with *load* arguement to read from mapfile
+        self.menuMap.add_command(label='New',        command=lambda: self.bf_newMap(self))
+        self.menuMap.add_command(label='Open...',    command=lambda: World.w_createMap(load_from_disk=True))
         self.menuMap.add_command(label='Save',       command=lambda: self.mp_save(World.w_getWorldData))
         self.menuMap.add_command(label='Save as...', command=lambda: None)
         self.menuMap.add_separator()
@@ -840,49 +856,52 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         tk.Label(self, text='World Show/Hide')\
         .grid(row=0, column=0, padx=5, sticky=self.ed_sticky_w)
 
-        ed_Checkbutton(self, 'Hide Ground',  self.bf_disp_gnd,   1, 0)
-        ed_Checkbutton(self, 'Hide Objects', self.bf_disp_objs,  1, 1)
-        ed_Checkbutton(self, 'Hide Walls',   self.bf_disp_wall,  2, 0)
-        ed_Checkbutton(self, 'Hide Wires',   self.bf_disp_wire,  2, 1)
+        ed_Checkbutton(self, "Hide Ground",  self.bf_disp_gnd,    1, 0)
+        ed_Checkbutton(self, "Hide Objects", self.bf_disp_objs,   1, 1)
+        ed_Checkbutton(self, "Hide Walls",   self.bf_disp_wall,   2, 0)
+        ed_Checkbutton(self, "Hide Wires",   self.bf_disp_wire,   2, 1)
+        ed_Checkbutton(self, "Hide Lights",  self.bf_disp_light,  3, 0)
+        ed_Checkbutton(self, "Hide Enemies", self.bf_disp_enemy,  3, 1)
+        ed_Checkbutton(self, "Hide Pickups", self.bf_disp_pickup, 4, 0)
         
         self.ed_separator(self, orient='horizontal')\
-        .grid(row=3, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
+        .grid(row=5, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
-        tk.Label(self, text='Decal Settings').grid(row=4, column=0, padx=5, 
+        tk.Label(self, text='Decal Settings').grid(row=6, column=0, padx=5, 
                                                    sticky=self.ed_sticky_w)
         
-        ed_Checkbutton(self, 'Hide Decals',  self.bf_disp_dec,   5, 0)
-        ed_Checkbutton(self, 'Snap Decals',  self.bf_snap_dec,   5, 1)
+        ed_Checkbutton(self, 'Hide Decals', self.bf_disp_dec, 7, 0)
+        ed_Checkbutton(self, 'Snap Decals', self.bf_snap_dec, 7, 1)
 
         self.ed_separator(self, orient='horizontal')\
-        .grid(row=6, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
+        .grid(row=8, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
         tk.Label(self, text='Misc Settings')\
-        .grid(row=7, column=0, padx=5, sticky=self.ed_sticky_w)
+        .grid(row=9, column=0, padx=5, sticky=self.ed_sticky_w)
         
-        ed_Checkbutton(self, 'AutoWalling',  self.bf_autowalls,  8, 0)
-        ed_Checkbutton(self, 'Show Sectors',  self.bf_disp_chunk, 9, 0)
+        ed_Checkbutton(self, 'AutoWalling', self.bf_autowalls, 10, 0)
+        ed_Checkbutton(self, 'Show Sectors', self.bf_disp_chunk, 11, 0)
 
         self.ed_separator(self, orient='horizontal')\
-        .grid(row=10, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
+        .grid(row=12, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
         tk.Label(self, text='Light & Wire Color')\
-        .grid(row=11, column=0, padx=5, sticky=self.ed_sticky_w)
+        .grid(row=13, column=0, padx=5, sticky=self.ed_sticky_w)
         
-        Lights.l_createColorFrame(self, row=12, column=0)
-
-        self.ed_separator(self, orient='horizontal')\
-        .grid(row=13, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
-
-        EditorStatistics.es_createStatFrame(self, row=14, column=0)
+        Lights.l_createColorFrame(self, row=14, column=0)
 
         self.ed_separator(self, orient='horizontal')\
         .grid(row=15, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
-        EntityPicker.ep_createEntityFrame(self, row=16, column=0)
+        EditorStatistics.es_createStatFrame(self, row=16, column=0)
 
         self.ed_separator(self, orient='horizontal')\
         .grid(row=17, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
+
+        EntityPicker.ep_createEntityFrame(self, row=18, column=0)
+
+        self.ed_separator(self, orient='horizontal')\
+        .grid(row=19, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
 # -------
 
@@ -1063,6 +1082,8 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.bf_disp_wall.trace('w',  lambda *args: self.w_toggleLayers(self.E_ID_WALL))
         self.bf_disp_wire.trace('w',  lambda *args: self.w_toggleLayers(self.E_ID_WIRE))
         self.bf_disp_dec.trace('w',   lambda *args: self.w_toggleLayers(self.E_ID_DECAL))
+        self.bf_disp_light.trace('w', lambda *args: self.w_toggleLayers(self.E_ID_LIGHT))
+        self.bf_disp_enemy.trace('w', lambda *args: self.w_toggleLayers(self.E_ID_ENEMY))
         self.bf_disp_chunk.trace('w', lambda *args: self.w_toggleLayers(-1))
 
         

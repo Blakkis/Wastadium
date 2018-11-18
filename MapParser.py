@@ -1,28 +1,19 @@
 import tkFileDialog as mp_file
 import tkMessageBox as mp_error
 import xml.etree.cElementTree as xmlParse
+import zipfile
 
 from pygame import image, surface, SRCALPHA
 from shutil import make_archive, rmtree
 from os import path, makedirs, rename, getcwd
 
 
-#>>> import xml.etree.cElementTree as ET
-#>>> root = ET.Element("root")
-#>>> doc = ET.SubElement(root, 'doc')
-#>>> ET.SubElement(doc, "field1", name="blah").text = "some value1"
-#>>> ET.SubElement(doc, "field2", name="asdfasd").text = "some vlaue2"
-#>>> tree = ET.ElementTree(root)
-#>>> tree.write("filename.xml") 
-
-
 __all__ = 'MapParser', 
 
 
-MAP_FORMAT_EXT_EXT = '.waw'
-MAP_FORMAT_EXT_FULL = "WheresAllWaste", "*{}".format(MAP_FORMAT_EXT_EXT)
-MAP_PATH_BASE = 'maps'
 MAP_PACK_PREFERRED_EXT = 'zip'
+MAP_FORMAT_EXT_FULL = "Wasted zip", "*.{}".format(MAP_PACK_PREFERRED_EXT)
+MAP_PATH_BASE = 'maps'
 MAP_DATA_EXT = 'data.xml'
 
 # Format in which the layers are stored
@@ -40,8 +31,11 @@ MAP_LIGHT_XML     = 'id_lights'
 MAP_DECAL_XML     = 'id_decals'
 MAP_WIRE_XML      = 'id_wires'
 MAP_PICKUP_XML    = 'id_pickup'
-MAP_PSTARTEND_XML = 'id_p_start_end'
 MAP_CELL_XML      = 'id_cell_data'
+MAP_GENERAL_XML   = 'id_general'
+
+MAP_PSTARTEND_XML = 'id_p_start_end'
+MAP_DIMENSION_XML = 'id_dimensions'
 
 
 # ----
@@ -132,8 +126,8 @@ class MapParser(object):
         makedirs(map_path)
 
         root = xmlParse.Element('root')
-        
-        cls.__parsePlayerPosition(root, data_fetcher('w_SpawnEnd', layers=False), name=MAP_PSTARTEND_XML)
+
+        cls.__parseGeneralData(root, name=MAP_GENERAL_XML, data_fetcher=data_fetcher)
 
         cls.__parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML)
 
@@ -150,20 +144,17 @@ class MapParser(object):
         cls.__parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
 
         # Build all the layers and save them
-        ws = data_fetcher('w_Size', layers=False)[2:4]
+        width_height = data_fetcher('w_Size', layers=False)[2:4]
         for l_id, name_id in ((cls.E_ID_GROUND, MAP_GROUND), (cls.E_ID_OBJECT, MAP_OBJECTS), (cls.E_ID_WALL, MAP_WALLS)):
-            cls.__parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, ws, l_id) 
+            cls.__parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, width_height, l_id) 
 
+        # Build the final xml output
         final_tree = xmlParse.ElementTree(root)
         final_tree.write(path.join(map_path, MAP_DATA_EXT))
 
         # Turn in to archive 
-        #make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
-        #rmtree(map_path)   # Delete original mapfolder(now archived and copied)
-
-        # Rename the extension to game specific format
-        #tmp_path_base = path.join(getcwd(), MAP_PATH_BASE, '{}.{}'.format(filename, MAP_PACK_PREFERRED_EXT))
-        #rename(tmp_path_base, ''.join(tmp_path_base.split('.')[:-1]) + MAP_FORMAT_EXT_EXT)
+        make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
+        rmtree(map_path)   # Delete original mapfolder(now archived and copied)
 
     
     @classmethod
@@ -211,10 +202,9 @@ class MapParser(object):
                 parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
                 parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
 
-   
     
     @classmethod
-    def __parsePlayerPosition(cls, xml_root, data, name=''):
+    def __parseGeneralData(cls, xml_root, data_fetcher, name=''):
         """
             TBD
 
@@ -222,15 +212,21 @@ class MapParser(object):
 
         """
         segment = xmlParse.SubElement(xml_root, name)
-        # Start position (Required!)
-        parent_p = xmlParse.SubElement(segment, name, name=data[0].id)
+
+        # Player position
+        data = data_fetcher('w_SpawnEnd', layers=False)
+        parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[0].id)
         parent_p.text = "{}.{}".format(data[0].x, data[0].y)
 
         # End goal (Optional!)
         if data[1] is not None:
-            parent_e = parent_p = xmlParse.SubElement(segment, name, name=data[1].id)
+            parent_e = parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[1].id)
             parent_e.text = "{}.{}".format(data[1].x, data[1].y)
 
+        # Map related data
+        data = data_fetcher('w_Size', layers=False)[4:6] 
+        parent_p = xmlParse.SubElement(segment, MAP_DIMENSION_XML)
+        parent_p.text = "{}.{}".format(*data)
 
     
     @classmethod
@@ -381,19 +377,25 @@ class MapParser(object):
             parent = xmlParse.SubElement(segment, name, name=pup.id)
             # x, y, content, value
             parent.text = '{}.{}.{}.{}'.format(pup.x, pup.y, pup.content, pup.value)
-
             
     
     @classmethod
     def mp_load(cls, editor_loader=False):
         """
-            TBD
+            Load and parse map files
+
+            editor_loader -> Set to 'True' when called by the map editor
 
             return -> None
 
-        """
-        filename = mp_file.askopenfilename(initialdir=MAP_PATH_BASE, filetypes=(MAP_FORMAT_EXT_FULL, ))
-        print filename
+        """ 
+        if editor_loader:
+            filename = mp_file.askopenfilename(initialdir=MAP_PATH_BASE, filetypes=(MAP_FORMAT_EXT_FULL, ))
+            if not filename:
+                return -1
+        
+        else:
+            pass
 
 
 if __name__ == '__main__':

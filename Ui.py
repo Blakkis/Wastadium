@@ -1,24 +1,86 @@
-from ConfigsModule import GlobalGameData#, TkCounter
+from ConfigsModule import GlobalGameData
 from TextureLoader import uiElements
 from Weapons import Weapons
 from EventManager import EventManager
 from Inventory import Inventory
 
 
-__all__ = ('uiOverlay', )
+__all__ = 'uiOverlay', 'uiGameTimer' 
 
 # NOTE: Replace the hardcoded shit with more robust system
 
+class uiGameTimer(GlobalGameData):
+
+    ui_data = {'g_timer':      None,        # Timer
+               'g_timer_bg':   None,        # Decorative
+               'g_timer_fg':   None,        # - || -
+               'g_timer_text':[None, None], # Rendered timer surface
+               'g_font':       None}        # Font used to render
+
     
-class uiOverlay(uiElements, EventManager, Inventory):
-    """
-        Handle and render gameplay overlay
+    @classmethod
+    def tick_timer(cls):
+        """
+            Tick the timer and update the timer surface 
 
-        NOTE: Make sure 'uiElements' has been loaded before creating instance of this class
+            return -> None
 
-        return -> None
-        
-    """
+        """
+        cls.ui_data['g_timer'] += 1
+
+        t = str(cls.tk_timedelta(seconds=cls.ui_data['g_timer']()))
+        cls.ui_data['g_timer_text'][0] = cls.tk_renderText(cls.ui_data['g_font'], t, 1, (0xff, 0x0, 0x0), shadow=1)  
+
+    
+    @classmethod
+    def render_timer(cls, surface):
+        """
+            Render the timer
+
+            surface -> Active screen surface
+
+            return -> None
+
+        """
+        surface.blit(*cls.ui_data['g_timer_bg'])
+        surface.blit(*cls.ui_data['g_timer_fg'])
+        surface.blit(*cls.ui_data['g_timer_text'])
+
+    
+    @classmethod
+    def setup_timer(cls, font):
+        """
+            Setup/Initialize timer
+
+            font -> font used to render the timer
+
+            return -> None
+
+        """
+        cls.ui_data['g_font'] = font
+        cls.ui_data['g_timer'] = cls.tk_counter(-1)
+
+        # Get size estimations for the timer
+        ew, eh = font.size('99:99:99')
+
+        # Background
+        bg = cls.tk_gradient_rect(ew + 32, eh, (0xff, 0x0, 0x0), 0xaa)
+        bg_pos = cls.tk_res_half[0] - bg.get_width() / 2, 0 
+        cls.ui_data['g_timer_bg'] = bg, bg_pos
+
+        # Foreground
+        fg = cls.tk_gradient_rect(ew + 64, 2, (0xff, 0x0, 0x0), 0xaa) 
+        fg_pos = cls.tk_res_half[0] - fg.get_width() / 2, bg.get_height()   
+        cls.ui_data['g_timer_fg'] = fg, fg_pos
+
+        # Timer font surface
+        cls.ui_data['g_timer_text'] = [None, None]
+        cls.tick_timer() 
+        cls.ui_data['g_timer_text'][1] = cls.tk_res_half[0] - cls.ui_data['g_timer_text'][0].get_width() / 2, 0 
+
+
+    
+class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer):
     
     def __init__(self):            
         # NOTE: Most of these hardcoded stuff is for the textures which do not scale with resolution (in-game)
@@ -26,30 +88,25 @@ class uiOverlay(uiElements, EventManager, Inventory):
         self.olFont_1 = self.tk_font(self.ElementFonts[0], 20)
         self.olFont_2 = self.tk_font(self.ElementFonts[0], 24)
 
-
-        w, h = self.olFont_1.size('99:99:99')   # estimating the size before rendering it
-        self.olDisplayTimer_bg = self.tk_gradient_rect(w + 32, h, (0xff, 0x0, 0x0), 0xaa)
-        self.olDisplayTimer_bg_pos = self.tk_res_half[0] -  self.olDisplayTimer_bg.get_width() / 2, 0 
-
-        self.olDisplayTimer_bg_outline = self.tk_gradient_rect(w + 64, 1, (0xff, 0x0, 0x0), 0xaa)
-        self.olDisplayTimer_bg_outline_pos = (self.tk_res_half[0] -  self.olDisplayTimer_bg_outline.get_width() / 2, 
-                                              self.olDisplayTimer_bg.get_height())  
+        self.setup_timer(self.olFont_1)
         
-        self.olGameTimer = self.tk_counter(-1); self.updateGameTimer() 
-
-        # NOTE: Most of this is just Overlay decoration
+        # Decorations ----
 
         # Weapon 
-        self.olWeaponElem = self.ol_buildElement((4, self.tk_resolution[1] - 84), 64, 64)
+        self.olWeaponElem = self.tk_draw_rounded_rect(64 + 8, 64 + 8, 10, (0xcc, 0x0, 0x0), 0x90, 
+                                                      ipad=8, anchor_pos=(4, self.tk_resolution[1] - 84))
         
         # Ammo 
-        self.olAmmoElem   = self.ol_buildElement((4, self.tk_resolution[1] - 136), 128, 32)
+        self.olAmmoElem = self.tk_draw_rounded_rect(128 + 8, 32 + 8, 10, (0xcc, 0x0, 0x0), 0x90,
+                                                    ipad=8, anchor_pos=(4, self.tk_resolution[1] - 136))
+
         self.tk_draw_aaline(self.olAmmoElem[0], (0xff, 0x0, 0x0), (48, 8), (48, 39))    # Separation of icon and ammo count
         self.AmmoBar = self.tk_surface((80, 28), self.tk_srcalpha)
         self.AmmoBar.fill((0x80, 0x0, 0x0, 0xaa))
         
         # Health and armor bg
-        self.olHpArmsElem = self.ol_buildElement((88, self.tk_resolution[1] - 84), 144, 64)
+        self.olHpArmsElem = self.tk_draw_rounded_rect(144 + 8, 64 + 8, 10, (0xcc, 0x0, 0x0), 0x90,
+                                                      ipad=8, anchor_pos=(88, self.tk_resolution[1] - 84))
         
         # Decoration for the health and armor slot (Endcaps)
         self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (44,  11), (44,  38))       # Health endcaps
@@ -61,6 +118,7 @@ class uiOverlay(uiElements, EventManager, Inventory):
         # Health 
         self.healthBar = self.tk_surface((96, 28), self.tk_srcalpha)
         self.heartBeatCycle = self.tk_cycle(self.__heartBeatGenerator(self.i_playerStats['health'][0]))
+        # Generate the sin table for the heartbeat effect generator
         self.heartBeatTable = [self.tk_sin(self.tk_radians(x)) for x in xrange(0, 360, 10)]
 
         self.healthBarCriticalCycle = self.tk_cycle(self.tk_chain(xrange(0, 128, 4), xrange(128, 0, -4)))
@@ -73,8 +131,8 @@ class uiOverlay(uiElements, EventManager, Inventory):
 
         # Ui Events
         EventManager.__init__(self)
-        self.Event_newEvent(1000, self.updateGameTimer)
-        self.Event_newEvent(1, self.overlayExtraEffects)
+        self.Event_newEvent(1000, self.tick_timer)
+        self.Event_newEvent(2, self.__flashGenerator)
 
 
     def __heartBeatGenerator(self, delay=8):
@@ -97,22 +155,8 @@ class uiOverlay(uiElements, EventManager, Inventory):
         for rest in xrange(min(72, max(8, delay))):
             yield 0
     
-    
-    def updateGameTimer(self):
-        """
-            Update gametimer and re-render the font texture
 
-            return -> None
-
-        """
-        self.olGameTimer += 1
-        # Update the text surface every second
-        self.olDisplayTimerRender = self.tk_renderText(self.olFont_1, 
-                                    str(self.tk_timedelta(seconds=self.olGameTimer())), 1, (0xff, 0x0, 0x0), shadow=1)
-
-    
-    
-    def overlayExtraEffects(self):
+    def __flashGenerator(self):
         """
             Update overlays visual effects
 
@@ -134,21 +178,6 @@ class uiOverlay(uiElements, EventManager, Inventory):
         self.healthBar.scroll(-1, 0) 
 
 
-    def ol_buildElement(self, pos, w, h, ipad=8):
-        """
-            Build an uielement with alpha background and element anchor pos
-
-            anchor pos is located at topleft, offset by ipad 
-
-            return -> surf, position, anchor position for icons inside the surface 
-
-        """
-        # Small extension for the 'tk_draw_rounded_rect' tho should move it inside the actual function
-        bg = self.tk_draw_rounded_rect(w + ipad, h + ipad, 10, (0xcc, 0x0, 0x0), 0x90)
-        anchor = pos[0] + ipad, pos[1] + ipad
-        return bg, pos, anchor
-
-    
     def drawOverlay(self, surface):
         """
             Draw the overlay during gameplay
@@ -158,16 +187,7 @@ class uiOverlay(uiElements, EventManager, Inventory):
             return -> None
 
         """
-        # Note: Most of the stuff is 'harcoded', so scaling will be issue
-        #       Also changing the font will be issue too
-
-        # Render a background for the timer
-        surface.blit(self.olDisplayTimer_bg, self.olDisplayTimer_bg_pos)
-
-        surface.blit(self.olDisplayTimer_bg_outline, self.olDisplayTimer_bg_outline_pos)
-        
-        # Render gametime 
-        surface.blit(self.olDisplayTimerRender, (self.tk_res_half[0] - self.olDisplayTimerRender.get_width() / 2, 0)) 
+        self.render_timer(surface)
         
         # Weapon
         surface.blit(*self.olWeaponElem[:2])
@@ -193,12 +213,12 @@ class uiOverlay(uiElements, EventManager, Inventory):
 
         # Weapons with infinite ammo, do not need the ammo gui element
         ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]
-        if ammo_id != -1: self.ol_render_ammo_gui(surface, ammo_id)
+        if ammo_id != -1: self.drawOverlayAmmo(surface, ammo_id)
              
         surface.blit(*self.tk_drawCursor(self.ElementCursors[0]))
 
     
-    def ol_render_ammo_gui(self, surface, ammo_id):
+    def drawOverlayAmmo(self, surface, ammo_id):
         """
             Render ammo icon/count if needed
 
