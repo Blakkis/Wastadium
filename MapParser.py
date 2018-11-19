@@ -7,6 +7,9 @@ from pygame import image, surface, SRCALPHA
 from shutil import make_archive, rmtree
 from os import path, makedirs, rename, getcwd
 
+from io import BytesIO
+import pygame.image as pyimage
+
 
 __all__ = 'MapParser', 
 
@@ -14,12 +17,12 @@ __all__ = 'MapParser',
 MAP_PACK_PREFERRED_EXT = 'zip'
 MAP_FORMAT_EXT_FULL = "Wasted zip", "*.{}".format(MAP_PACK_PREFERRED_EXT)
 MAP_PATH_BASE = 'maps'
-MAP_DATA_EXT = 'data.xml'
 
 # Format in which the layers are stored
-MAP_SURFACE_EXT = '.png'
+MAP_SURFACE_EXT = 'png'
 
-# layer tags
+# Folder tags
+MAP_DATA_EXT  = 'data.xml'
 MAP_GROUND    = 'id_ground'
 MAP_WALLS     = 'id_walls'
 MAP_OBJECTS   = 'id_objects'
@@ -40,18 +43,19 @@ MAP_DIMENSION_XML = 'id_dimensions'
 
 # ----
 
-# Exception classes
-
 class WastadiumEditorException(Exception):
     pass 
 
+
 # Error names(+ codes if needed for parsing?)
 
-MAP_PLAYER_MISSING = "Player Missing! - 0x{}".format(0x1 << 1)
-MAP_ASSERT_ERROR   = "Assert Error! - 0x{}"  .format(0x1 << 2)
+MAP_PLAYER_MISSING   = "Player Missing! - 0x{}"    .format(0x1 << 1)
+MAP_ASSERT_ERROR     = "Assert Error! - 0x{}"      .format(0x1 << 2)
+MAP_CORRUPTION_ERROR = "Map File Corrupted! - 0x{}".format(0x1 << 3) 
 
 
 # ----
+
 
 def dataParseCheck(func): 
     def wrapped(*args, **kw):
@@ -76,9 +80,63 @@ def dataParseCheck(func):
             mp_error.showerror(MAP_ASSERT_ERROR, e)
  
     return wrapped
-    
 
-class MapParser(object):
+
+class Packer(object):
+
+    # Zip file path
+    __filepath = None
+    
+    
+    @classmethod
+    def getValidFilePath(cls, filepath):
+        if path.exists(filepath) and zipfile.is_zipfile(filepath):
+            cls.__filepath = filepath
+        else:
+            return -1
+    
+    
+    @classmethod
+    def decompressAndParse(cls):
+        """
+            TBD
+
+            return -> None
+
+        """
+        assert cls.__filepath is not None, "Get the path first!" 
+
+        with zipfile.ZipFile(cls.__filepath) as zr:
+            files = zr.namelist() 
+            try:
+                data = files.index(MAP_DATA_EXT)
+                lr1 = files.index('{}.{}'.format(MAP_GROUND,  MAP_SURFACE_EXT))
+                lr2 = files.index('{}.{}'.format(MAP_OBJECTS, MAP_SURFACE_EXT))
+                lr3 = files.index('{}.{}'.format(MAP_WALLS,   MAP_SURFACE_EXT))
+
+            except Exception as e:
+                mp_error.showerror(MAP_CORRUPTION_ERROR, e)
+
+            # Load surfaces
+            for l in (lr1, lr2, lr3):
+                with BytesIO(zr.read(files[l])) as _bytes:
+                    yield pyimage.load(_bytes).convert_alpha()     
+    
+    
+    @classmethod
+    def compress(cls, filename, filepath):
+        """
+            TBD
+
+            return -> None
+
+        """
+        make_archive(filename, MAP_PACK_PREFERRED_EXT, filepath)
+        rmtree(filepath)   # Delete original mapfolder(now archived and copied)
+
+
+
+class MapParser(Packer):
     
     w_enum = {'E_ID_GROUND'   : 0x0,    
               'E_ID_OBJECT'   : 0x1,    
@@ -152,9 +210,7 @@ class MapParser(object):
         final_tree = xmlParse.ElementTree(root)
         final_tree.write(path.join(map_path, MAP_DATA_EXT))
 
-        # Turn in to archive 
-        make_archive(filename, MAP_PACK_PREFERRED_EXT, map_path)
-        rmtree(map_path)   # Delete original mapfolder(now archived and copied)
+        cls.compress(filename, map_path)
 
     
     @classmethod
@@ -183,7 +239,7 @@ class MapParser(object):
                 for r_decal in cls.__DataStorage[cls.E_ID_DECAL]:
                     base.blit(r_decal.tex, r_decal.pos)
 
-        image.save(base, path.join(final_path, name_id + MAP_SURFACE_EXT))
+        image.save(base, path.join(final_path, '{}.{}'.format(name_id, MAP_SURFACE_EXT)))
 
     
     @classmethod
@@ -206,7 +262,9 @@ class MapParser(object):
     @classmethod
     def __parseGeneralData(cls, xml_root, data_fetcher, name=''):
         """
-            TBD
+            Parse general map data
+            -   SpawnPos/EndPos
+            -   World size
 
             return -> None
 
@@ -268,7 +326,6 @@ class MapParser(object):
             enemy = e[1]
             parent = xmlParse.SubElement(segment, name, name=enemy.id)
 
-            # x, y
             parent.text = '{}.{}'.format(enemy.x >> 5, enemy.y >> 5) 
 
 
@@ -390,14 +447,23 @@ class MapParser(object):
 
         """ 
         if editor_loader:
-            filename = mp_file.askopenfilename(initialdir=MAP_PATH_BASE, filetypes=(MAP_FORMAT_EXT_FULL, ))
-            if not filename:
-                return -1
+            valid = cls.getValidFilePath(mp_file.askopenfilename(initialdir=MAP_PATH_BASE, 
+                                                                 filetypes=(MAP_FORMAT_EXT_FULL, )))
+            if valid == -1:
+                return None
+
+            cls.decompressAndParse()
+            
+            #packet = zipfile.ZipFile(filename)
+            #names = packet.namelist()
+
+            #surface = pygame.image.load(BytesIO(packet.read(names[1])))#.convert_alpha()
+            
+            #packet.close()
         
         else:
             pass
 
 
 if __name__ == '__main__':
-    pass
-    #MapParser.mp_load()
+    MapParser.mp_load(editor_loader=True)

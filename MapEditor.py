@@ -6,7 +6,7 @@ from TextureLoader import TextureLoader, uiElements
 from TextureHandlerEditor import TextureSelectOverlay
 from DecalModule import DecalGibsHandler
 from LightEditor import Lights
-from MapParser import MapParser
+from MapParser import MapParser, Packer
 from StatisticsEditor import EditorStatistics
 from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
@@ -53,7 +53,7 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
         cls.editor_font = cls.ed_font(cls.ElementFonts[1], 12)
 
 
-class World(VisualResources, MapParser):
+class World(VisualResources, MapParser, Packer):
     # NOTE: Create a struct for holding the layer and associated display bool together!
 
     w_Pos = [0, 0]
@@ -205,6 +205,9 @@ class World(VisualResources, MapParser):
             filename = cls.mp_load(editor_loader=load_from_disk)
             if filename == -1:
                 return None
+
+            for disk_surface in cls.decompressAndParse():
+                print disk_surface
 
         # Reset Statistic values
         cls.es_initVariables(reset=True)
