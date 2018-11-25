@@ -17,7 +17,7 @@ from GadgetLoader import *
 from PickUps import Pickups
 from Tokenizers import *
 
-from pygame import FULLSCREEN
+from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF
 
 
 # NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
@@ -1661,6 +1661,8 @@ class Main(World, DeltaTimer):
             for event in self.tk_eventDispatch():
                 self.uioverlay.Event_handleEvents(event.type) 
 
+                # Have all the single keyevent handling here, and pass via functions
+                # to the ones who need it
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']: 
                         ignore_delta = paused = 1 
@@ -1697,7 +1699,8 @@ class Main(World, DeltaTimer):
 
             self.tk_display.flip()
 
-            if paused: paused = self.Menus.all_menus['m_options'].run(self.screen, snapshot=1)
+            if paused: 
+                paused = self.Menus.all_menus['m_options'].run(self.screen, snapshot=1)
 
     
 

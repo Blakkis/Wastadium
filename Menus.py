@@ -7,12 +7,13 @@ from Inventory import Inventory
 from MenuUtils import * 
 from _3d_models import Model3D
 from Tokenizers import MenuEventDispatch
+from Timer import DeltaTimer
 
 
 __all__ = ('MenuManager')
 
 
-class PagesHelp(uiElements, SoundMusic, GlobalGameData):
+class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
 
     @classmethod
     def ph_initData(cls):
@@ -28,14 +29,18 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData):
         # Provide a same background for all the menus
         cls.menu_background = cls.__ph_createBackground(1)
 
+        # SHOULD BE REPLACED WITH THE TIMER class tick timer!
         # Provide common timer for every menu class
-        cls.menu_timer = MenuEventDispatch(get_event=cls.tk_uEvent, 
+        cls.menu_base_event = cls.tk_uEvent 
+        cls.menu_timer = MenuEventDispatch(get_event=lambda t=None: cls.menu_base_event if t is None \
+                                                     else cls.menu_timer.get_ticks.m_add(.05) if t == cls.menu_base_event else 0,  
                                            get_ticks=cls.tk_counter(0)) 
+        
         # Call this function when the menu_timer event is caught in event handling
-        cls.menu_timer_inc = lambda cls: cls.menu_timer.get_ticks.m_add(.05) 
+        #cls.menu_timer_inc = lambda cls: cls.menu_timer.get_ticks.m_add(.05) 
 
         # Start the common event timer
-        cls.tk_time.set_timer(cls.menu_timer.get_event, 10)
+        cls.tk_time.set_timer(cls.menu_timer.get_event(), 10)
 
     
     @classmethod
@@ -154,11 +159,12 @@ class MenuIntro(PagesHelp, EventManager):
                             # Stop the fadein animation
                             self.intro_exit_proceed = 1
 
-                if event.type == self.menu_timer.get_event: self.menu_timer_inc()
+                self.menu_timer.get_event(event.type)
 
                 self.Event_handleEvents(event.type) 
             
             tick_t = self.menu_timer.get_ticks() 
+            
             # Render gear
             surface.blit(self.tk_rotateImage(self.dsurf, tick_t * (64 - tick_t * 1.5), 
                                              self.dsurf.get_rect()), self.dsurf_pos)
@@ -292,8 +298,7 @@ class MenuMain(PagesHelp, EventManager):
             for event in self.tk_eventDispatch():
                 self.Event_handleEvents(event.type)
 
-                if event.type == self.menu_timer.get_event: 
-                    self.menu_timer_inc(); tick = 1
+                if self.menu_timer.get_event(event.type): tick = 1
 
                 if event.type == self.tk_event_mouseup: click = 1
 
@@ -470,9 +475,10 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             click = 0
 
             for event in self.tk_eventDispatch():
-                if event.type == self.menu_timer.get_event: self.menu_timer_inc() 
+                self.menu_timer.get_event(event.type)
 
-                if event.type == self.tk_event_mouseup: click = 1
+                if event.type == self.tk_event_mouseup: 
+                    click = 1
 
             mx, my = self.tk_mouse_pos()
 
@@ -911,8 +917,9 @@ class MenuOptions(PagesHelp):
                 elif event.type == self.tk_event_mouseup:
                     click_up = event.button
 
-                elif event.type == self.menu_timer.get_event: 
-                    self.menu_timer_inc()
+                elif self.menu_timer.get_event(event.type):
+                    pass 
+
 
                 elif event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc'] and not self.mo_uk_editme:

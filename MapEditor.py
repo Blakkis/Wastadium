@@ -11,7 +11,7 @@ from StatisticsEditor import EditorStatistics
 from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
 from Tokenizers import *
-from Tokenizers import Ed_PostPoint
+from Tokenizers import Ed_CellPoint
 
 
 # NOTE
@@ -202,12 +202,10 @@ class World(VisualResources, MapParser, Packer):
 
         """
         if load_from_disk:
-            filename = cls.mp_load(editor_loader=load_from_disk)
-            if filename == -1:
-                return None
-
-            for disk_surface in cls.decompressAndParse():
-                print disk_surface
+            cls.mp_load(editor_loader=load_from_disk)
+            data = cls.decompressAndParse(editor_loader=load_from_disk)
+            
+            if not data: return None    
 
         # Reset Statistic values
         cls.es_initVariables(reset=True)
@@ -1377,7 +1375,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                         return None 
 
                 post_type = 'id_spawn' if action == 0 else 'id_finish' 
-                self.w_SpawnEnd[action] = Ed_PostPoint(*index, id=post_type)
+                self.w_SpawnEnd[action] = Ed_CellPoint(*index, id=post_type)
     
     
     def __pf_applyGround(self, index, x, y, surface=None, action_key=0, set_id=0):

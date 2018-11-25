@@ -38,13 +38,13 @@ class Id_Decal(namedtuple('id_decal', ['tex', 'name', 'pos', 'w', 'h', 'orient']
 class Id_Wire(namedtuple('id_wire', ['p1', 'p2', 'color'])):
 	pass
 
+
 # ----
 
-class Ed_PostPoint(namedtuple('ed_postpoint', ['x', 'y', 'id'])):
+
+class Ed_CellPoint(namedtuple('ed_postpoint', ['x', 'y', 'id'])):
 	pass
 
-
-# ----
 
 class MenuEventDispatch(namedtuple('MenuEventDispatch', ['get_event', 'get_ticks'])):
 	pass

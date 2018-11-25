@@ -409,7 +409,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
         v1 = [self.tk_cos(v1Angle), self.tk_sin(v1Angle)] 
         v2 = [self.tk_cos(v2Angle), self.tk_sin(v2Angle)]
         
-        return self.tk_acos( self.tk_np_dot(v1, v2) ) < cAngle 
+        return self.tk_acos(self.tk_np_dot(v1, v2)) < cAngle 
 
 
     def get_new_waypoint(self, ePos, surface=None):

@@ -43,7 +43,7 @@ class TkCounter(object):
 
     def __call__(self): return self.__c
 
-    def m_add(self, v): self.__c += v
+    def m_add(self, v): self.__c += v; return 1
 
     def reset(self): self.__c = self.__init
 

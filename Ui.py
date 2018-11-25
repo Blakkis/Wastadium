@@ -68,7 +68,7 @@ class uiGameTimer(GlobalGameData):
         bg_pos = cls.tk_res_half[0] - bg.get_width() / 2, 0 
         cls.ui_data['g_timer_bg'] = bg, bg_pos
 
-        # Foreground
+        # Decoration line
         fg = cls.tk_gradient_rect(ew + 64, 2, (0xff, 0x0, 0x0), 0xaa) 
         fg_pos = cls.tk_res_half[0] - fg.get_width() / 2, bg.get_height()   
         cls.ui_data['g_timer_fg'] = fg, fg_pos

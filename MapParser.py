@@ -9,7 +9,7 @@ from os import path, makedirs, rename, getcwd
 
 from io import BytesIO
 import pygame.image as pyimage
-
+import sys
 
 __all__ = 'MapParser', 
 
@@ -35,10 +35,19 @@ MAP_DECAL_XML     = 'id_decals'
 MAP_WIRE_XML      = 'id_wires'
 MAP_PICKUP_XML    = 'id_pickup'
 MAP_CELL_XML      = 'id_cell_data'
-MAP_GENERAL_XML   = 'id_general'
+MAP_GENERAL_XML   = 'id_general' 
+
+# General data sub-tags
 
 MAP_PSTARTEND_XML = 'id_p_start_end'
 MAP_DIMENSION_XML = 'id_dimensions'
+
+
+MAP_ALL_TAGS = (MAP_COLLISION_XML, MAP_ENEMY_XML, 
+                MAP_LIGHT_XML,     MAP_DECAL_XML,
+                MAP_WIRE_XML,      MAP_PICKUP_XML, 
+                MAP_CELL_XML,      MAP_GENERAL_XML,
+                MAP_PSTARTEND_XML, MAP_DIMENSION_XML)
 
 
 # ----
@@ -53,6 +62,8 @@ MAP_PLAYER_MISSING   = "Player Missing! - 0x{}"    .format(0x1 << 1)
 MAP_ASSERT_ERROR     = "Assert Error! - 0x{}"      .format(0x1 << 2)
 MAP_CORRUPTION_ERROR = "Map File Corrupted! - 0x{}".format(0x1 << 3) 
 
+XML_PARSING_ERROR =     "Error Parsing The XML File!"
+XML_PARSING_SUB_ERROR = "Error Parsing The Following XML Section: {}!"
 
 # ----
 
@@ -90,6 +101,14 @@ class Packer(object):
     
     @classmethod
     def getValidFilePath(cls, filepath):
+        """
+            This needs to be called before decompressing the zipfile
+
+            filepath -> Path to valid mapfile
+
+            return -> '-1' if not valid else 'None'
+
+        """
         if path.exists(filepath) and zipfile.is_zipfile(filepath):
             cls.__filepath = filepath
         else:
@@ -97,9 +116,9 @@ class Packer(object):
     
     
     @classmethod
-    def decompressAndParse(cls):
+    def decompressAndParse(cls, editor_loader=False):
         """
-            TBD
+            Decompress the mapfile. Validate and parse the contents
 
             return -> None
 
@@ -109,18 +128,23 @@ class Packer(object):
         with zipfile.ZipFile(cls.__filepath) as zr:
             files = zr.namelist() 
             try:
+                # Check these files exist inside the pack
                 data = files.index(MAP_DATA_EXT)
-                lr1 = files.index('{}.{}'.format(MAP_GROUND,  MAP_SURFACE_EXT))
-                lr2 = files.index('{}.{}'.format(MAP_OBJECTS, MAP_SURFACE_EXT))
-                lr3 = files.index('{}.{}'.format(MAP_WALLS,   MAP_SURFACE_EXT))
+                lr01 = files.index('{}.{}'.format(MAP_GROUND,  MAP_SURFACE_EXT))
+                lr02 = files.index('{}.{}'.format(MAP_OBJECTS, MAP_SURFACE_EXT))
+                lr03 = files.index('{}.{}'.format(MAP_WALLS,   MAP_SURFACE_EXT))
 
             except Exception as e:
                 mp_error.showerror(MAP_CORRUPTION_ERROR, e)
 
-            # Load surfaces
-            for l in (lr1, lr2, lr3):
-                with BytesIO(zr.read(files[l])) as _bytes:
-                    yield pyimage.load(_bytes).convert_alpha()     
+            if editor_loader:
+                return cls.parseXML(zr, files[data])
+
+            else:
+                # Load surfaces (Ground surface doesn't need alpha component)
+                surfaces = {key: BytesIO(zr.read(files[layer])).convert() if key == lr01 else
+                                 BytesIO(zr.read(files[layer])).convert_alpha() for key in (lr01, lr02, lr03)}
+                return surfaces     
     
     
     @classmethod
@@ -133,6 +157,89 @@ class Packer(object):
         """
         make_archive(filename, MAP_PACK_PREFERRED_EXT, filepath)
         rmtree(filepath)   # Delete original mapfolder(now archived and copied)
+
+
+    @classmethod
+    def parseXML(cls, handler, xml_zip_file):
+        """
+            TBD
+
+            return -> None
+
+        """
+        with handler.open(xml_zip_file) as pzip:
+            try:
+                xml_data = {}
+
+                tree = xmlParse.parse(pzip)
+                root = tree.getroot()
+
+                # Check that all child are in
+                if any([child.tag not in MAP_ALL_TAGS for child in root.getchildren()]):
+                    raise WastadiumEditorException(XML_PARSING_ERROR)
+
+                childrens = {child.tag: child for child in root.getchildren()}  
+                for key, value in childrens.iteritems():
+                    cls.__parseXML_helper(xml_data, key, value)    
+
+            except (WastadiumEditorException, Exception) as e:
+                mp_error.showerror(MAP_CORRUPTION_ERROR, e)
+                xml_data.clear()
+
+        return xml_data
+
+    
+    @classmethod
+    def __parseXML_helper(cls, data_cache, ckey, cval):
+        """
+            TBD
+
+            return -> None
+
+        """
+        # Sub-dict for all the data sections
+        data_cache[ckey] = {}
+
+        if ckey == MAP_GENERAL_XML:
+            data_cache[ckey] = cls.parseGeneralData(data_fetcher=cval, operation='r')
+
+
+    @classmethod
+    def parseGeneralData(cls, xml_root=None, data_fetcher=None, name='', operation='w'):
+        """
+            Parse general map data
+            -   SpawnPos/EndPos
+            -   World size
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+
+            # Player position
+            data = data_fetcher('w_SpawnEnd', layers=False)
+            parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[0].id)
+            parent_p.text = "{}.{}".format(data[0].x, data[0].y)
+
+            # End goal (Optional!)
+            if data[1] is not None:
+                parent_e = parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[1].id)
+                parent_e.text = "{}.{}".format(data[1].x, data[1].y)
+
+            # Map related data
+            data = data_fetcher('w_Size', layers=False)[4:6] 
+            parent_p = xmlParse.SubElement(segment, MAP_DIMENSION_XML)
+            parent_p.text = "{}.{}".format(*data)
+
+        elif operation == 'r':
+            data = {}
+            childs = {child.tag: child for child in data_fetcher.getchildren()} 
+            if any([tag + '1' not in MAP_ALL_TAGS for tag in childs]):
+                raise WastadiumEditorException(XML_PARSING_SUB_ERROR.format(data_fetcher.tag))
+            
 
 
 
@@ -185,26 +292,26 @@ class MapParser(Packer):
 
         root = xmlParse.Element('root')
 
-        cls.__parseGeneralData(root, name=MAP_GENERAL_XML, data_fetcher=data_fetcher)
+        cls.parseGeneralData(root, name=MAP_GENERAL_XML, data_fetcher=data_fetcher)
 
-        cls.__parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML)
+        cls.parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML)
 
-        cls.__parseEnemies(root, data=data_fetcher(cls.E_ID_ENEMY), name=MAP_ENEMY_XML)
+        cls.parseEnemies(root, data=data_fetcher(cls.E_ID_ENEMY), name=MAP_ENEMY_XML)
 
-        cls.__parseLights(root, data=data_fetcher(cls.E_ID_LIGHT), name=MAP_LIGHT_XML)
+        cls.parseLights(root, data=data_fetcher(cls.E_ID_LIGHT), name=MAP_LIGHT_XML)
 
-        cls.__parseDecals(root, data=data_fetcher(cls.E_ID_DECAL), name=MAP_DECAL_XML)
+        cls.parseDecals(root, data=data_fetcher(cls.E_ID_DECAL), name=MAP_DECAL_XML)
 
-        cls.__parseWires(root, data=data_fetcher(cls.E_ID_WIRE), name=MAP_WIRE_XML)
+        cls.parseWires(root, data=data_fetcher(cls.E_ID_WIRE), name=MAP_WIRE_XML)
 
-        cls.__parsePickups(root, data=data_fetcher(cls.E_ID_PICKUP), name=MAP_PICKUP_XML)
+        cls.parsePickups(root, data=data_fetcher(cls.E_ID_PICKUP), name=MAP_PICKUP_XML)
 
-        cls.__parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
+        cls.parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
 
         # Build all the layers and save them
         width_height = data_fetcher('w_Size', layers=False)[2:4]
         for l_id, name_id in ((cls.E_ID_GROUND, MAP_GROUND), (cls.E_ID_OBJECT, MAP_OBJECTS), (cls.E_ID_WALL, MAP_WALLS)):
-            cls.__parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, width_height, l_id) 
+            cls.parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, width_height, l_id) 
 
         # Build the final xml output
         final_tree = xmlParse.ElementTree(root)
@@ -214,7 +321,7 @@ class MapParser(Packer):
 
     
     @classmethod
-    def __parseWorldSurfaces(cls, data, name_id, final_path, final_size, layer_index=-1):
+    def parseWorldSurfaces(cls, data, name_id, final_path, final_size, layer_index=-1):
         """
             Clue all the subsurfaces together to form a full surface image
             for storing
@@ -243,7 +350,7 @@ class MapParser(Packer):
 
     
     @classmethod
-    def __parseWorldData(cls, xml_root, data, name=''):
+    def parseWorldData(cls, xml_root, data, name=''):
         """
             TBD
 
@@ -260,36 +367,8 @@ class MapParser(Packer):
 
     
     @classmethod
-    def __parseGeneralData(cls, xml_root, data_fetcher, name=''):
-        """
-            Parse general map data
-            -   SpawnPos/EndPos
-            -   World size
-
-            return -> None
-
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-
-        # Player position
-        data = data_fetcher('w_SpawnEnd', layers=False)
-        parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[0].id)
-        parent_p.text = "{}.{}".format(data[0].x, data[0].y)
-
-        # End goal (Optional!)
-        if data[1] is not None:
-            parent_e = parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[1].id)
-            parent_e.text = "{}.{}".format(data[1].x, data[1].y)
-
-        # Map related data
-        data = data_fetcher('w_Size', layers=False)[4:6] 
-        parent_p = xmlParse.SubElement(segment, MAP_DIMENSION_XML)
-        parent_p.text = "{}.{}".format(*data)
-
-    
-    @classmethod
     @dataParseCheck
-    def __parseCollisions(cls, xml_root, data, name=''):
+    def parseCollisions(cls, xml_root, data, name=''):
         """
             Parse collision data to/from xml file
 
@@ -309,7 +388,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def __parseEnemies(cls, xml_root, data, name=''):
+    def parseEnemies(cls, xml_root, data, name=''):
         """
             Parse enemy data to/from xml file
 
@@ -331,7 +410,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def __parseLights(cls, xml_root, data, name=''):
+    def parseLights(cls, xml_root, data, name=''):
         """
             Parse light data to/from xml file
 
@@ -357,7 +436,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def __parseDecals(cls, xml_root, data, name=''):
+    def parseDecals(cls, xml_root, data, name=''):
         """
             Parse decals
 
@@ -382,7 +461,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def __parseWires(cls, xml_root, data, name=''):
+    def parseWires(cls, xml_root, data, name=''):
         """
             Parse wire segments
 
@@ -416,7 +495,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def __parsePickups(cls, xml_root, data, name=''):
+    def parsePickups(cls, xml_root, data, name=''):
         """
             Parse pickups
 
@@ -452,15 +531,8 @@ class MapParser(Packer):
             if valid == -1:
                 return None
 
-            cls.decompressAndParse()
-            
-            #packet = zipfile.ZipFile(filename)
-            #names = packet.namelist()
+            #cls.decompressAndParse(editor_loader=1)
 
-            #surface = pygame.image.load(BytesIO(packet.read(names[1])))#.convert_alpha()
-            
-            #packet.close()
-        
         else:
             pass
 

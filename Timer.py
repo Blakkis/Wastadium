@@ -1,5 +1,5 @@
 from itertools import cycle
-from pygame.time import Clock
+from pygame.time import Clock, get_ticks
 
 
 __all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger',
@@ -11,16 +11,19 @@ __all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger',
 class DeltaTimer(object):
 
     __dt_clock = Clock()
+    __dt_ticks = get_ticks
 
-    dt_deltas = {'delta': 0,
-                 'delta_ms': 0}
+    dt_deltas = {'delta_ms': 0,
+                 'tick': 0}
 
     @classmethod
     def dt_tick(cls, limit_fps=0, ignore_delta=0):
         dt = cls.__dt_clock.tick(limit_fps) / float(1000)
+        tick = cls.__dt_ticks() / float(1000) 
         #dt = max(0.002, min(0.016, dt))
         if not ignore_delta:
-            cls.dt_deltas['delta_ms'] = dt 
+            cls.dt_deltas['delta_ms'] = dt
+            cls.dt_deltas['tick'] = tick
 
         return 0
 
