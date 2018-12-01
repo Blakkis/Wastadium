@@ -9,7 +9,11 @@ from os import path, makedirs, rename, getcwd
 
 from io import BytesIO
 import pygame.image as pyimage
-import sys
+
+from Tokenizers import *
+from Tokenizers import Ed_CellPoint
+
+from ast import literal_eval
 
 __all__ = 'MapParser', 
 
@@ -39,15 +43,15 @@ MAP_GENERAL_XML   = 'id_general'
 
 # General data sub-tags
 
-MAP_PSTARTEND_XML = 'id_p_start_end'
+MAP_PLR_BEGIN_XML = 'id_plr_begin'
+MAP_PLR_END_XML   = 'id_plr_end'
 MAP_DIMENSION_XML = 'id_dimensions'
 
 
-MAP_ALL_TAGS = (MAP_COLLISION_XML, MAP_ENEMY_XML, 
-                MAP_LIGHT_XML,     MAP_DECAL_XML,
-                MAP_WIRE_XML,      MAP_PICKUP_XML, 
-                MAP_CELL_XML,      MAP_GENERAL_XML,
-                MAP_PSTARTEND_XML, MAP_DIMENSION_XML)
+MAP_ALL_TAGS = {}
+for key in locals().keys():
+    if key.startswith('MAP_') and key.endswith('_XML'):
+        MAP_ALL_TAGS[key] = locals()[key]
 
 
 # ----
@@ -70,22 +74,24 @@ XML_PARSING_SUB_ERROR = "Error Parsing The Following XML Section: {}!"
 
 def dataParseCheck(func): 
     def wrapped(*args, **kw):
-        # Gather and clean the data from the deep nests
-        clean_data = []
-        for c_block in kw['data']:
-            for r_block in c_block:
-                # Data is stored in dict or list on each world chunk
-                if isinstance(r_block, dict):
-                    for key, value in r_block.iteritems():
-                        clean_data.append((key, value))
-                
-                else:
-                    for value in r_block:
-                        clean_data.append(value)
-        
-        kw['data'] = clean_data
+        # Gather and clean the data from the deep nests (With another deep nest)
+        if kw['operation'] == 'w':
+            clean_data = []
+            for c_block in kw['data']:
+                for r_block in c_block:
+                    # Data is stored in dict or list on each world chunk
+                    if isinstance(r_block, dict):
+                        for key, value in r_block.iteritems():
+                            clean_data.append((key, value))
+                    
+                    else:
+                        for value in r_block:
+                            clean_data.append(value)
+            
+            kw['data'] = clean_data
         try:
             r = func(*args, **kw)
+            return r
         # Should not happen. But just incase
         except Exception as e:
             mp_error.showerror(MAP_ASSERT_ERROR, e)
@@ -95,7 +101,7 @@ def dataParseCheck(func):
 
 class Packer(object):
 
-    # Zip file path
+    # Zipfile path
     __filepath = None
     
     
@@ -150,7 +156,10 @@ class Packer(object):
     @classmethod
     def compress(cls, filename, filepath):
         """
-            TBD
+            Pack the files in to archive
+
+            filename -> Name of the output archive
+            filepath -> Path to store the output archive
 
             return -> None
 
@@ -158,13 +167,18 @@ class Packer(object):
         make_archive(filename, MAP_PACK_PREFERRED_EXT, filepath)
         rmtree(filepath)   # Delete original mapfolder(now archived and copied)
 
+        # Add file renaming here if needed
+
 
     @classmethod
     def parseXML(cls, handler, xml_zip_file):
         """
-            TBD
+            Validate and parse the xml file locating in the map archive
 
-            return -> None
+            handler -> zip handler
+            xml_zip_file -> Archive filepath
+
+            return -> Parsed data for building the map
 
         """
         with handler.open(xml_zip_file) as pzip:
@@ -175,7 +189,7 @@ class Packer(object):
                 root = tree.getroot()
 
                 # Check that all child are in
-                if any([child.tag not in MAP_ALL_TAGS for child in root.getchildren()]):
+                if any([child.tag not in MAP_ALL_TAGS.values() for child in root.getchildren()]):
                     raise WastadiumEditorException(XML_PARSING_ERROR)
 
                 childrens = {child.tag: child for child in root.getchildren()}  
@@ -192,16 +206,29 @@ class Packer(object):
     @classmethod
     def __parseXML_helper(cls, data_cache, ckey, cval):
         """
-            TBD
+            Helper function acting as "switch" to feed the correct data to correct parser
+
+            data_cache -> Pass-by-reference dictionary
+            ckey -> xml_tag name
+            cval -> xml_tag associated data
 
             return -> None
 
         """
         # Sub-dict for all the data sections
-        data_cache[ckey] = {}
+        #data_cache[ckey] = {}
 
         if ckey == MAP_GENERAL_XML:
             data_cache[ckey] = cls.parseGeneralData(data_fetcher=cval, operation='r')
+
+        elif ckey == MAP_COLLISION_XML:
+            data_cache[ckey] = cls.parseCollisions(data=cval, operation='r')
+
+        elif ckey == MAP_ENEMY_XML:
+            data_cache[ckey] = cls.parseEnemies(data=cval, operation='r')
+
+        elif ckey == MAP_LIGHT_XML:
+            data_cache[ckey] = cls.parseLights(data=cval, operation='r')
 
 
     @classmethod
@@ -219,28 +246,145 @@ class Packer(object):
         if operation == 'w':
             segment = xmlParse.SubElement(xml_root, name)
 
-            # Player position
+            # Player position (x, y, id)
             data = data_fetcher('w_SpawnEnd', layers=False)
-            parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[0].id)
+            parent_p = xmlParse.SubElement(segment, MAP_PLR_BEGIN_XML, name=data[0].id)
             parent_p.text = "{}.{}".format(data[0].x, data[0].y)
 
             # End goal (Optional!)
             if data[1] is not None:
-                parent_e = parent_p = xmlParse.SubElement(segment, MAP_PSTARTEND_XML, name=data[1].id)
+                parent_e = parent_p = xmlParse.SubElement(segment, MAP_PLR_END_XML, name=data[1].id)
                 parent_e.text = "{}.{}".format(data[1].x, data[1].y)
 
-            # Map related data
+            # Map related data (x, y)
             data = data_fetcher('w_Size', layers=False)[4:6] 
             parent_p = xmlParse.SubElement(segment, MAP_DIMENSION_XML)
             parent_p.text = "{}.{}".format(*data)
 
-        elif operation == 'r':
-            data = {}
+        else:
+            r_data = {}
             childs = {child.tag: child for child in data_fetcher.getchildren()} 
-            if any([tag + '1' not in MAP_ALL_TAGS for tag in childs]):
+            
+            if any([tag not in MAP_ALL_TAGS.values() for tag in childs]):
                 raise WastadiumEditorException(XML_PARSING_SUB_ERROR.format(data_fetcher.tag))
             
+            r_data[MAP_PLR_BEGIN_XML] = [Ed_CellPoint(*[int(p) for p in childs[MAP_PLR_BEGIN_XML].text.split('.')], 
+                                                    id=childs[MAP_PLR_BEGIN_XML].attrib['name']), 
+                                       Ed_CellPoint(*[int(p) for p in childs[MAP_PLR_END_XML].text.split('.')],
+                                                    id=childs[MAP_PLR_END_XML].attrib['name']) if MAP_PLR_END_XML in childs else None]
+            
+            r_data[MAP_DIMENSION_XML] = literal_eval('{},{}'.format(*childs[MAP_DIMENSION_XML].text.split('.')))
 
+            return r_data
+    
+    
+    @classmethod
+    @dataParseCheck
+    def parseCollisions(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            Parse collision data to/from xml file
+
+            Collision data is in (pos): 1 (1 for now, but might be something in the future)
+
+            xml_root -> xml root object
+            data -> Data to be written
+            name -> Field name on the xml
+
+            return -> None
+        
+        """
+        # Collision data is single array of x, y pairs 
+        # Compress the data by shifting the position closer to cell index positions 
+        # (Should fix this in editor too) 
+
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+            parent = xmlParse.SubElement(segment, name)
+            parent.text = '.'.join([str(pos >> 5) for token, _ in data for pos in token])
+
+        else: 
+            r_data = {}
+            
+            points = [int(p) for p in data[0].text.split('.')]
+            for l in xrange(0, len(points), 2):
+                r_data[tuple(points[l : l + 2])] = 1
+
+            return r_data
+
+
+    @classmethod
+    @dataParseCheck
+    def parseEnemies(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            Parse enemy data to/from xml file
+
+            xml_root -> xml root object
+            data -> Data to be written
+            name -> Field name on the xml
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+
+            for e in sorted(data, key=lambda x: x[1].id):
+                enemy = e[1]
+                parent = xmlParse.SubElement(segment, name, name=enemy.id)
+
+                parent.text = '{}.{}'.format(enemy.x, enemy.y)
+        else:
+            r_data = []
+            
+            for e in data.getchildren():
+                name = e.attrib['name']
+                x, y = [int(p) for p in e.text.split('.')]
+                r_data.append(Id_Enemy(x=x, y=y, id=name, debug_name=None))
+
+            return r_data
+
+    @classmethod
+    @dataParseCheck
+    def parseLights(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            Parse light data to/from xml file
+
+            xml_root -> xml root object
+            data -> Data to be written
+            name -> Field name on the xml
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+
+            for enum, l in enumerate(data):
+                light = l[1]
+                parent = xmlParse.SubElement(segment, name, name='light_{}'.format(enum))
+                # Convert rgb tripled to hex
+                r, g, b = light.color
+                hex_repr = '{0:#0{1}x}'.format(((r << 16) ^ g << 8) ^ b, 8)    # Keep leading zeroes
+
+                # x, y, radius(Kept for future use), hex color
+                parent.text = '{}.{}.{}.{}'.format(light.x >> 5, light.y >> 5, light.radius, hex_repr)
+        else:
+            r_data = []
+            
+            for l in data.getchildren():
+                x, y, r, c = [int(x, 0) for x in l.text.split('.')]
+                r_data.append(Id_Light(x=x, y=y, radius=r, color=((c >> 16) & 0xff, 
+                                                                  (c >>  8) & 0xff, 
+                                                                  (c & 0xff))))    
+
+            
+            return r_data
 
 
 class MapParser(Packer):
@@ -294,17 +438,17 @@ class MapParser(Packer):
 
         cls.parseGeneralData(root, name=MAP_GENERAL_XML, data_fetcher=data_fetcher)
 
-        cls.parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML)
+        cls.parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML, operation='w')
 
-        cls.parseEnemies(root, data=data_fetcher(cls.E_ID_ENEMY), name=MAP_ENEMY_XML)
+        cls.parseEnemies(root, data=data_fetcher(cls.E_ID_ENEMY), name=MAP_ENEMY_XML, operation='w')
 
-        cls.parseLights(root, data=data_fetcher(cls.E_ID_LIGHT), name=MAP_LIGHT_XML)
+        cls.parseLights(root, data=data_fetcher(cls.E_ID_LIGHT), name=MAP_LIGHT_XML, operation='w')
 
-        cls.parseDecals(root, data=data_fetcher(cls.E_ID_DECAL), name=MAP_DECAL_XML)
+        cls.parseDecals(root, data=data_fetcher(cls.E_ID_DECAL), name=MAP_DECAL_XML, operation='w')
 
-        cls.parseWires(root, data=data_fetcher(cls.E_ID_WIRE), name=MAP_WIRE_XML)
+        cls.parseWires(root, data=data_fetcher(cls.E_ID_WIRE), name=MAP_WIRE_XML, operation='w')
 
-        cls.parsePickups(root, data=data_fetcher(cls.E_ID_PICKUP), name=MAP_PICKUP_XML)
+        cls.parsePickups(root, data=data_fetcher(cls.E_ID_PICKUP), name=MAP_PICKUP_XML, operation='w')
 
         cls.parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
 
@@ -365,78 +509,10 @@ class MapParser(Packer):
                 parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
                 parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
 
-    
-    @classmethod
-    @dataParseCheck
-    def parseCollisions(cls, xml_root, data, name=''):
-        """
-            Parse collision data to/from xml file
-
-            xml_root -> xml root object
-            data -> Data to be written
-            name -> Field name on the xml
-
-            return -> None
-        
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-        parent = xmlParse.SubElement(segment, name)
-        # Collision data is single array of x, y pairs 
-        # Compress the data by shifting the position closer to cell index positions (Should fix this in editor too) 
-        parent.text = '.'.join([str(pos >> 5) for token, _ in data for pos in token])
-    
 
     @classmethod
     @dataParseCheck
-    def parseEnemies(cls, xml_root, data, name=''):
-        """
-            Parse enemy data to/from xml file
-
-            xml_root -> xml root object
-            data -> Data to be written
-            name -> Field name on the xml
-
-            return -> None
-
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-
-        for e in sorted(data, key=lambda x: x[1].id):
-            enemy = e[1]
-            parent = xmlParse.SubElement(segment, name, name=enemy.id)
-
-            parent.text = '{}.{}'.format(enemy.x >> 5, enemy.y >> 5) 
-
-
-    @classmethod
-    @dataParseCheck
-    def parseLights(cls, xml_root, data, name=''):
-        """
-            Parse light data to/from xml file
-
-            xml_root -> xml root object
-            data -> Data to be written
-            name -> Field name on the xml
-
-            return -> None
-
-        """ 
-        segment = xmlParse.SubElement(xml_root, name)
-
-        for enum, l in enumerate(data):
-            light = l[1]
-            parent = xmlParse.SubElement(segment, name, name='light_{}'.format(enum))
-            # Convert rgb tripled to hex
-            r, g, b = light.color
-            hex_repr = '{0:#0{1}x}'.format(((r << 16) ^ g << 8) ^ b, 8)    # Keep leading zeroes
-
-            # x, y, radius(Kept for future use), hex color
-            parent.text = '{}.{}.{}.{}'.format(light.x >> 5, light.y >> 5, light.radius, hex_repr)
-
-
-    @classmethod
-    @dataParseCheck
-    def parseDecals(cls, xml_root, data, name=''):
+    def parseDecals(cls, xml_root, data, name='', operation='w'):
         """
             Parse decals
 
@@ -461,7 +537,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def parseWires(cls, xml_root, data, name=''):
+    def parseWires(cls, xml_root, data, name='', operation='w'):
         """
             Parse wire segments
 
@@ -495,7 +571,7 @@ class MapParser(Packer):
 
     @classmethod
     @dataParseCheck
-    def parsePickups(cls, xml_root, data, name=''):
+    def parsePickups(cls, xml_root, data, name='', operation='w'):
         """
             Parse pickups
 
@@ -531,7 +607,7 @@ class MapParser(Packer):
             if valid == -1:
                 return None
 
-            #cls.decompressAndParse(editor_loader=1)
+            cls.decompressAndParse(editor_loader=1)
 
         else:
             pass

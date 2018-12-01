@@ -12,7 +12,7 @@ from collections import deque, namedtuple, OrderedDict
 from compiler.ast import flatten
 from copy import copy
 
-from pprint import pprint as prn
+#from pprint import pprint as prn
 
 
 
@@ -546,7 +546,7 @@ class GlobalGameDataEditor(object):
     ed_ordereddict = OrderedDict
     ed_namedtuple = staticmethod(namedtuple) 
     ed_flatten = staticmethod(flatten)
-    ed_copy = staticmethod(copy) 
+    ed_copy = staticmethod(copy)
 
     # Tkinter
     ed_separator = ttk.Separator

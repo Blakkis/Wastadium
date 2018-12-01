@@ -6,7 +6,7 @@ from TextureLoader import TextureLoader, uiElements
 from TextureHandlerEditor import TextureSelectOverlay
 from DecalModule import DecalGibsHandler
 from LightEditor import Lights
-from MapParser import MapParser, Packer
+from MapParser import MapParser, Packer, MAP_ALL_TAGS
 from StatisticsEditor import EditorStatistics
 from EntityPickerEditor import EntityPicker
 from Timer import DeltaTimer
@@ -28,7 +28,11 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
         Loads and init all external elements needed by the editor
 
     """
+    # Clear texture(void)
     void_texture = None
+
+    # Share data between all childrens
+    data = {}
 
     
     @classmethod
@@ -50,19 +54,41 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
 
         cls.tso_createTextureSets()
 
-        cls.editor_font = cls.ed_font(cls.ElementFonts[1], 12)
+        cls.data['ed_font'] = cls.ed_font(cls.ElementFonts[1], 12)
+
+    
+    @classmethod
+    def fontRender(cls, s, shadow=True):
+        """
+            Global font renderer for the editor
+
+            s -> String to be renderer
+            shadow -> Apply shadow highlight to the font
+
+            return -> None
+        """
+        if shadow:
+            w, h = cls.data['ed_font'].size(s) 
+            surf = cls.ed_surface((w, h), cls.ed_srcalpha)
+            surf.blit(cls.data['ed_font'].render(s, True, (0x0,  0x0,  0x0)),  (-1, 1))
+            surf.blit(cls.data['ed_font'].render(s, True, (0xff, 0xff, 0xff)), ( 0, 0))
+            return surf
+        
+        else:
+            return cls.data['ed_font'].render(s, True, (0xff, 0xff, 0xff))
+
 
 
 class World(VisualResources, MapParser, Packer):
-    # NOTE: Create a struct for holding the layer and associated display bool together!
 
     w_Pos = [0, 0]
     
     # 2d array containing all single cells(32 x 32)
     w_Cells_Single = []
 
-    # Copy the layer enums from the MapParser
+    # Copy read-only values from the MapParser
     locals()['w_enum'] = MapParser.w_enum
+    locals().update(**MAP_ALL_TAGS)
 
     # Holds all textures layers in separated list/dictionaries
     w_Cells_Layers = {key: [] for key in w_enum.itervalues()}
@@ -189,7 +215,7 @@ class World(VisualResources, MapParser, Packer):
 
 
     @classmethod
-    def w_createMap(cls, width=0, height=0, floor_id='', wall_set_id='', load_from_disk=False):
+    def w_createMap(cls, width=0, height=0, floor_id='debug_floor', wall_set_id='concrete_wall_01', load_from_disk=False):
         """
             Worldbuild
 
@@ -201,18 +227,20 @@ class World(VisualResources, MapParser, Packer):
             return -> None
 
         """
+        disk_data = load_from_disk
+        
         if load_from_disk:
             cls.mp_load(editor_loader=load_from_disk)
-            data = cls.decompressAndParse(editor_loader=load_from_disk)
+            disk_data = cls.decompressAndParse(editor_loader=load_from_disk)
             
-            if not data: return None    
+            width, height = disk_data[cls.MAP_GENERAL_XML][cls.MAP_DIMENSION_XML]   
 
-        # Reset Statistic values
+        # ---- Reset/Basic setup
         cls.es_initVariables(reset=True)
 
         cls.w_moveWorld(reset=True)
 
-        cls.w_SpawnEnd = [None, None]
+        cls.w_SpawnEnd = disk_data[cls.MAP_GENERAL_XML][cls.MAP_PLR_BEGIN_XML] if disk_data else [None, None]
 
         # Reset entity containers (Ignore the first 3: Ground, Object, Wall)
         for reset_enum in sorted(cls.w_Cells_Layers.keys())[3:]:
@@ -221,14 +249,17 @@ class World(VisualResources, MapParser, Packer):
             cls.w_Cells_Layers[reset_enum] = [[_type() for x in xrange(0, width,  cls.ed_chunk_size)] 
                                                        for y in xrange(0, height, cls.ed_chunk_size)]
 
-        # Store the world size in multiple formats
+        # ----
+        if disk_data: cls.__w_diskPopulate(disk_data)
+
+        # Store the world size in multiple formats (Desc more!)
         cls.w_Size = (width / cls.ed_chunk_size, height / cls.ed_chunk_size, 
                       width * 32, height * 32,  
                       width, height)    
         
         chunk = 32 * cls.ed_chunk_size 
 
-        cls.w_Cells_Single = []
+        cls.w_Cells_Single[:] = []
 
         for buildstep in (cls.E_ID_GROUND, cls.E_ID_OBJECT, cls.E_ID_WALL):
             fullWorld = cls.ed_surface((32 * width, 32 * height), pygame.SRCALPHA)
@@ -258,6 +289,28 @@ class World(VisualResources, MapParser, Packer):
             cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, fullWorld.subsurface(chunk * x, chunk * y, chunk, chunk)) 
                                             for x in xrange(cls.w_Size[0])]
                                             for y in xrange(cls.w_Size[1])]
+
+    @classmethod
+    def __w_diskPopulate(cls, data):
+        """
+            Called to store xml data in editor format
+
+            data -> xml data dict
+
+            return -> None
+
+        """
+        # Enemies
+        for e_cnt, e in enumerate(data[cls.MAP_ENEMY_XML], start=1):
+            pos =  (e.x << 5) + 16, (e.x << 5) + 16
+            cx, cy = e.x >> 3, e.y >> 3
+            e = e._replace(x=e.x, y=e.y, id=e.id, debug_name=cls.fontRender(e.id))
+
+            cls.w_Cells_Layers[cls.E_ID_ENEMY][cy][cx][pos] = e
+        
+        cls.es_update('id_enemy_cnt', len(data[cls.MAP_ENEMY_XML]))
+
+
 
 
     @classmethod
@@ -466,7 +519,7 @@ class World(VisualResources, MapParser, Packer):
             extra_info = set()
 
             for enemy in cls.w_Cells_Layers[cls.E_ID_ENEMY][y][x].itervalues():
-                posx, posy = cls.w_homePosition(enemy.x, enemy.y, _round=1)
+                posx, posy = cls.w_homePosition(enemy.x * 32 + 16, enemy.y * 32 + 16, _round=1)
                 if tool_id == cls.E_ID_ENEMY:
                     extra_info.add((enemy.debug_name,
                                     (posx -  enemy.debug_name.get_width() / 2, 
@@ -1760,6 +1813,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Works as position and key
             pos = (index[0] * 32 + 16, index[1] * 32 + 16)  
 
+            print pos
             if action_key == 1:
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx] else 0  
 
@@ -1807,8 +1861,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx] else 0
 
-                id_name = self.editor_font.render("{} : {}".format(token.content if token.content else token.id, 
-                                                                   token.value), True, (0xff, 0xff, 0xff))
+                id_name = self.fontRender("{} : {}".format(token.content if token.content else token.id, token.value))
 
                 self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx][pos] = Id_Pickup(x=pos[0], y=pos[1], 
                                                                                id=token.id, 
@@ -1855,12 +1908,10 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_ENEMY][cy][cx] else 0
 
-                id_name = self.editor_font.render(token.id, True, (0xff, 0xff, 0xff))
-
-                self.w_Cells_Layers[self.E_ID_ENEMY][cy][cx][pos] = Id_Enemy(x=pos[0], 
-                                                                             y=pos[1], 
+                self.w_Cells_Layers[self.E_ID_ENEMY][cy][cx][pos] = Id_Enemy(x=pos[0] >> 5, 
+                                                                             y=pos[1] >> 5, 
                                                                              id=token.id,
-                                                                             debug_name=id_name)
+                                                                             debug_name=self.fontRender(token.id))
 
                 return 1 - no_update
 
@@ -2095,7 +2146,6 @@ class Main(GlobalGameDataEditor, DeltaTimer):
 
         """
         self.dt_tick()
-        
         while 1:
             self.dt_tick(256)
             

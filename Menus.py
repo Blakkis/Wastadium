@@ -434,7 +434,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
     def ms_setup_healthArmor(self):
         """
-            TBD
+            Setup health/armor texture section
 
             return -> None
 
@@ -597,7 +597,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         """
             Render ammo
 
-            surface ->  Active screen surface
+            surface -> Active screen surface
 
             return -> None
 
@@ -629,6 +629,8 @@ class MenuShop(PagesHelp, Inventory, EventManager):
     def ms_render_gadgets(self, surface, **kw):
         """
             Render gadgets
+
+            surface -> Active screen surface
 
             return -> None
 
