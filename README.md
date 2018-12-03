@@ -1,4 +1,8 @@
 # Wastadium
+Topdown shooter with high modability and in-built mapeditor
+Work in progress
+
+inspiration comes from "Hotline Miami" and old finnish game called "TapanKaikki" by ErrorFree (Mostly the latter)
 
 TODO:
   - Add music

@@ -293,23 +293,31 @@ class World(VisualResources, MapParser, Packer):
     @classmethod
     def __w_diskPopulate(cls, data):
         """
-            Called to store xml data in editor format
+            Populate the world map with disk data
 
             data -> xml data dict
 
             return -> None
 
         """
+        # Get macro cell position and world position 
+        cell_pos = lambda x, y: ((x >> 3, y >> 3, ((x << 5) + 16, (y << 5) + 16)))
+
         # Enemies
-        for e_cnt, e in enumerate(data[cls.MAP_ENEMY_XML], start=1):
-            pos =  (e.x << 5) + 16, (e.x << 5) + 16
-            cx, cy = e.x >> 3, e.y >> 3
+        for e in data[cls.MAP_ENEMY_XML]:
+            cx, cy, pos = cell_pos(e.x, e.y) 
             e = e._replace(x=e.x, y=e.y, id=e.id, debug_name=cls.fontRender(e.id))
 
             cls.w_Cells_Layers[cls.E_ID_ENEMY][cy][cx][pos] = e
         
         cls.es_update('id_enemy_cnt', len(data[cls.MAP_ENEMY_XML]))
 
+        # Lights
+        for l in data[cls.MAP_LIGHT_XML]:
+            cx, cy, pos = cell_pos(l.x, l.y) 
+            cls.w_Cells_Layers[cls.E_ID_LIGHT][cy][cx][pos] = l
+
+        cls.es_update('id_light_cnt', len(data[cls.MAP_LIGHT_XML]))
 
 
 
@@ -492,7 +500,7 @@ class World(VisualResources, MapParser, Packer):
             extra_info = set()
 
             for light in cls.w_Cells_Layers[cls.E_ID_LIGHT][y][x].itervalues():
-                posx, posy = cls.w_homePosition(light.x, light.y, _round=1)
+                posx, posy = cls.w_homePosition((light.x << 5) + 16, (light.y << 5) + 16, _round=1)
                 # Render light radius when the light tool is active
                 if tool_id == cls.E_ID_LIGHT:
                     extra_info.add((posx, posy, light.radius, light.color))
@@ -519,7 +527,7 @@ class World(VisualResources, MapParser, Packer):
             extra_info = set()
 
             for enemy in cls.w_Cells_Layers[cls.E_ID_ENEMY][y][x].itervalues():
-                posx, posy = cls.w_homePosition(enemy.x * 32 + 16, enemy.y * 32 + 16, _round=1)
+                posx, posy = cls.w_homePosition((enemy.x << 5) + 16, (enemy.y << 5) + 16, _round=1)
                 if tool_id == cls.E_ID_ENEMY:
                     extra_info.add((enemy.debug_name,
                                     (posx -  enemy.debug_name.get_width() / 2, 
@@ -1813,11 +1821,10 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Works as position and key
             pos = (index[0] * 32 + 16, index[1] * 32 + 16)  
 
-            print pos
             if action_key == 1:
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx] else 0  
 
-                self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx][pos] = Id_Light(x=pos[0], y=pos[1], 
+                self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx][pos] = Id_Light(x=index[0], y=index[1], 
                                                                              color=self.l_current_color[0],
                                                                              radius=self.l_current_size)
 

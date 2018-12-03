@@ -347,6 +347,7 @@ class Packer(object):
 
             return r_data
 
+    
     @classmethod
     @dataParseCheck
     def parseLights(cls, xml_root=None, data=None, name='', operation='w'):
@@ -379,11 +380,11 @@ class Packer(object):
             
             for l in data.getchildren():
                 x, y, r, c = [int(x, 0) for x in l.text.split('.')]
-                r_data.append(Id_Light(x=x, y=y, radius=r, color=((c >> 16) & 0xff, 
-                                                                  (c >>  8) & 0xff, 
-                                                                  (c & 0xff))))    
+                r_data.append(Id_Light(x=x, y=y, radius=r, 
+                                       color=((c >> 16) & 0xff, 
+                                              (c >>  8) & 0xff, 
+                                              (c & 0xff))))    
 
-            
             return r_data
 
 
