@@ -20,9 +20,9 @@ from Tokenizers import *
 from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF
 
 
-# NOTE NOTE NOTE: Investigate map_layers[1] and remove it 
-# ITS EFFECT LAYER THUS DISABLED
-# CHANGE w_ambientTone to work with ground and walls (See arguements)
+# Investigate map_layers[1] and remove it 
+# Its effect layer, thus disabled
+# CHANGE w_ambientTone to work with ground and walls (See arguments)
 
 # NOTES:
 #   Refactor!
