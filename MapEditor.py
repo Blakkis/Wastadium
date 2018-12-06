@@ -81,7 +81,10 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
 
 class World(VisualResources, MapParser, Packer):
 
-    w_Pos = [0, 0]
+    w_Pos = [0, 0]          # World position
+    
+    # World additional read/write data dict
+    w_Data = {'mouseIndex': (0, 0)}
     
     # 2d array containing all single cells(32 x 32)
     w_Cells_Single = []
@@ -309,6 +312,8 @@ class World(VisualResources, MapParser, Packer):
         # Enemies
         for e in data[cls.MAP_ENEMY_XML]:
             cx, cy, pos = cell_pos(e.x, e.y) 
+
+            # Replace needed due to editor having access to font rendering 
             e = e._replace(x=e.x, y=e.y, id=e.id, debug_name=cls.fontRender(e.id))
 
             cls.w_Cells_Layers[cls.E_ID_ENEMY][cy][cx][pos] = e
@@ -328,6 +333,7 @@ class World(VisualResources, MapParser, Packer):
             tex = cls.ed_transform.rotate(cls.dh_all_decals[d.name], d.orient)
             w, h = tex.get_size()
 
+            # Replace needed due to editor having access to textures only
             d = d._replace(tex=tex, name=d.name, pos=d.pos, w=w, h=h, orient=d.orient)
 
             cls.w_Cells_Layers[cls.E_ID_DECAL][cy][cx].append(d)
@@ -338,10 +344,11 @@ class World(VisualResources, MapParser, Packer):
         for w in data[cls.MAP_WIRE_XML]:
             cx1, cy1 = (w.p1[0] - 1 >> 5) >> 3, (w.p1[1] - 1 >> 5) >> 3
             cx2, cy2 = (w.p2[0] - 1 >> 5) >> 3, (w.p2[1] - 1 >> 5) >> 3
-
-            print cx1, cy1, cx2, cy2  
+ 
             cls.w_Cells_Layers[cls.E_ID_WIRE][cy1][cx1].append(w)
             cls.w_Cells_Layers[cls.E_ID_WIRE][cy2][cx2].append(w)
+
+        cls.es_update('id_wire_cnt', len(data[cls.MAP_WIRE_XML]))
 
 
 
@@ -572,18 +579,30 @@ class World(VisualResources, MapParser, Packer):
 
         """
         if after_data is not None:
-            for pickup in after_data:
-                surface.blit(*pickup) 
-            
+            mx, my = cls.w_Data['mouseIndex']
+            mx, my = cls.w_homePosition((mx << 5) + 16, (my << 5) + 16, _round=1)
+            last = len(after_data)
+
+            for enum, pickup in enumerate(sorted(after_data, 
+                                                 key=lambda p: cls.ed_hypot(mx - p[1][0], 
+                                                                            my - p[1][1]), reverse=1), start=1):
+                w, h = pickup[0].get_size()
+                x = pickup[1][0] - w / 2
+                y = pickup[1][1] - (h + 16)
+                if enum == last:
+                    # Last one gets a black background to make it more visible 
+                    # (Which is the pickup nearest mouse index)
+                    cls.ed_draw_rect(surface, (0x0, 0x0, 0x0), (x - 2, y + 2, w + 4, h - 4))
+                
+                surface.blit(pickup[0], (x, y))  
+        
         else:
             extra_info = set()
 
             for pickup in cls.w_Cells_Layers[cls.E_ID_PICKUP][y][x].itervalues():
                 posx, posy = cls.w_homePosition(pickup.x, pickup.y, _round=1)
                 if tool_id == cls.E_ID_PICKUP:
-                    extra_info.add((pickup.debug_name,
-                                    (posx -  pickup.debug_name.get_width() / 2, 
-                                     posy - (pickup.debug_name.get_height() + 16)))) 
+                    extra_info.add((pickup.debug_name, (posx, posy))) 
 
                 surface.blit(cls.ElementTextures[41], (posx - 16, posy - 16))
 
@@ -1428,6 +1447,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Needs click once per cell
             action = 1 if mouse_btn_id == 1 else 2 if mouse_btn_id == 3 else 0    
 
+        self.w_Data['mouseIndex'] = index
         self.build_functions[func](index, int(x), int(y), self.screen, action, func)
 
 
@@ -2008,11 +2028,9 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                     x1, y1 = kw['point']['p1_index']
                     wire_ = Id_Wire(p1=point_1, p2=(px, py), color=self.l_current_color[0])
 
-                    print x1, y1, cx, cy
                     self.w_Cells_Layers[self.E_ID_WIRE][y1][x1].append(wire_)
                     self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].append(wire_)
 
-                    print wire_
                     kw['point']['p1'] = 0
 
                     return 1
