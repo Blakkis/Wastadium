@@ -103,6 +103,10 @@ class Packer(object):
 
     # Zipfile path
     __filepath = None
+
+    
+    # Store cleaned data here for others to use if needed
+    dataStorage = {} 
     
     
     @classmethod
@@ -129,7 +133,9 @@ class Packer(object):
             return -> None
 
         """
-        assert cls.__filepath is not None, "Get the path first!" 
+        if cls.__filepath is None:
+            return None
+        #assert cls.__filepath is not None, "Get the path first!" 
 
         with zipfile.ZipFile(cls.__filepath) as zr:
             files = zr.namelist() 
@@ -216,7 +222,7 @@ class Packer(object):
 
         """
         # Sub-dict for all the data sections
-        #data_cache[ckey] = {}
+        data_cache[ckey] = {}
 
         if ckey == MAP_GENERAL_XML:
             data_cache[ckey] = cls.parseGeneralData(data_fetcher=cval, operation='r')
@@ -229,6 +235,12 @@ class Packer(object):
 
         elif ckey == MAP_LIGHT_XML:
             data_cache[ckey] = cls.parseLights(data=cval, operation='r')
+
+        elif ckey == MAP_DECAL_XML:
+            data_cache[ckey] = cls.parseDecals(data=cval, operation='r')
+
+        elif ckey == MAP_WIRE_XML:
+            data_cache[ckey] = cls.parseWires(data=cval, operation='r')
 
 
     @classmethod
@@ -269,9 +281,9 @@ class Packer(object):
                 raise WastadiumEditorException(XML_PARSING_SUB_ERROR.format(data_fetcher.tag))
             
             r_data[MAP_PLR_BEGIN_XML] = [Ed_CellPoint(*[int(p) for p in childs[MAP_PLR_BEGIN_XML].text.split('.')], 
-                                                    id=childs[MAP_PLR_BEGIN_XML].attrib['name']), 
-                                       Ed_CellPoint(*[int(p) for p in childs[MAP_PLR_END_XML].text.split('.')],
-                                                    id=childs[MAP_PLR_END_XML].attrib['name']) if MAP_PLR_END_XML in childs else None]
+                                                      id=childs[MAP_PLR_BEGIN_XML].attrib['name']), 
+                                         Ed_CellPoint(*[int(p) for p in childs[MAP_PLR_END_XML].text.split('.')],
+                                                      id=childs[MAP_PLR_END_XML].attrib['name']) if MAP_PLR_END_XML in childs else None]
             
             r_data[MAP_DIMENSION_XML] = literal_eval('{},{}'.format(*childs[MAP_DIMENSION_XML].text.split('.')))
 
@@ -374,7 +386,7 @@ class Packer(object):
                 hex_repr = '{0:#0{1}x}'.format(((r << 16) ^ g << 8) ^ b, 8)    # Keep leading zeroes
 
                 # x, y, radius(Kept for future use), hex color
-                parent.text = '{}.{}.{}.{}'.format(light.x >> 5, light.y >> 5, light.radius, hex_repr)
+                parent.text = '{}.{}.{}.{}'.format(light.x, light.y, light.radius, hex_repr)
         else:
             r_data = []
             
@@ -386,6 +398,101 @@ class Packer(object):
                                               (c & 0xff))))    
 
             return r_data
+
+
+    @classmethod
+    @dataParseCheck
+    def parseDecals(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            Parse decals
+
+            xml_root -> xml root object
+            data -> Data to be written
+            name -> Field name on the xml
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+            
+            for decal in sorted(data, key=lambda x: x.name):
+                parent = xmlParse.SubElement(segment, name, name=decal.name)
+
+                # x, y, orientation
+                parent.text = '{}.{}.{orient}'.format(*decal.pos, orient=decal.orient)
+
+            # Store the decals for the world parser
+            cls.dataStorage[cls.E_ID_DECAL] = data
+        
+        else:
+            r_data = []
+
+            for d in data.getchildren():
+                name = d.attrib['name'] 
+                x, y, orient = [int(p) for p in d.text.split('.')]
+                r_data.append(Id_Decal(tex=None,    # Editor fills this
+                                       name=name,
+                                       pos=(x, y),
+                                       w=None,      # - || -
+                                       h=None,      # - || -
+                                       orient=orient))
+
+            return r_data
+
+
+    @classmethod
+    @dataParseCheck
+    def parseWires(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            Parse wire segments
+
+            xml_root -> xml root object
+            data -> Data to be written
+            name -> Field name on the xml
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+
+            done_inc = 0
+            done = set()
+            for wire in data:
+                fw = wire.p1 + wire.p2
+                if fw in done: 
+                    continue
+                
+                done.add(fw)
+                parent = xmlParse.SubElement(segment, name, name='wire_{}'.format(done_inc))
+
+                # Convert rgb tripled to hex
+                r, g, b = wire.color
+                hex_repr = '{0:#0{1}x}'.format(((r << 16) ^ g << 8) ^ b, 8) 
+
+                # x, y, x, y, hex color
+                parent.text = '{}.{}.{}.{}.{hex_repr}'.format(*fw, hex_repr=hex_repr)
+                done_inc += 1
+        else:
+            r_data = []
+
+            for w in data.getchildren():
+                x1, y1, x2, y2, color = [int(x, 0) for x in w.text.split('.')]
+
+                r = (color >> 16) & 0xff
+                g = (color >> 8) & 0xff
+                b = color & 0xff
+
+                r_data.append(Id_Wire(p1=(x1, y1), p2=(x2, y2), color=(r, g, b)))
+
+            return r_data
+
+
 
 
 class MapParser(Packer):
@@ -401,9 +508,6 @@ class MapParser(Packer):
               'E_ID_PICKUP'   : 0x8}
 
     locals().update(w_enum)
-
-    # Store cleaned data here for others to use if needed
-    __DataStorage = {}
 
     
     @classmethod
@@ -487,8 +591,8 @@ class MapParser(Packer):
                 base.blit(surf, (x, y))
 
         if layer_index == cls.E_ID_GROUND:
-            if cls.E_ID_DECAL in cls.__DataStorage:  
-                for r_decal in cls.__DataStorage[cls.E_ID_DECAL]:
+            if cls.E_ID_DECAL in cls.dataStorage:  
+                for r_decal in cls.dataStorage[cls.E_ID_DECAL]:
                     base.blit(r_decal.tex, r_decal.pos)
 
         image.save(base, path.join(final_path, '{}.{}'.format(name_id, MAP_SURFACE_EXT)))
@@ -509,65 +613,6 @@ class MapParser(Packer):
             for x, cell in enumerate(row):
                 parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
                 parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
-
-
-    @classmethod
-    @dataParseCheck
-    def parseDecals(cls, xml_root, data, name='', operation='w'):
-        """
-            Parse decals
-
-            xml_root -> xml root object
-            data -> Data to be written
-            name -> Field name on the xml
-
-            return -> None
-
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-        
-        for decal in sorted(data, key=lambda x: x.name):
-            parent = xmlParse.SubElement(segment, name, name=decal.name)
-
-            # x, y, orientation
-            parent.text = '{}.{}.{orient}'.format(*decal.pos, orient=decal.orient)
-
-        # Store the decals for the world parser
-        cls.__DataStorage[cls.E_ID_DECAL] = data
-
-
-    @classmethod
-    @dataParseCheck
-    def parseWires(cls, xml_root, data, name='', operation='w'):
-        """
-            Parse wire segments
-
-            xml_root -> xml root object
-            data -> Data to be written
-            name -> Field name on the xml
-
-            return -> None
-
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-
-        done_inc = 0
-        done = set()
-        for wire in data:
-            fw = wire.p1 + wire.p2
-            if fw in done: 
-                continue
-            
-            done.add(fw)
-            parent = xmlParse.SubElement(segment, name, name='wire_{}'.format(done_inc))
-
-            # Convert rgb tripled to hex
-            r, g, b = wire.color
-            hex_repr = '{0:#0{1}x}'.format(((r << 16) ^ g << 8) ^ b, 8) 
-
-            # x, y, x, y, hex color
-            parent.text = '{}.{}.{}.{}.{hex_repr}'.format(*fw, hex_repr=hex_repr)
-            done_inc += 1
 
 
     @classmethod
@@ -608,7 +653,7 @@ class MapParser(Packer):
             if valid == -1:
                 return None
 
-            cls.decompressAndParse(editor_loader=1)
+            #cls.decompressAndParse(editor_loader=1)
 
         else:
             pass

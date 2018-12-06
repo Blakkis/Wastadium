@@ -233,6 +233,9 @@ class World(VisualResources, MapParser, Packer):
             cls.mp_load(editor_loader=load_from_disk)
             disk_data = cls.decompressAndParse(editor_loader=load_from_disk)
             
+            if disk_data is None:
+                return
+            
             width, height = disk_data[cls.MAP_GENERAL_XML][cls.MAP_DIMENSION_XML]   
 
         # ---- Reset/Basic setup
@@ -318,6 +321,28 @@ class World(VisualResources, MapParser, Packer):
             cls.w_Cells_Layers[cls.E_ID_LIGHT][cy][cx][pos] = l
 
         cls.es_update('id_light_cnt', len(data[cls.MAP_LIGHT_XML]))
+
+        # Decals
+        for d in data[cls.MAP_DECAL_XML]:
+            cx, cy = (d.pos[0] >> 5) >> 3, (d.pos[1] >> 5) >> 3
+            tex = cls.ed_transform.rotate(cls.dh_all_decals[d.name], d.orient)
+            w, h = tex.get_size()
+
+            d = d._replace(tex=tex, name=d.name, pos=d.pos, w=w, h=h, orient=d.orient)
+
+            cls.w_Cells_Layers[cls.E_ID_DECAL][cy][cx].append(d)
+
+        cls.es_update('id_decal_cnt', len(data[cls.MAP_LIGHT_XML]))
+
+        # Wires
+        for w in data[cls.MAP_WIRE_XML]:
+            cx1, cy1 = (w.p1[0] - 1 >> 5) >> 3, (w.p1[1] - 1 >> 5) >> 3
+            cx2, cy2 = (w.p2[0] - 1 >> 5) >> 3, (w.p2[1] - 1 >> 5) >> 3
+
+            print cx1, cy1, cx2, cy2  
+            cls.w_Cells_Layers[cls.E_ID_WIRE][cy1][cx1].append(w)
+            cls.w_Cells_Layers[cls.E_ID_WIRE][cy2][cx2].append(w)
+
 
 
 
@@ -1698,8 +1723,10 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         
         rot = self.ed_transform.rotate(tex, angle)
 
-        rot_w = rot.get_width()
-        rot_h = rot.get_height()
+        #rot_w = rot.get_width()
+        #rot_h = rot.get_height()
+
+        rot_w, rot_h = rot.get_size()
 
         cx, cy = index[0] >> 3, index[1] >> 3
 
@@ -1981,8 +2008,11 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                     x1, y1 = kw['point']['p1_index']
                     wire_ = Id_Wire(p1=point_1, p2=(px, py), color=self.l_current_color[0])
 
+                    print x1, y1, cx, cy
                     self.w_Cells_Layers[self.E_ID_WIRE][y1][x1].append(wire_)
                     self.w_Cells_Layers[self.E_ID_WIRE][cy][cx].append(wire_)
+
+                    print wire_
                     kw['point']['p1'] = 0
 
                     return 1

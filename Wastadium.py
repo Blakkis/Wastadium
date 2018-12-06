@@ -635,6 +635,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.gib_reset(cls.w_micro_cells)
         
+        
         # Next step is to combine the smaller cells in to bigger ones to make world rendering faster
         # and have easier way to blit stuff on the world layer
         frag_s = cls.tk_macro_cell_size    # Max fragment size
