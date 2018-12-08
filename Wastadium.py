@@ -16,6 +16,7 @@ from Timer import DeltaTimer
 from GadgetLoader import *
 from PickUps import Pickups
 from Tokenizers import *
+from MapParser import MapParser
 
 from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF
 
@@ -362,7 +363,8 @@ def hero_handle(self, surface, key_event=-1):
 
 class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons, 
             WeaponCasings, DecalGibsHandler, MessSolver, CharacterShadows,
-            FootSteps, uiElements, SoundMusic, GadgetLoader, TkWorldDataShared):
+            FootSteps, uiElements, SoundMusic, GadgetLoader, TkWorldDataShared,
+            MapParser):
     """
         Setup and handle all world related and external modules loading
 
@@ -614,9 +616,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y
 
-        # Update the player(world) position for enemies
-        Enemies.update_relative_pos(32 * player_spawn_pos[0], 32 * player_spawn_pos[1])
-
         # Reset dynamic entities arrays
         cls.w_entities_dynamic = [[set() for x in xrange(cls.w_map_size[0] / cls.tk_entity_sector_s)] \
                                          for y in xrange(cls.w_map_size[1] / cls.tk_entity_sector_s)]
@@ -635,7 +634,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.gib_reset(cls.w_micro_cells)
         
-        
+
         # Next step is to combine the smaller cells in to bigger ones to make world rendering faster
         # and have easier way to blit stuff on the world layer
         frag_s = cls.tk_macro_cell_size    # Max fragment size

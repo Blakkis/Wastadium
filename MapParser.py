@@ -11,11 +11,19 @@ from io import BytesIO
 import pygame.image as pyimage
 
 from Tokenizers import *
-from Tokenizers import Ed_CellPoint
+from Tokenizers import Ed_CellPoint, PackerParserToken
+from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE
 
 from ast import literal_eval
+from collections import OrderedDict
 
-__all__ = 'MapParser', 
+from traceback import print_exc as mp_getLastException
+
+# Enable to get print based exceptions 
+IDE_TRACEBACK = True
+
+
+__all__ = 'MapParser',
 
 
 MAP_PACK_PREFERRED_EXT = 'zip'
@@ -66,7 +74,7 @@ MAP_PLAYER_MISSING   = "Player Missing! - 0x{}"    .format(0x1 << 1)
 MAP_ASSERT_ERROR     = "Assert Error! - 0x{}"      .format(0x1 << 2)
 MAP_CORRUPTION_ERROR = "Map File Corrupted! - 0x{}".format(0x1 << 3) 
 
-XML_PARSING_ERROR =     "Error Parsing The XML File!"
+XML_PARSING_ERROR     = "Error Parsing The XML File!"
 XML_PARSING_SUB_ERROR = "Error Parsing The Following XML Section: {}!"
 
 # ----
@@ -94,19 +102,34 @@ def dataParseCheck(func):
             return r
         # Should not happen. But just incase
         except Exception as e:
-            mp_error.showerror(MAP_ASSERT_ERROR, e)
+            if IDE_TRACEBACK: mp_getLastException()
+            else: mp_error.showerror(MAP_ASSERT_ERROR, e)
  
     return wrapped
 
 
 class Packer(object):
 
+    w_enum = {'E_ID_GROUND'   : 0x0,    
+              'E_ID_OBJECT'   : 0x1,    
+              'E_ID_WALL'     : 0x2,    
+              'E_ID_DECAL'    : 0x3,    
+              'E_ID_COLLISION': 0x4,    
+              'E_ID_LIGHT'    : 0x5,    
+              'E_ID_WIRE'     : 0x6,
+              'E_ID_ENEMY'    : 0x7,
+              'E_ID_PICKUP'   : 0x8}
+
+    locals().update(w_enum)
+
     # Zipfile path
     __filepath = None
 
-    
     # Store cleaned data here for others to use if needed
-    dataStorage = {} 
+    p_dataStorage = {} 
+
+    # All parser functions
+    p_parserFunctions = OrderedDict()
     
     
     @classmethod
@@ -147,7 +170,8 @@ class Packer(object):
                 lr03 = files.index('{}.{}'.format(MAP_WALLS,   MAP_SURFACE_EXT))
 
             except Exception as e:
-                mp_error.showerror(MAP_CORRUPTION_ERROR, e)
+                if IDE_TRACEBACK: mp_getLastException()
+                else: mp_error.showerror(MAP_CORRUPTION_ERROR, e)
 
             if editor_loader:
                 return cls.parseXML(zr, files[data])
@@ -199,48 +223,25 @@ class Packer(object):
                     raise WastadiumEditorException(XML_PARSING_ERROR)
 
                 childrens = {child.tag: child for child in root.getchildren()}  
+                
                 for key, value in childrens.iteritems():
-                    cls.__parseXML_helper(xml_data, key, value)    
+                    if key not in cls.p_parserFunctions: 
+                        continue
+                    
+                    if key == MAP_GENERAL_XML:
+                        xml_data[key] = cls.p_parserFunctions[key].parse(data_fetcher=value, operation='r')
+                    else:    
+                        xml_data[key] = cls.p_parserFunctions[key].parse(data=value, operation='r')
+
+                xml_data[MAP_CELL_XML] = cls.parseWorldData(data=childrens[MAP_CELL_XML], operation='r')    
 
             except (WastadiumEditorException, Exception) as e:
-                mp_error.showerror(MAP_CORRUPTION_ERROR, e)
+                if IDE_TRACEBACK: mp_getLastException()
+                else: mp_error.showerror(MAP_CORRUPTION_ERROR, e)
+                
                 xml_data.clear()
 
         return xml_data
-
-    
-    @classmethod
-    def __parseXML_helper(cls, data_cache, ckey, cval):
-        """
-            Helper function acting as "switch" to feed the correct data to correct parser
-
-            data_cache -> Pass-by-reference dictionary
-            ckey -> xml_tag name
-            cval -> xml_tag associated data
-
-            return -> None
-
-        """
-        # Sub-dict for all the data sections
-        data_cache[ckey] = {}
-
-        if ckey == MAP_GENERAL_XML:
-            data_cache[ckey] = cls.parseGeneralData(data_fetcher=cval, operation='r')
-
-        elif ckey == MAP_COLLISION_XML:
-            data_cache[ckey] = cls.parseCollisions(data=cval, operation='r')
-
-        elif ckey == MAP_ENEMY_XML:
-            data_cache[ckey] = cls.parseEnemies(data=cval, operation='r')
-
-        elif ckey == MAP_LIGHT_XML:
-            data_cache[ckey] = cls.parseLights(data=cval, operation='r')
-
-        elif ckey == MAP_DECAL_XML:
-            data_cache[ckey] = cls.parseDecals(data=cval, operation='r')
-
-        elif ckey == MAP_WIRE_XML:
-            data_cache[ckey] = cls.parseWires(data=cval, operation='r')
 
 
     @classmethod
@@ -289,7 +290,9 @@ class Packer(object):
 
             return r_data
     
+        
     
+
     @classmethod
     @dataParseCheck
     def parseCollisions(cls, xml_root=None, data=None, name='', operation='w'):
@@ -425,7 +428,7 @@ class Packer(object):
                 parent.text = '{}.{}.{orient}'.format(*decal.pos, orient=decal.orient)
 
             # Store the decals for the world parser
-            cls.dataStorage[cls.E_ID_DECAL] = data
+            cls.p_dataStorage[cls.E_ID_DECAL] = data
         
         else:
             r_data = []
@@ -493,22 +496,106 @@ class Packer(object):
             return r_data
 
 
+    @classmethod
+    @dataParseCheck
+    def parsePickups(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            Parse pickups
+
+            xml_root -> xml root object
+            data -> Data to be written
+            name -> Field name on the xml
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+
+            for pup in sorted(data, key=lambda x: x[1].id):
+                pup = pup[1]
+                parent = xmlParse.SubElement(segment, name, name=pup.id)
+                # x, y, content, value
+                parent.text = '{}.{}.{}.{}'.format(pup.x, pup.y, pup.content, pup.value)
+
+        else:
+            r_data = []
+
+            for p in data.getchildren():
+                name = p.attrib['name']
+                x, y, content, value = [int(x) if x.isdigit() else str(x) for x in p.text.split('.')]
+                r_data.append(Id_Pickup(x=x, y=y, id=name,
+                                        content=content, value=value))
+
+            return r_data
+
+
+    @classmethod
+    def parseWorldData(cls, xml_root=None, data=None, name='', operation='w'):
+        """
+            TBD
+
+            return -> None
+
+        """
+        assert operation in ('w', 'r')
+
+        if operation == 'w':
+            segment = xmlParse.SubElement(xml_root, name)
+
+            # Store ground data
+            for y, row in enumerate(data):
+                for x, cell in enumerate(row):
+                    parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
+                    parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
+        else:
+            # Check that the number of cells is within valid map ranges
+            valid_cube = len(data.getchildren())
+            if valid_cube not in MAX_VALID_CUBE_RANGE:
+                raise WastadiumEditorException(XML_PARSING_ERROR)
+
+            for child in data.getchildren():
+                pos = child.attrib['name'].split('_')[1]
+                x, y = [int(c) for c in pos.split('.')]
+                #print child.text
+    
+    
+    @classmethod
+    def bindParsers(cls):
+        """
+            Bind all the parser functions with their' associated XML id
+
+            return -> None
+
+        """
+        cls.p_parserFunctions[MAP_GENERAL_XML] = \
+            PackerParserToken(parse=cls.parseGeneralData, id=None)
+        
+        cls.p_parserFunctions[MAP_COLLISION_XML] = \
+            PackerParserToken(parse=cls.parseCollisions, id=cls.E_ID_COLLISION)
+
+        cls.p_parserFunctions[MAP_ENEMY_XML] = \
+            PackerParserToken(parse=cls.parseEnemies, id=cls.E_ID_ENEMY)
+        
+        cls.p_parserFunctions[MAP_LIGHT_XML] = \
+            PackerParserToken(parse=cls.parseLights, id=cls.E_ID_LIGHT)
+
+        cls.p_parserFunctions[MAP_DECAL_XML] = \
+            PackerParserToken(parse=cls.parseDecals, id=cls.E_ID_DECAL)
+        
+        cls.p_parserFunctions[MAP_WIRE_XML] = \
+            PackerParserToken(parse=cls.parseWires, id=cls.E_ID_WIRE)
+        
+        cls.p_parserFunctions[MAP_PICKUP_XML] = \
+            PackerParserToken(parse=cls.parsePickups, id=cls.E_ID_PICKUP)
+
 
 
 class MapParser(Packer):
-    
-    w_enum = {'E_ID_GROUND'   : 0x0,    
-              'E_ID_OBJECT'   : 0x1,    
-              'E_ID_WALL'     : 0x2,    
-              'E_ID_DECAL'    : 0x3,    
-              'E_ID_COLLISION': 0x4,    
-              'E_ID_LIGHT'    : 0x5,    
-              'E_ID_WIRE'     : 0x6,
-              'E_ID_ENEMY'    : 0x7,
-              'E_ID_PICKUP'   : 0x8}
 
-    locals().update(w_enum)
-
+    Packer.bindParsers()
     
     @classmethod
     def mp_save(cls, data_fetcher):
@@ -541,19 +628,11 @@ class MapParser(Packer):
 
         root = xmlParse.Element('root')
 
-        cls.parseGeneralData(root, name=MAP_GENERAL_XML, data_fetcher=data_fetcher)
-
-        cls.parseCollisions(root, data=data_fetcher(cls.E_ID_COLLISION), name=MAP_COLLISION_XML, operation='w')
-
-        cls.parseEnemies(root, data=data_fetcher(cls.E_ID_ENEMY), name=MAP_ENEMY_XML, operation='w')
-
-        cls.parseLights(root, data=data_fetcher(cls.E_ID_LIGHT), name=MAP_LIGHT_XML, operation='w')
-
-        cls.parseDecals(root, data=data_fetcher(cls.E_ID_DECAL), name=MAP_DECAL_XML, operation='w')
-
-        cls.parseWires(root, data=data_fetcher(cls.E_ID_WIRE), name=MAP_WIRE_XML, operation='w')
-
-        cls.parsePickups(root, data=data_fetcher(cls.E_ID_PICKUP), name=MAP_PICKUP_XML, operation='w')
+        for key, parser in cls.p_parserFunctions.iteritems():
+            if key == MAP_GENERAL_XML:
+                parser.parse(root, name=key, data_fetcher=data_fetcher)
+            else:
+                parser.parse(root, data=data_fetcher(parser.id), name=key, operation='w')
 
         cls.parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
 
@@ -591,51 +670,12 @@ class MapParser(Packer):
                 base.blit(surf, (x, y))
 
         if layer_index == cls.E_ID_GROUND:
-            if cls.E_ID_DECAL in cls.dataStorage:  
-                for r_decal in cls.dataStorage[cls.E_ID_DECAL]:
+            if cls.E_ID_DECAL in cls.p_dataStorage:  
+                for r_decal in cls.p_dataStorage[cls.E_ID_DECAL]:
                     base.blit(r_decal.tex, r_decal.pos)
 
         image.save(base, path.join(final_path, '{}.{}'.format(name_id, MAP_SURFACE_EXT)))
 
-    
-    @classmethod
-    def parseWorldData(cls, xml_root, data, name=''):
-        """
-            TBD
-
-            return -> None
-
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-
-        # Store ground data
-        for y, row in enumerate(data):
-            for x, cell in enumerate(row):
-                parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
-                parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
-
-
-    @classmethod
-    @dataParseCheck
-    def parsePickups(cls, xml_root, data, name='', operation='w'):
-        """
-            Parse pickups
-
-            xml_root -> xml root object
-            data -> Data to be written
-            name -> Field name on the xml
-
-            return -> None
-
-        """
-        segment = xmlParse.SubElement(xml_root, name)
-
-        for pup in sorted(data, key=lambda x: x[1].id):
-            pup = pup[1]
-            parent = xmlParse.SubElement(segment, name, name=pup.id)
-            # x, y, content, value
-            parent.text = '{}.{}.{}.{}'.format(pup.x, pup.y, pup.content, pup.value)
-            
     
     @classmethod
     def mp_load(cls, editor_loader=False):
@@ -653,7 +693,7 @@ class MapParser(Packer):
             if valid == -1:
                 return None
 
-            #cls.decompressAndParse(editor_loader=1)
+            cls.decompressAndParse(editor_loader=1)
 
         else:
             pass

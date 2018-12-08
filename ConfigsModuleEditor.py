@@ -22,6 +22,13 @@ __all__ = ('GlobalGameDataEditor', 'ed_killMe',     'ed_centerWidget',
            'ed_AutoWallSolver',    'ed_BitToggle',  'ed_WireTool')
 
 
+# Max world dimension
+MAX_CUBE_SIZE = 64
+
+# Valid range of map dimensions
+MAX_VALID_CUBE_RANGE = set([x**2 for x in xrange(8, MAX_CUBE_SIZE + 1, 8)])
+
+
 class ed_BitToggle(object):
     """
         Provide capsulated toggle *bit for inside lambdas

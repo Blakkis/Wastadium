@@ -51,7 +51,7 @@ class TkCounter(object):
 class TkWorldDataShared(object):
     
     # Common data shared between classes
-    w_share = {'WorldPosition': (0, 0),     
+    w_share = {'WorldPosition': (0, 0),        
                'ShadowOffset':  (0, 0)}    # Used with shadow casting
 
 

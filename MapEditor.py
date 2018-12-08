@@ -2,6 +2,7 @@ import pygame
 import Tkinter as tk
 
 from ConfigsModuleEditor import *
+from ConfigsModuleEditor import MAX_CUBE_SIZE
 from TextureLoader import TextureLoader, uiElements
 from TextureHandlerEditor import TextureSelectOverlay
 from DecalModule import DecalGibsHandler
@@ -350,6 +351,13 @@ class World(VisualResources, MapParser, Packer):
 
         cls.es_update('id_wire_cnt', len(data[cls.MAP_WIRE_XML]))
 
+        # Pickups
+        for p in data[cls.MAP_PICKUP_XML]:
+            cx, cy, pos = cell_pos(p.x, p.y)
+            p = p._replace(x=p.x, y=p.y, id=p.id, content=p.content, value=p.value, 
+                           debug_name=cls.fontRender("{} : {}".format(p.content if p.content else p.id, p.value)))
+            cls.w_Cells_Layers[cls.E_ID_PICKUP][cy][cx][pos] = p
+
 
 
 
@@ -441,7 +449,7 @@ class World(VisualResources, MapParser, Packer):
         # Render extra display info about the current active entities (Based on the current active tool)
         for k, v in disp_extra.iteritems():
             if k == -1: continue
-            if v: cls.w_Display_Layer[k][1](surface=surface, after_data=v)         
+            if v: cls.w_Display_Layer[k][1](surface=surface, list_of_strs=v)         
 
         # Display the chunk sectors
         if disp_extra[-1]:
@@ -457,7 +465,7 @@ class World(VisualResources, MapParser, Packer):
     
 
     @classmethod
-    def w_render_decals(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+    def w_render_decals(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
         """
             Render decals
 
@@ -465,13 +473,13 @@ class World(VisualResources, MapParser, Packer):
             surface -> Surface which to render on
             tool_id -> Current active tool id
             layer_id -> Which render layer this is
-            after_data -> Data rendered last on renderstack
+            list_of_strs -> Data rendered last on renderstack
 
             return -> None
 
         """
-        if after_data is not None:
-            for decal in after_data:
+        if list_of_strs is not None:
+            for decal in list_of_strs:
                 cls.__w_ShowDecalOrigin(surface, (decal,))  
 
         else:  
@@ -490,15 +498,15 @@ class World(VisualResources, MapParser, Packer):
 
 
     @classmethod
-    def w_render_collisions(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+    def w_render_collisions(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
         """
             -- || --
 
             return -> None
 
         """
-        if after_data is not None:
-            for collision in after_data:
+        if list_of_strs is not None:
+            for collision in list_of_strs:
                 cls.__w_ShowCollisionOrigin(surface, *collision)  
             
         else:   
@@ -517,15 +525,15 @@ class World(VisualResources, MapParser, Packer):
 
 
     @classmethod
-    def w_render_lights(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+    def w_render_lights(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
         """
             -- || --
 
             return -> None
 
         """
-        if after_data is not None:
-            for light in after_data:
+        if list_of_strs is not None:
+            for light in list_of_strs:
                 cls.ed_draw_aacircle(surface, *light) 
             
         else: 
@@ -542,18 +550,17 @@ class World(VisualResources, MapParser, Packer):
 
             return tool_id, extra_info
 
-
     @classmethod
-    def w_render_enemies(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+    def w_render_enemies(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
         """
             -- || --
 
             return -> None
 
         """
-        if after_data is not None:
-            for enemy in after_data:
-                surface.blit(*enemy) 
+        if list_of_strs is not None:
+            for enemy in cls.w_renderEntityNameBackground(surface, list_of_strs):
+                surface.blit(*enemy)
             
         else: 
             extra_info = set()
@@ -561,46 +568,30 @@ class World(VisualResources, MapParser, Packer):
             for enemy in cls.w_Cells_Layers[cls.E_ID_ENEMY][y][x].itervalues():
                 posx, posy = cls.w_homePosition((enemy.x << 5) + 16, (enemy.y << 5) + 16, _round=1)
                 if tool_id == cls.E_ID_ENEMY:
-                    extra_info.add((enemy.debug_name,
-                                    (posx -  enemy.debug_name.get_width() / 2, 
-                                     posy - (enemy.debug_name.get_height() + 16))))    
+                    extra_info.add((enemy.debug_name, (posx, posy)))    
 
                 surface.blit(cls.ElementTextures[42], (posx - 16, posy - 16)) 
 
-            return tool_id, extra_info
+            return tool_id, extra_info  
 
 
     @classmethod
-    def w_render_pickups(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+    def w_render_pickups(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
         """
             -- || --
 
             return -> None
 
         """
-        if after_data is not None:
-            mx, my = cls.w_Data['mouseIndex']
-            mx, my = cls.w_homePosition((mx << 5) + 16, (my << 5) + 16, _round=1)
-            last = len(after_data)
-
-            for enum, pickup in enumerate(sorted(after_data, 
-                                                 key=lambda p: cls.ed_hypot(mx - p[1][0], 
-                                                                            my - p[1][1]), reverse=1), start=1):
-                w, h = pickup[0].get_size()
-                x = pickup[1][0] - w / 2
-                y = pickup[1][1] - (h + 16)
-                if enum == last:
-                    # Last one gets a black background to make it more visible 
-                    # (Which is the pickup nearest mouse index)
-                    cls.ed_draw_rect(surface, (0x0, 0x0, 0x0), (x - 2, y + 2, w + 4, h - 4))
-                
-                surface.blit(pickup[0], (x, y))  
+        if list_of_strs is not None:
+            for pickup in cls.w_renderEntityNameBackground(surface, list_of_strs):
+                surface.blit(*pickup)  
         
         else:
             extra_info = set()
 
             for pickup in cls.w_Cells_Layers[cls.E_ID_PICKUP][y][x].itervalues():
-                posx, posy = cls.w_homePosition(pickup.x, pickup.y, _round=1)
+                posx, posy = cls.w_homePosition((pickup.x << 5) + 16, (pickup.y << 5) + 16, _round=1)
                 if tool_id == cls.E_ID_PICKUP:
                     extra_info.add((pickup.debug_name, (posx, posy))) 
 
@@ -610,15 +601,15 @@ class World(VisualResources, MapParser, Packer):
 
 
     @classmethod
-    def w_render_wires(cls, x=0, y=0, surface=None, tool_id=-1, after_data=None):
+    def w_render_wires(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
         """
             -- || --
 
             return -> None
 
         """
-        if after_data is not None:
-            for wire in after_data:
+        if list_of_strs is not None:
+            for wire in list_of_strs:
                 cls.__w_ShowDecalOrigin(surface, [wire[x:2+x] for x in xrange(0, len(wire), 2)])    
             
         else:
@@ -664,7 +655,36 @@ class World(VisualResources, MapParser, Packer):
         cls.w_Display_Layer[cls.E_ID_WIRE][1]      = cls.w_render_wires
 
 
+    @classmethod
+    def w_renderEntityNameBackground(cls, surface, list_of_strs):
+        """
+            Render entity names with the last one (Nearest to mouseindex) getting black background
+
+            surface -> Active screen surface
+            list_of_strs -> List of font rendered strings
+
+            return -> None
+
+        """
+        mx, my = cls.w_Data['mouseIndex']
+        mx, my = cls.w_homePosition((mx << 5) + 16, (my << 5) + 16, _round=1)
+        last = len(list_of_strs)
+        
+        # Sort the strings based on distance to mouse index (so the last one gets black background)
+        for enum, text in enumerate(sorted(list_of_strs, 
+                                           key=lambda p: cls.ed_hypot(mx - p[1][0], 
+                                                                      my - p[1][1]), reverse=1), start=1):
+            w, h = text[0].get_size()
+            x = text[1][0] - w / 2
+            y = text[1][1] - (h + 16)
+            if enum == last:
+                # Last one gets a black background to make it more visible 
+                # (Which is the pickup nearest mouse index)
+                cls.ed_draw_rect(surface, (0x0, 0x0, 0x0), (x - 2, y + 4, w + 4, h - 6)) 
+            
+            yield text[0], (x, y)
     
+
     @classmethod
     def w_renderWorldCell(cls, surface, tool_id):
         """
@@ -888,7 +908,7 @@ class TkinterResources(VisualResources):
                 error = True
 
             # Map max dimensions are 64 x 64
-            elif width > 64 or height > 64:
+            elif width > MAX_CUBE_SIZE or height > MAX_CUBE_SIZE:
                 self.ed_msg_box.showerror("Incorrect Map Dimensions",
                                           "Map max width/height are 64 x 64!")
                 error = True
@@ -1871,7 +1891,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             if action_key == 1:
                 no_update = 1 if pos in self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx] else 0  
 
-                self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx][pos] = Id_Light(x=index[0], y=index[1], 
+                self.w_Cells_Layers[self.E_ID_LIGHT][cy][cx][pos] = Id_Light(*index, 
                                                                              color=self.l_current_color[0],
                                                                              radius=self.l_current_size)
 
@@ -1917,7 +1937,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
                 id_name = self.fontRender("{} : {}".format(token.content if token.content else token.id, token.value))
 
-                self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx][pos] = Id_Pickup(x=pos[0], y=pos[1], 
+                self.w_Cells_Layers[self.E_ID_PICKUP][cy][cx][pos] = Id_Pickup(*index, 
                                                                                id=token.id, 
                                                                                content=token.content, 
                                                                                value=token.value,

@@ -42,7 +42,11 @@ class Id_Wire(namedtuple('id_wire', ['p1', 'p2', 'color'])):
 # ----
 
 
-class Ed_CellPoint(namedtuple('ed_postpoint', ['x', 'y', 'id'])):
+class Ed_CellPoint(namedtuple('ed_cellpoint', ['x', 'y', 'id'])):
+	pass
+
+
+class PackerParserToken(namedtuple('PackerParserToken', ['parse', 'id'])):
 	pass
 
 
