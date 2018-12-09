@@ -11,11 +11,12 @@ from io import BytesIO
 import pygame.image as pyimage
 
 from Tokenizers import *
-from Tokenizers import Ed_CellPoint, PackerParserToken
+from Tokenizers import Ed_CellPoint, PackerParserToken, PackerParserCell
 from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE
 
 from ast import literal_eval
 from collections import OrderedDict
+from math import sqrt
 
 from traceback import print_exc as mp_getLastException
 
@@ -556,10 +557,22 @@ class Packer(object):
             if valid_cube not in MAX_VALID_CUBE_RANGE:
                 raise WastadiumEditorException(XML_PARSING_ERROR)
 
+            row_length = int(sqrt(valid_cube)) - 1
+            final_matrix = []
+
+            row = []
             for child in data.getchildren():
                 pos = child.attrib['name'].split('_')[1]
                 x, y = [int(c) for c in pos.split('.')]
-                #print child.text
+                low, mid, obj, link = [literal_eval(c) for c in child.text.split('.')]
+                
+                row.append(PackerParserCell(low=low, mid=mid, obj=obj, link=link))
+                
+                if x == row_length:
+                    final_matrix.append(row)
+                    row = []
+
+            return final_matrix
     
     
     @classmethod
@@ -693,7 +706,7 @@ class MapParser(Packer):
             if valid == -1:
                 return None
 
-            cls.decompressAndParse(editor_loader=1)
+            #cls.decompressAndParse(editor_loader=1)
 
         else:
             pass

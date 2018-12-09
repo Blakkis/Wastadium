@@ -257,7 +257,8 @@ class World(VisualResources, MapParser, Packer):
                                                        for y in xrange(0, height, cls.ed_chunk_size)]
 
         # ----
-        if disk_data: cls.__w_diskPopulate(disk_data)
+        if disk_data: 
+            cls.__w_diskPopulate(disk_data)
 
         # Store the world size in multiple formats (Desc more!)
         cls.w_Size = (width / cls.ed_chunk_size, height / cls.ed_chunk_size, 
@@ -266,31 +267,54 @@ class World(VisualResources, MapParser, Packer):
         
         chunk = 32 * cls.ed_chunk_size 
 
+        if disk_data:
+            disk_data[cls.MAP_CELL_XML]
+
         cls.w_Cells_Single[:] = []
 
         for buildstep in (cls.E_ID_GROUND, cls.E_ID_OBJECT, cls.E_ID_WALL):
             fullWorld = cls.ed_surface((32 * width, 32 * height), pygame.SRCALPHA)
             
-            if buildstep == cls.E_ID_GROUND:      # Ground
-                for column in xrange(height):
-                    r = []
-                    for row in xrange(width):
-                        fullWorld.blit(cls.low_textures[floor_id]['tex_main'], (32 * row, 32 * column))
-                        r.append(World(row, column, floor_id))
-                    cls.w_Cells_Single.append(r)
+            if buildstep == cls.E_ID_GROUND:    
+                if disk_data:
+                    for y, column in enumerate(disk_data[cls.MAP_CELL_XML]):
+                        r = []
+                        for x, row in enumerate(column):
+                            r.append(World(row, column, row.low[0]))
+                            fullWorld.blit(cls.low_textures[row.low[0]]['tex_main'], (x * 32, y * 32))
+                        cls.w_Cells_Single.append(r) 
+                
+                else:  
+                    for column in xrange(height):
+                        r = []
+                        for row in xrange(width):
+                            fullWorld.blit(cls.low_textures[floor_id]['tex_main'], (32 * row, 32 * column))
+                            r.append(World(row, column, floor_id))
+                        cls.w_Cells_Single.append(r)
 
-            elif buildstep == cls.E_ID_OBJECT:    # Objects
+            
+            elif buildstep == cls.E_ID_OBJECT:   
                 # Future stuff for the object layer if needed
                 pass
 
             
-            elif buildstep == cls.E_ID_WALL:      # Walls
-                for count, wall in enumerate(cls.__w_wallBuilder(width, height), start=1):
-                    _id, ori, x, y = wall
-                    cls.w_Cells_Single[y][x].cell_midTex = wall_set_id, ori / 90, _id
-                    fullWorld.blit(cls.ed_transform.rotate(cls.mid_textures[wall_set_id][_id], ori), (32 * x, 32 * y))
+            elif buildstep == cls.E_ID_WALL: 
+                if disk_data:
+                    for y, column in enumerate(disk_data[cls.MAP_CELL_XML]):
+                        r = []
+                        for x, row in enumerate(column):
+                            tex, orient, _id = row.mid
+                            #cls.w_Cells_Single[y][x].cell_midTex = row.mid 
+                            #fullWorld.blit(cls.ed_transform.rotate(cls.mid_textures[row.mid[0]][row.mid[2]], row.mid[1]), (x * 32, y * 32))  
 
-                cls.es_update('id_wall_cnt', count)
+
+                else:     
+                    for count, wall in enumerate(cls.__w_wallBuilder(width, height), start=1):
+                        _id, orient, x, y = wall
+                        cls.w_Cells_Single[y][x].cell_midTex = wall_set_id, orient / 90, _id
+                        fullWorld.blit(cls.ed_transform.rotate(cls.mid_textures[wall_set_id][_id], orient), (32 * x, 32 * y))
+
+                    cls.es_update('id_wall_cnt', count)
             
             # Chop the world into chunks
             cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, fullWorld.subsurface(chunk * x, chunk * y, chunk, chunk)) 
@@ -357,6 +381,8 @@ class World(VisualResources, MapParser, Packer):
             p = p._replace(x=p.x, y=p.y, id=p.id, content=p.content, value=p.value, 
                            debug_name=cls.fontRender("{} : {}".format(p.content if p.content else p.id, p.value)))
             cls.w_Cells_Layers[cls.E_ID_PICKUP][cy][cx][pos] = p
+
+        cls.es_update('id_pickup_cnt', len(data[cls.MAP_CELL_XML]))
 
 
 
@@ -858,7 +884,8 @@ class TkinterResources(VisualResources):
         nm_option_menu_1 = tk.OptionMenu(nm_geo_frame, self.bf_mapbase_tex, *self.low_textures.keys(), 
                                          command=lambda v1: nm_preview_1.setImage(self.ed_pygameToTkinter(\
                                                                                   self.low_textures[v1]['tex_main'])))
-        nm_option_menu_1.grid(row=5, column=1, sticky=self.ed_sticky_vert, columnspan=2, pady=5)
+        nm_option_menu_1.grid(row=5, column=1, sticky=self.ed_sticky_vert, 
+                              columnspan=2, pady=5)
 
         
         # Default Wall Set
@@ -869,7 +896,8 @@ class TkinterResources(VisualResources):
         nm_option_menu_2 = tk.OptionMenu(nm_geo_frame, self.bf_mapwall_tex, *self.mid_textures.keys(), 
                                          command=lambda v1: nm_preview_2.setImage(self.ed_pygameToTkinter(\
                                                                                   self.mid_textures[v1][0])))
-        nm_option_menu_2.grid(row=7, column=1, sticky=self.ed_sticky_vert, columnspan=2, pady=5)
+        nm_option_menu_2.grid(row=7, column=1, sticky=self.ed_sticky_vert, 
+                              columnspan=2, pady=5)
 
         
         nm_button = tk.Button(nm_frame, text='Create', command=lambda: self.__bf_beforeNewMap(nm_frame))

@@ -27,10 +27,6 @@ class Id_Light(namedtuple('id_light', ['x', 'y', 'radius', 'color'])):
     pass
 
 
-class Id_Entity_Values(namedtuple('id_entity', ['id', 'content', 'value'])):
-    pass
-
-
 class Id_Decal(namedtuple('id_decal', ['tex', 'name', 'pos', 'w', 'h', 'orient'])):
 	pass
 
@@ -39,7 +35,11 @@ class Id_Wire(namedtuple('id_wire', ['p1', 'p2', 'color'])):
 	pass
 
 
-# ----
+class Id_Entity_Values(namedtuple('id_entity', ['id', 'content', 'value'])):
+    pass
+
+
+# ---- (These should be moved on their' own modules)
 
 
 class Ed_CellPoint(namedtuple('ed_cellpoint', ['x', 'y', 'id'])):
@@ -47,6 +47,10 @@ class Ed_CellPoint(namedtuple('ed_cellpoint', ['x', 'y', 'id'])):
 
 
 class PackerParserToken(namedtuple('PackerParserToken', ['parse', 'id'])):
+	pass
+
+
+class PackerParserCell(namedtuple('PackerParserCell', ['low', 'mid', 'obj', 'link'])):
 	pass
 
 
