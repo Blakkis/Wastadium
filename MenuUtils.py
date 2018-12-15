@@ -123,14 +123,14 @@ class RadialSlider(GlobalGameData):
 
         self.tk_draw_lines(self._rs_mask, self._rs_color, 1, self._rs_ring_points[0] + self._rs_ring_points[1], 3)
 
-        self._rs_mask = self.tk_blur_surface(self._rs_mask)                 # Blur the mask a little bit(shitty one)
+        self._rs_mask = self.tk_blur_surface(self._rs_mask)    # Blur the mask a little bit(shitty one)
         
         # Value for controlling the slider input/output
-        self._rs_value['max'] = len(self._rs_ring_points[0])                        # Max steps on the slider
-        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max'])) # Set initial value to center
-        self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']       # Get the range multiplier
-        self._rs_value['adi'] = float(270) / self._rs_value['max']                  # Angle value per step
-        self._rs_value['dva'] = self._rs_value['mul'] * self._rs_value['val']  
+        self._rs_value['max'] = len(self._rs_ring_points[0])                    # Max steps on the slider
+        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max']))        # Set initial value to center
+        self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']   # Get the range multiplier
+        self._rs_value['adi'] = float(270) / self._rs_value['max']              # Angle value per step
+        self._rs_value['dva'] = self._rs_value['mul'] * self._rs_value['val']   # Default value  
 
     
     def rs_slide(self, sx, sy, pos):

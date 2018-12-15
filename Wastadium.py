@@ -1635,6 +1635,7 @@ class Main(World, DeltaTimer):
             self.Menus.all_menus['m_intro'].run(self.screen)
         
         # Note: Move this to campaign and next map function menu
+        print
         World.build_map()
 
 

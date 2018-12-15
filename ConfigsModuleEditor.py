@@ -375,8 +375,10 @@ class ed_Button(tk.Button):
 
         """
         if num_of_buttons: return len(cls.ed_button_all)
+        
         try:
             return [b[1] for b in cls.ed_button_all].index(1)
+        
         except ValueError:
             return -1 
 

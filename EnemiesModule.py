@@ -8,7 +8,7 @@ from Tokenizers import EnemyDeathSeq
 
 import PathFinder
 
-# NOTE: Fix Rotation from player back to waypoint 
+# NOTE: This shit needs total rework
 
 class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared):
     """
@@ -22,7 +22,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
     enemy_id_cnt = TkCounter(0)
     
     # Relative position for enemies (Player position on the map)
-    enemy_rel_pos = [0, 0]
+    #enemy_rel_pos = [0, 0]
 
     # Provide the enemy copy of the world with all the collisions
     enemy_world_collisions = []     # Currently not in-use

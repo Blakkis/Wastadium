@@ -51,7 +51,6 @@ MAP_CELL_XML      = 'id_cell_data'
 MAP_GENERAL_XML   = 'id_general' 
 
 # General data sub-tags
-
 MAP_PLR_BEGIN_XML = 'id_plr_begin'
 MAP_PLR_END_XML   = 'id_plr_end'
 MAP_DIMENSION_XML = 'id_dimensions'
@@ -490,7 +489,7 @@ class Packer(object):
 
                 r = (color >> 16) & 0xff
                 g = (color >> 8) & 0xff
-                b = color & 0xff
+                b =  color & 0xff
 
                 r_data.append(Id_Wire(p1=(x1, y1), p2=(x2, y2), color=(r, g, b)))
 
@@ -550,7 +549,13 @@ class Packer(object):
             for y, row in enumerate(data):
                 for x, cell in enumerate(row):
                     parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
+
+                    obj = cell.get_set_CellToken()['obj'][0] 
+                    if obj is not None: print obj
+
                     parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
+
+            print '\n'
         else:
             # Check that the number of cells is within valid map ranges
             valid_cube = len(data.getchildren())
