@@ -149,10 +149,9 @@ class World(VisualResources, MapParser, Packer):
         cx, cy = (self.cell_pos[0] >> 5) >> 3, (self.cell_pos[1] >> 5) >> 3 
 
         if value[0] is None:
-            try:
-                del self.w_Cells_Layers[self.E_ID_COLLISION][cy][cx][self.cell_pos]
-            except KeyError("Value[0] is 'None' and trying to delete collision from empty cell"):
-                pass
+            assert self.cell_pos in self.w_Cells_Layers[self.E_ID_COLLISION][cy][cx], \
+            "Trying to delete collision from empty cell" 
+            del self.w_Cells_Layers[self.E_ID_COLLISION][cy][cx][self.cell_pos]
 
         else:
             # Check if the wall has collision enabled
@@ -181,10 +180,10 @@ class World(VisualResources, MapParser, Packer):
     @classmethod
     def w_getWorldData(cls, data_segment='', layers=True):
         """
-            Return data related 
+            Data handler for saving 
 
-            data_segment -> TBD 
-            layers -> Get anything else otherthan layer data if 'False'
+            data_segment -> World attribute
+            layers -> if 'False' get any attribute inside World class
 
             return -> None
 
@@ -278,31 +277,39 @@ class World(VisualResources, MapParser, Packer):
         cls.w_Cells_Single[:] = []
 
         for buildstep in (cls.E_ID_GROUND, cls.E_ID_OBJECT, cls.E_ID_WALL):
-            fullWorld = cls.ed_surface((32 * width, 32 * height), pygame.SRCALPHA)
+            full_world = cls.ed_surface((32 * width, 32 * height), pygame.SRCALPHA)
             
             if buildstep == cls.E_ID_GROUND:    
-                if disk_data:
-                    for y, column in enumerate(disk_data[cls.MAP_CELL_XML]):
-                        r = []
-                        for x, row in enumerate(column):
-                            r.append(World(x, y, row.low[0]))
-                            fullWorld.blit(cls.low_textures[row.low[0]]['tex_main'], (x * 32, y * 32))
-                        cls.w_Cells_Single.append(r) 
-                
-                else:  
-                    for column in xrange(height):
-                        r = []
-                        for row in xrange(width):
-                            fullWorld.blit(cls.low_textures[floor_id]['tex_main'], (32 * row, 32 * column))
-                            r.append(World(row, column, floor_id))
-                        cls.w_Cells_Single.append(r)
+                for y, column in enumerate(disk_data[cls.MAP_CELL_XML]) if disk_data else enumerate(xrange(height)):
+                    r = []
+                    for x, row in enumerate(column) if disk_data else enumerate(xrange(width)):
+                        f_id = row.low[0] if disk_data else floor_id 
+                        full_world.blit(cls.low_textures[f_id]['tex_main'], (x * 32, y * 32))
+                        r.append(World(x, y, f_id))
+                    cls.w_Cells_Single.append(r)
 
             
             elif disk_data and buildstep == cls.E_ID_OBJECT:   
-                # Future stuff for the object layer if needed
+                obj_cnt = 0
                 for y, column in enumerate(disk_data[cls.MAP_CELL_XML]):
                     for x, row in enumerate(column):
-                        if row.obj[0] is not None: print row.obj
+                        tex, orient = row.obj
+                        link = row.link
+
+                        if link is not None:
+                            cls.w_Cells_Single[y][x].cell_link = link
+                        
+                        if tex is not None:
+                            cls.w_Cells_Single[y][x].cell_objTex = tex, orient
+
+                            sector, pos = link[1][0]
+
+                            px = cls.ed_chunk_size_raw * sector[0] + pos[0]
+                            py = cls.ed_chunk_size_raw * sector[1] + pos[1] 
+                            full_world.blit(cls.ed_transform.rotate(cls.obj_textures[tex]['tex_main'], orient * 90), (px, py))
+                            obj_cnt += 1
+
+                cls.es_update('id_object_cnt', obj_cnt)
             
             
             elif buildstep == cls.E_ID_WALL: 
@@ -312,19 +319,20 @@ class World(VisualResources, MapParser, Packer):
                             tex, orient, _id = row.mid
                             if tex is not None:
                                 cls.w_Cells_Single[y][x].cell_midTex = tex, orient, _id 
-                                fullWorld.blit(cls.ed_transform.rotate(cls.mid_textures[row.mid[0]][row.mid[2]], row.mid[1] * 90), (x * 32, y * 32))  
+                                tex = cls.ed_transform.rotate(cls.mid_textures[row.mid[0]][row.mid[2]], row.mid[1] * 90) 
+                                full_world.blit(tex, (x * 32, y * 32))  
 
 
                 else:     
                     for wall_cnt, wall in enumerate(cls.__w_wallBuilder(width, height), start=1):
                         _id, orient, x, y = wall
                         cls.w_Cells_Single[y][x].cell_midTex = wall_set_id, orient / 90, _id
-                        fullWorld.blit(cls.ed_transform.rotate(cls.mid_textures[wall_set_id][_id], orient), (32 * x, 32 * y))
+                        full_world.blit(cls.ed_transform.rotate(cls.mid_textures[wall_set_id][_id], orient), (32 * x, 32 * y))
 
                     cls.es_update('id_wall_cnt', wall_cnt)
             
             # Chop the world into chunks
-            cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, fullWorld.subsurface(chunk * x, chunk * y, chunk, chunk)) 
+            cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, full_world.subsurface(chunk * x, chunk * y, chunk, chunk)) 
                                             for x in xrange(cls.w_Size[0])]
                                             for y in xrange(cls.w_Size[1])]
 
@@ -389,7 +397,7 @@ class World(VisualResources, MapParser, Packer):
                            debug_name=cls.fontRender("{} : {}".format(p.content if p.content else p.id, p.value)))
             cls.w_Cells_Layers[cls.E_ID_PICKUP][cy][cx][pos] = p
 
-        cls.es_update('id_pickup_cnt', len(data[cls.MAP_CELL_XML]))
+        cls.es_update('id_pickup_cnt', len(data[cls.MAP_PICKUP_XML]))
 
 
 
@@ -1658,7 +1666,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Only the topleft most index stored the (set, texture id) & angle
             self.w_Cells_Single[index[1]][index[0]].cell_objTex = (tex_data['name'], tex_data['rot'] / 90)
 
-            
             # The rest of the cells gets the link data between the cells occupied by the object 
             for i in stored_indexes:
                 self.w_Cells_Single[i[1]][i[0]].cell_link = (stored_indexes, chunks_blitted, (cx, cy))
@@ -2245,6 +2252,7 @@ class Main(GlobalGameDataEditor, DeltaTimer):
         self.toolWindow = ToolFrame(self.base)
         self.pygameWindow = PygameFrame(self.base)
 
+        # Center the editor on the screen
         ed_centerWidget(self.base)  
     
 

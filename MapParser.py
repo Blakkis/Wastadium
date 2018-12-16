@@ -108,6 +108,20 @@ def dataParseCheck(func):
     return wrapped
 
 
+class WorldConfigParser(object):
+    
+    @classmethod
+    def parseCampaignFile(cls, filepath):
+        """
+            TBD
+
+            return -> None
+
+        """
+        pass
+
+
+
 class Packer(object):
 
     w_enum = {'E_ID_GROUND'   : 0x0,    
@@ -555,7 +569,6 @@ class Packer(object):
 
                     parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
 
-            print '\n'
         else:
             # Check that the number of cells is within valid map ranges
             valid_cube = len(data.getchildren())
