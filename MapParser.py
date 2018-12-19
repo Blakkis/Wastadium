@@ -17,8 +17,10 @@ from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE
 from ast import literal_eval
 from collections import OrderedDict
 from math import sqrt
+from glob import iglob
 
 from traceback import print_exc as mp_getLastException
+
 
 # Enable to get print based exceptions 
 IDE_TRACEBACK = True
@@ -34,13 +36,20 @@ MAP_PATH_BASE = 'maps'
 # Format in which the layers are stored
 MAP_SURFACE_EXT = 'png'
 
-# Folder tags
+# File tags inside pack
 MAP_DATA_EXT  = 'data.xml'
 MAP_GROUND    = 'id_ground'
-MAP_WALLS     = 'id_walls'
 MAP_OBJECTS   = 'id_objects'
+MAP_WALLS     = 'id_walls'
 
-# Segment tags
+# Checksum to validate pack content
+MAP_FILES_CHECKSUM = hash((MAP_DATA_EXT,
+                           '.'.join((MAP_GROUND,  MAP_SURFACE_EXT)),
+                           '.'.join((MAP_OBJECTS, MAP_SURFACE_EXT)),
+                           '.'.join((MAP_WALLS,   MAP_SURFACE_EXT)))) 
+
+
+# Segment tags in XML
 MAP_COLLISION_XML = 'id_collisions'
 MAP_ENEMY_XML     = 'id_enemies'
 MAP_LIGHT_XML     = 'id_lights'
@@ -108,17 +117,52 @@ def dataParseCheck(func):
     return wrapped
 
 
-class WorldConfigParser(object):
+class CampaignParser(object):
+    
+    # All campaigns with atleast one valid map file
+    all_valid_campaigns = {}
+
     
     @classmethod
-    def parseCampaignFile(cls, filepath):
+    def parseCampaignFiles(cls):
         """
-            TBD
+            Parse campaign files which contains the play order for the campaign maps
 
             return -> None
 
         """
-        pass
+        for cfg in iglob(path.join(MAP_PATH_BASE, '*.cfg')):
+            with open(cfg) as read:
+                # Check that the file contains atleast one valid map
+                # (Doesn't validate the content of the pack files) *Propably should do it here
+                name = path.split(cfg)[-1].split('.')[0]
+                cls.all_valid_campaigns[name] = set() 
+                
+                for line in read:
+                    if not line.startswith('-'): continue
+                    
+                    map_name = line.split('-')[-1]
+
+                    # Allow both with extension suffix and without
+                    if map_name.endswith(".{}".format(MAP_PACK_PREFERRED_EXT)):
+                        pass
+                    else:
+                        map_name = '.'.join((map_name, MAP_PACK_PREFERRED_EXT))
+
+                    # Run few checksums test on the maps
+                    filepath = path.join(MAP_PATH_BASE, map_name) 
+                    if not path.exists(filepath):
+                        continue
+
+                    # Check that the pack contains only the allowed tags inside it
+                    with zipfile.ZipFile(filepath) as checksum_files:
+                        if not hash(tuple(checksum_files.namelist())) == MAP_FILES_CHECKSUM:
+                            continue
+
+                    cls.all_valid_campaigns[name].add(map_name.split('.')[0]) 
+
+        print cls.all_valid_campaigns    
+
 
 
 
@@ -731,4 +775,5 @@ class MapParser(Packer):
 
 
 if __name__ == '__main__':
-    MapParser.mp_load(editor_loader=True)
+    #MapParser.mp_load(editor_loader=True)
+    CampaignParser.parseCampaignFiles()
