@@ -69,5 +69,5 @@ class Inventory(Weapons, GadgetLoader):
             
             cls.i_playerStats[k].append(key)
 
-        print cls.i_playerStats
+        #print cls.i_playerStats
      

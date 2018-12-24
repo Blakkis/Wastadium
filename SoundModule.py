@@ -13,16 +13,15 @@ class SoundMusic(GlobalGameData):
     sm_volumes = {0: 1.0,   # Music
                   1: 1.0}   # Effects
 
-    # Max distance at which effects can be heard at
-    __sm_volume_max_dist = 320.0
-    __sm_fade_out_tuning = 1.5	# Fine-tune for the max distance fadeout 
+    # Volume range for falloff of the sound
+    sm_max_hearing_range = 350.0
+    sm_falloff = 1.0 / sm_max_hearing_range 
 
-    # Volume falloff scalar
-    __sm_volume_falloff = (sm_volumes[1] * __sm_fade_out_tuning) / __sm_volume_max_dist
-
+    
     def __init__(self):
         pass
 
+    
     @classmethod
     def readSoundMusic(cls):
         """
@@ -69,38 +68,38 @@ class SoundMusic(GlobalGameData):
             elif volume_id == 1 and volume != cls.sm_volumes[volume_id]:
                 cls.sm_volumes[volume_id] = volume
                 if play_sound_cue: 
-                	cls.playSoundEffect(188)
-
-                # Re-calculate the volume falloff
-            	cls.__sm_volume_falloff = (cls.sm_volumes[volume_id] * cls.__sm_fade_out_tuning) / cls.__sm_volume_max_dist     
+                    cls.playSoundEffect(188)     
 
 
     @classmethod
-    def playSoundEffect(cls, _id, distance=0):
+    def playSoundEffect(cls, _id, distance=0, env_damp=0):
         """
             Play sound-effect by id
 
             _id -> int id of the needed soundeffect (See sounds.cfg for the sounds by id)
-            distance -> Screen position to calculate volume falloff from the center(Player perspective) 
+            distance -> Screen position to calculate volume falloff from the center 
+            env_damp -> Optional environment dampening (Use with sound effects emitted from interacting with env)
             
-            return -> None
+            return -> Channel
 
         """
         if not isinstance(_id, int) and not sm_volumes[1]: 
-        	return None
+            return None
 
         if distance:
-        	dist = cls.tk_hypot(cls.tk_res_half[0] - distance[0], cls.tk_res_half[1] - distance[1]) 
-        	distance = cls.__sm_volume_falloff * min(cls.__sm_volume_max_dist, dist)
+            distance = cls.tk_hypot(cls.tk_res_half[0] - distance[0], 
+                                    cls.tk_res_half[1] - distance[1]) 
 
         channel = cls.all_sounds[_id].play()
-        # No available channel to play on
+        # No available channel to play on.
         if channel is None: 
-        	return None
+            return None
         
-        # Set the volume for the channel
-        channel.set_volume(cls.tk_clamp(cls.sm_volumes[1] - distance, 0, 1))
-
+        # Dumpen the environment effects
+        volume_env_damp = env_damp * cls.sm_volumes[1]
+        volume_falloff = cls.sm_falloff * distance * cls.sm_volumes[1] 
+        channel.set_volume(cls.tk_clamp(cls.sm_volumes[1] - (volume_falloff + volume_env_damp), 0, 1))
+      	
         return channel
 
 

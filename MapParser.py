@@ -117,14 +117,14 @@ def dataParseCheck(func):
     return wrapped
 
 
-class CampaignParser(object):
+class EpisodeParser(object):
     
     # All campaigns with atleast one valid map file
     all_valid_campaigns = {}
 
     
     @classmethod
-    def parseCampaignFiles(cls):
+    def parseEpisodeFiles(cls):
         """
             Parse campaign files which contains the play order for the campaign maps
 
@@ -159,9 +159,7 @@ class CampaignParser(object):
                         if not hash(tuple(checksum_files.namelist())) == MAP_FILES_CHECKSUM:
                             continue
 
-                    cls.all_valid_campaigns[name].add(map_name.split('.')[0]) 
-
-        print cls.all_valid_campaigns    
+                    cls.all_valid_campaigns[name].add(map_name.split('.')[0])     
 
 
 
@@ -640,7 +638,7 @@ class Packer(object):
     @classmethod
     def bindParsers(cls):
         """
-            Bind all the parser functions with their' associated XML id
+            Bind all the parser functions with their' associated XML id's
 
             return -> None
 
@@ -776,4 +774,4 @@ class MapParser(Packer):
 
 if __name__ == '__main__':
     #MapParser.mp_load(editor_loader=True)
-    CampaignParser.parseCampaignFiles()
+    EpisodeParser.parseEpisodeFiles()

@@ -4,8 +4,6 @@ Work in progress
 
 inspiration comes from "Hotline Miami" and old finnish game called "TapanKaikki" by ErrorFree (Mostly the latter)
 
-Feel free to copy anything
-
 # Game (Work in progress)
 ![alt text](https://i.imgur.com/DMmw1Jo.png)
 # Editor (Work in progress)

@@ -12,7 +12,6 @@ import os
 from Timer import *
 from datetime import timedelta
 from sys import exit as exit_system
-from sys import argv as read_argv
 from numpy import copyto, roll, zeros, dot
 from numpy import sum as _sum
 #from numpy.linalg import norm as normalize
@@ -259,7 +258,6 @@ class GlobalGameData(DefaultConfigParser):
     tk_np_sum = staticmethod(_sum) 
     tk_np_dot = dot
     tk_quit_system = exit_system
-    tk_read_args = read_argv
     tk_counter = TkCounter
     tk_literal_eval = staticmethod(literal_eval)
     tk_iglob =  staticmethod(iglob)
@@ -307,8 +305,7 @@ class GlobalGameData(DefaultConfigParser):
     
     # Player (Allow for customization) 
     tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d, 'esc': K_ESCAPE}
-    tk_user.update({key: globals()['K_{}'.format(enum)] for enum, key in enumerate(tk_slots_available, start=1)})
-
+    tk_user.update({key: globals()['K_{}'.format(enum)] for enum, key in enumerate(tk_slots_available, start=1)}) 
 
     # Event
     tk_event = pygame.event
@@ -328,7 +325,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_audio_frequency = 22050
     tk_audio_channel = 2
 
-    # A.I related
+    # AI related
     tk_enemy_turn_speed = 4         # Basic turning speed
     tk_enemy_hearing_dist = 64      # Alert enemy when inside this distance
     tk_enemy_alarm_state = 1.5      # How long to hunt player for
@@ -559,7 +556,7 @@ class GlobalGameData(DefaultConfigParser):
             h -> height
             r -> radius of the corners
             color -> color of the rect 
-            alpha -> alpha level of the rect
+            alpha -> alpha level of the rect 0 -> 255
             anti_aliasing -> Add antialiasing to the r_rect NOTE: Keep the dimensions small! It's un-optimized
 
             return -> Surface
@@ -576,11 +573,7 @@ class GlobalGameData(DefaultConfigParser):
         cls.tk_draw_rect(surf, color, (r, 0, w - r, h + r))
         cls.tk_draw_rect(surf, color, (0, r, w + r, h - r))
 
-        # Get an pixel alph array from the surface for modifying
-        alpha_surf = cls.tk_surfarray.pixels_alpha(surf)
-        
-        # Go through each pixel applying the alpha if the pixel alpha is greater than 0
-        alpha_surf[alpha_surf > 0] = alpha
+        surf = cls.tk_set_surface_alpha(surf, alpha)
 
         if anti_aliasing: surf = cls.tk_blur_surface(surf, alpha)
 
@@ -589,6 +582,25 @@ class GlobalGameData(DefaultConfigParser):
             return surf, anchor_pos, padded_anchor
         else:
             return surf
+
+
+    @classmethod
+    def tk_set_surface_alpha(cls, surface, alpha):
+        """
+            Set the alpha level of the surface
+
+            surface -> target surface
+            alpha -> 0 - 255
+
+            return -> Surface with the alpha changes
+
+        """
+        surf = surface.copy()
+        
+        alpha_surf = cls.tk_surfarray.pixels_alpha(surf)
+        alpha_surf[alpha_surf > 0] = alpha
+
+        return surf
 
     
     @classmethod

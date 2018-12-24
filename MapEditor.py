@@ -997,12 +997,11 @@ class BaseFrame(tk.Tk, TkinterResources):
         self.config(padx=5, pady=5, menu=self.menuBar)
 
         self.menuMap = tk.Menu(self.menuBar, tearoff=0)
-        self.menuMap.add_command(label='New',        command=lambda: self.bf_newMap(self))
-        self.menuMap.add_command(label='Open...',    command=lambda: World.w_createMap(load_from_disk=True))
-        self.menuMap.add_command(label='Save',       command=lambda: self.mp_save(World.w_getWorldData))
-        self.menuMap.add_command(label='Save as...', command=lambda: None)
+        self.menuMap.add_command(label='New',     command=lambda: self.bf_newMap(self))
+        self.menuMap.add_command(label='Open...', command=lambda: World.w_createMap(load_from_disk=True))
+        self.menuMap.add_command(label='Save...', command=lambda: self.mp_save(World.w_getWorldData))
         self.menuMap.add_separator()
-        self.menuMap.add_command(label='Exit',       command=lambda: self.destroy())
+        self.menuMap.add_command(label='Exit',    command=lambda: self.destroy())
         
         self.menuBar.add_cascade(label='Map', menu=self.menuMap)
 

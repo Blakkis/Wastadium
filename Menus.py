@@ -8,6 +8,9 @@ from MenuUtils import *
 from _3d_models import Model3D
 from Tokenizers import MenuEventDispatch
 from Timer import DeltaTimer
+from MapParser import EpisodeParser
+
+from sys import argv as read_argv
 
 
 __all__ = ('MenuManager')
@@ -235,10 +238,12 @@ class MenuIntro(PagesHelp, EventManager):
 
 
 class MenuMain(PagesHelp, EventManager):
-    # Notes about the menu
-    # There's room for 2 lines of text under different categories of items (Weapons, ammo, gadgets)
+    # NOTE: There's room for 2 lines of text under different categories of items (Weapons, ammo, gadgets)
+    
+    # Function references
+    __menu_ref_functions = {} 
 
-
+    
     def __init__(self):
         self.font_96 = self.tk_font(self.ElementFonts[0], int(96 * self.menu_scale))
         self.font_48 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
@@ -262,10 +267,10 @@ class MenuMain(PagesHelp, EventManager):
         
         self.options = self.tk_ordereddict()
         self.options[0] = (RectSurface(self.font_48.render("New Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180),  
-                           lambda: None)
+                           lambda surface: self.__menu_ref_functions['episode'].run(surface))
         
         self.options[1] = (RectSurface(self.font_48.render("Options", 1, (0xff, 0x0, 0x0)), snd_hover_over=180),   
-                           lambda: None)
+                           lambda surface: self.__menu_ref_functions['options'].run(surface, enable_quit=False))
         
         self.options[2] = (RectSurface(self.font_48.render("Exit Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180), 
                            lambda: self.tk_quitgame())
@@ -273,11 +278,20 @@ class MenuMain(PagesHelp, EventManager):
         # Get the total height of all the options
         self.options_height = (sum([h[0].rs_getSize()[1] for h in self.options.itervalues()]) + self.gfont.get_height()) / 2
 
-        self.mm_active_bg = ActiveBackGround()
+        self.active_bg = ActiveBackGround()
         
         # Update scanline y position
         EventManager.__init__(self)
         self.Event_newEvent(self.scanline.slg_speed, self.scanline.slg_update)
+    
+    
+    def set_reference_functions(self, **kw): 
+        """
+            Set reference functions for the buttons on the menu
+
+            return -> None
+        """
+        self.__menu_ref_functions.update(**kw)
     
     
     def run(self, surface):
@@ -302,7 +316,7 @@ class MenuMain(PagesHelp, EventManager):
 
                 if event.type == self.tk_event_mouseup: click = 1
 
-            self.mm_active_bg.ab_render(surface, tick)
+            self.active_bg.ab_render(surface, tick)
 
             # Give some random wiggle for certain ui elements
             if tick: twitch = 4 if self.tk_randrange(0, 100) > 95 else 0
@@ -319,30 +333,29 @@ class MenuMain(PagesHelp, EventManager):
             
             for key, surf in self.options.iteritems():
                 surf = surf[0].rs_renderSurface()
-                px = self.tk_res_half[0] - surf.get_width()  / 2 
-                py =  self.gfont_pos[1] + self.gfont.get_height()
+                x = self.tk_res_half[0] - surf.get_width() / 2 
+                y =  self.gfont_pos[1] + self.gfont.get_height()
                 
                 # Spacing between logo and options 
-                py += 64 * self.menu_scale - self.options_height
+                y += 64 * self.menu_scale - self.options_height
                 
                 # Spacing between options text 
-                py += (surf.get_height() + 16 * self.menu_scale) * key  
+                y += (surf.get_height() + 16 * self.menu_scale) * key  
                 
-                self.options[key][0].rs_updateRect(px, py)
+                self.options[key][0].rs_updateRect(x, y)
 
                 if self.options[key][0].rs_hover_over((mx, my)):
                     if self.last_select != key:
                         self.last_select = key    
                         self.menu_timer.get_ticks.reset()
 
-                    #if self.tk_mouse_pressed()[0]:
-                    #    self.options[key][1]()
+                    if click: 
+                        self.options[key][1](surface)
 
                 if key == self.last_select:
-                    surf, px, py = self.ph_flash_effect(surf, (px, py))
+                    surf, x, y = self.ph_flash_effect(surf, (x, y))
 
-                surface.blit(surf, (px, py))
-
+                surface.blit(surf, (x, y))
 
             # -- Set everything above this function to be affected by the scanline --
             self.scanline.slg_scanlineEffect(surface)
@@ -355,18 +368,104 @@ class MenuMain(PagesHelp, EventManager):
 
 
 
-class MenuCampaign(PagesHelp):
+class MenuCampaign(PagesHelp, EpisodeParser):
+    
     def __init__(self):
-        pass
+        self.parseEpisodeFiles()
+        
+        self.font_24 = self.tk_font(self.ElementFonts[0], int(24 * self.menu_scale))
+        self.font_32 = self.tk_font(self.ElementFonts[0], int(32 * self.menu_scale))
 
+        self.episodes = {key: RectSurface(self.tk_renderText(self.font_24, key, True, (0xff, 0x0, 0x0), shadow=True),
+                                          snd_hover_over=180) \
+                         for key in self.all_valid_campaigns.iterkeys()}
+
+        # Decorations
+        self.active_bg = ActiveBackGround() 
+
+        self.selection_bg = self.tk_draw_rounded_rect(int(256 * self.menu_scale), 
+                                                      (self.tk_resolution[1] - 8) - int(64 * self.menu_scale), 
+                                                      8, (0xff, 0x0, 0x0), 0x60, False) 
+        
+        self.selection_bg_pos = (self.tk_res_half[0] - self.selection_bg.get_width() / 2,
+                                 (self.tk_res_half[1] - self.selection_bg.get_height() / 2) + 8 * self.menu_scale)
+
+        self.pre_text = {'select_ep': self.tk_renderText(self.font_32, "Select Episode", True, (0xff, 0x0, 0x0), shadow=True)}
+        
+        # Max number of items inside the selection rect
+        self.selection_bg_max_items = 8
+        
+        # Items showed, but can't be clicked and fades out 
+        self.selection_bg_max_hide_items = 5
+        
+        # Scroll level 
+        self.selection_bg_scroll = 0
+        
+        # Last selected value
+        self.last_select = -1 
+    
     
     def run(self, surface):
         while 1:
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
 
+            tick = 0
             for event in self.tk_eventDispatch():
-                pass
+                if event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']:
+                        return
+
+                elif event.type == self.tk_event_mouseup:
+                    if event.button == 4:    # Wheel up
+                        self.selection_bg_scroll -= 1
+
+                    elif event.button == 5:  # Wheel down
+                        self.selection_bg_scroll += 1
+
+                    self.selection_bg_scroll = max(0, min(len(self.episodes) - self.selection_bg_max_items, 
+                                                          self.selection_bg_scroll))
+
+                if self.menu_timer.get_event(event.type): tick = 1
+
+            self.active_bg.ab_render(surface, tick)
+
+            surface.blit(self.pre_text['select_ep'], (self.tk_res_half[0] - self.pre_text['select_ep'].get_width() / 2, 0))
+
+            surface.blit(self.selection_bg, self.selection_bg_pos)
+
+            mx, my = self.tk_mouse_pos() 
+            for enum, episode in enumerate(sorted(self.episodes.keys())):
+                if self.selection_bg_scroll > enum:
+                    continue
+
+                enum -= self.selection_bg_scroll 
+                
+                ep_surf = self.episodes[episode] 
+                x = self.tk_res_half[0] - ep_surf.rs_getSize()[0] / 2
+                y = (self.selection_bg_pos[1] + 16 * self.menu_scale) + (ep_surf.rs_getSize()[1] + 8 * self.menu_scale) * enum
+                
+                # *Highlight* the last selected value
+                if enum == self.last_select:
+                    x += self.tk_sin(self.menu_timer.get_ticks()) * 8
+
+                surf = ep_surf.rs_renderSurface()
+
+                if enum < self.selection_bg_max_items:
+                    if ep_surf.rs_hover_over((mx, my)):
+                        if self.last_select != enum:
+                            self.last_select = enum    
+                            self.menu_timer.get_ticks.reset()
+
+                elif enum < self.selection_bg_max_items + self.selection_bg_max_hide_items:
+                    alpha_level = enum - self.selection_bg_max_items 
+                    surf = self.tk_set_surface_alpha(surf, max(0, 0x20 - 10 * alpha_level))  
+                
+                else:
+                    break
+
+                ep_surf.rs_updateRect(x, y)
+                surface.blit(surf, (x, y))
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
@@ -897,6 +996,7 @@ class MenuOptions(PagesHelp):
 
         """
         pause_bg = surface.copy() if snapshot else None
+        
         if pause_bg is not None:
             # Decorate the options menu during gameplay
             pause_bg.fill((0x40, 0x0, 0x0, 0x80), special_flags=self.tk_blend_rgba_mult)
@@ -937,7 +1037,6 @@ class MenuOptions(PagesHelp):
 
                     self.__mo_validate_userkey(surface, event.key, stage=2)
 
-
             self.mo_functions[self.mo_display_func](surface, mx, my, click_up, 
                                                     hide_quit=enable_quit, 
                                                     click_down=click_down)
@@ -974,7 +1073,7 @@ class MenuOptions(PagesHelp):
 
             if key == self.mo_last_select:
                 surf, x, y = self.ph_flash_effect(surf, (x, y))
-                if click: 
+                if click and value.rs_hover_over((mx, my)): 
                     self.mo_display_func = value.rs_click()
             
             surface.blit(surf, (x, y))
@@ -1043,7 +1142,7 @@ class MenuOptions(PagesHelp):
             if key == self.mo_uk_editme: 
                 surf = self.mo_uk_prerendered[-1] 
             
-            if suf_f.rs_hover_over((mx, my)) or pre_f.rs_hover_over((mx, my)):
+            if pre_f.rs_hover_over((mx, my)): # or suf_f.rs_hover_over((mx, my)):
                 indicate_selected = 16
                 if click: self.__mo_validate_userkey(surface, key, stage=1)
 
@@ -1052,7 +1151,7 @@ class MenuOptions(PagesHelp):
 
             surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer.get_ticks())), pos[1]))
 
-            print 'Yeah?'
+            #print 'Yeah?'
 
             r += pre_f.rs_getSize()[1]
 
@@ -1125,6 +1224,8 @@ class MenuManager(object):
     def __init__(self):
         PagesHelp.ph_initData()
         
+        # NOTE: These should be visible to every menues, 
+        #       so we could get rid of the 'set_reference_function' bullshit 
         self.all_menus = {'m_intro':   MenuIntro(),
                           'm_main':    MenuMain(),
                           'm_episode': MenuCampaign(),
@@ -1132,6 +1233,24 @@ class MenuManager(object):
                           'm_inout':   MenuIntroOutro(),
                           'm_options': MenuOptions(),
                           'm_report':  MenuReport()}
+
+        self.all_menus['m_main'].set_reference_functions(options=self.all_menus['m_options'],
+                                                         episode=self.all_menus['m_episode'])
+
+    def setup_playstate(self, surface, world_build_function, game_loop_function):
+        """
+            TBD
+
+            return -> None
+
+        """
+        if '-nosplash' not in read_argv:
+            self.all_menus['m_intro'].run(surface)
+
+        self.all_menus['m_main'].run(surface)
+
+        world_build_function()
+        game_loop_function()
 
 
 

@@ -1,5 +1,5 @@
 import random
-random.seed(0xdeadbeef122)
+random.seed(0xdeadbeef12)
 
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from Weapons import *
@@ -44,7 +44,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         self.char_center = self.tk_res_half[0] - 16, self.tk_res_half[1] - 16
         self.char_rect.move_ip(self.char_center)
 
-        self.player_data = {'speed':  180,            # Speed
+        self.player_data = {'speed':  170,            # Speed
                             'legs':   'legs_black',   # Legs str id
                             'torso':  'hero',         # Torso str id 
                             'model':  ''}             # Torso + weapon
@@ -63,7 +63,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         self.footstep_id = 0    # Id of the footstep left behind
         self.footstep_cycle = iter(xrange(8, 40))        # First 0 to 7 indexes are data about the footstep and the rest are footstep textures 
         self.footstep_delay = self.tk_trigger_const(.1)  # Frames between each footstep +
-        self.footstep_delay_sound = self.tk_trigger_const(.001)    # Frames between each footstep soundeffects
+        self.footstep_delay_sound = self.tk_trigger_const(.002)    # Frames between each footstep soundeffects
 
         # Laser cast module (During in-game if player has bought it)
         self.lmodule = LaserSightModule(World.get_ray_env_collisions) 
@@ -521,7 +521,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.load_decalsGibs()
 
         # 
-        cls.Menus = MenuManager()
+        cls.menus = MenuManager()
 
         #
         cls.load_pickups(font=cls.ElementFonts[1])
@@ -564,6 +564,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Create testing rects for collision
         rl_rect = cls.tk_rect(0, 0, 4, 28)
         tb_rect = cls.tk_rect(0, 0, 28, 4)
+
+        # NOTE: Collision should push back to contact with the surface
+        #       change this
 
         # Move the collision boxes either side of the box for collision testing
         rl_rect.center = obj_col.midright if x < 0 else obj_col.midleft 
@@ -743,7 +746,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
         num_of_enemies = 1
         enemies = [(5, 
-                    5, 'rifleman') for _ in xrange(num_of_enemies)]
+                    5, 'punk') for _ in xrange(num_of_enemies)]
 
         enemies = [Id_Enemy(*e) for e in enemies]
         cls.w_spawnEnemies(enemies)
@@ -1233,7 +1236,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                             hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
                             if cls.w_micro_cells[ey][ex].w_sound_hit is not None:
                                 cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 
-                                                    distance=(orx, ory))
+                                                    distance=(orx, ory), env_damp=.5)
                             
                             if hit_effect is not None:
                                 # Choose random effect from the list of effect from the wall/object
@@ -1266,7 +1269,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
                     else:
                         # Run damage check to see if projectile weapon Area-of-effect hit anything
-                        #print 'Aoe Damage Check: Hit Wall!'
                         cls.calc_aoe_taken(*test_rect.center, weapon=weapon)
                 
                 else:
@@ -1279,7 +1281,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         else:
             # Went through the loop without any wall/enemy hits. 
             if cls.all_weapons[weapon]['w_type'] == 2:
-                #print 'Aoe Damage Check: Hit Nothing'
                 cls.calc_aoe_taken(*test_rect.center, weapon=weapon)
 
             else:
@@ -1295,7 +1296,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
                         if cls.w_micro_cells[gy][gx].w_sound_hit is not None:
                             cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[gy][gx].w_sound_hit), 
-                                                distance=(dx, dy))
+                                                distance=(dx, dy), env_damp=.5)
 
                 else:
                     # Energy dispatched went out from this world
@@ -1506,7 +1507,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         if not ignore_after:
             # Add Aoe damage top of the normal hit damage if projectile weapon
             if cls.all_weapons[weapon]['w_type'] == 2: 
-                #print 'Aoe Damage Check: Hit Enemy'
                 cls.calc_aoe_taken(sx, sy, weapon)
 
     
@@ -1631,12 +1631,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        if '-nosplash' not in self.tk_read_args:
-            self.Menus.all_menus['m_intro'].run(self.screen)
-        
-        # Note: Move this to campaign and next map function menu
-        World.build_map()
-
+        self.menus.setup_playstate(self.screen, World.build_map, self.gameloop)
 
         
     def gameloop(self):
@@ -1700,7 +1695,7 @@ class Main(World, DeltaTimer):
             self.tk_display.flip()
 
             if paused: 
-                paused = self.Menus.all_menus['m_options'].run(self.screen, snapshot=1)
+                paused = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)
 
     
 

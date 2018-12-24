@@ -229,8 +229,7 @@ class ScanLineGenerator(GlobalGameData):
 
 
 class ActiveBackGround(GlobalGameData):
-    # Display a background with 3d objects
-    # Used for mainmenu only (Could be added to other menus aswell)
+    # Display a background with 3d objects (Currently locked to bulletcasings only)
     def __init__(self):
         self.ab_num_of_casings = 12
 
