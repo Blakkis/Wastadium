@@ -746,7 +746,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
         num_of_enemies = 1
         enemies = [(5, 
-                    5, 'punk') for _ in xrange(num_of_enemies)]
+                    5, 'prisoner') for _ in xrange(num_of_enemies)]
 
         enemies = [Id_Enemy(*e) for e in enemies]
         cls.w_spawnEnemies(enemies)

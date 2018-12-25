@@ -273,7 +273,7 @@ class MenuMain(PagesHelp, EventManager):
                            lambda surface: self.__menu_ref_functions['options'].run(surface, enable_quit=False))
         
         self.options[2] = (RectSurface(self.font_48.render("Exit Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180), 
-                           lambda: self.tk_quitgame())
+                           lambda *args: self.tk_quitgame())
 
         # Get the total height of all the options
         self.options_height = (sum([h[0].rs_getSize()[1] for h in self.options.itervalues()]) + self.gfont.get_height()) / 2
@@ -1234,8 +1234,6 @@ class MenuManager(object):
                           'm_options': MenuOptions(),
                           'm_report':  MenuReport()}
 
-        self.all_menus['m_main'].set_reference_functions(options=self.all_menus['m_options'],
-                                                         episode=self.all_menus['m_episode'])
 
     def setup_playstate(self, surface, world_build_function, game_loop_function):
         """
@@ -1247,7 +1245,9 @@ class MenuManager(object):
         if '-nosplash' not in read_argv:
             self.all_menus['m_intro'].run(surface)
 
-        self.all_menus['m_main'].run(surface)
+        self.all_menus['m_main'].set_reference_functions(options=self.all_menus['m_options'],
+                                                         episode=self.all_menus['m_episode'])
+        #self.all_menus['m_main'].run(surface)
 
         world_build_function()
         game_loop_function()

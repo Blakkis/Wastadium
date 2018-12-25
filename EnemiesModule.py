@@ -110,10 +110,10 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
 
         # That shot definitely hurt
         if self.tk_randrange(0, 100) > 60:
-            self.playSoundEffect(self.tk_choice(self.enemy_pain_snd), distance=scr_enemy)
+            self.playSoundEffect(self.tk_choice(self.enemy_pain_snd), distance=scr_enemy, env_damp=.5)
 
         # Minor weapon hit sounds
-        self.playSoundEffect(self.tk_choice(self.enemy_hit_snd), distance=scr_enemy)
+        self.playSoundEffect(self.tk_choice(self.enemy_hit_snd), distance=scr_enemy, env_damp=.5)
 
         return self.enemy_health, (self.tk_choice(self.enemy_blood_frames),
                                    (scr_enemy[0] - self.tk_sin(e_angle) * 20, 
@@ -134,7 +134,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
         self.enemy_delete = 1
 
         # Play death sound
-        self.playSoundEffect(self.tk_choice(self.enemy_death_snd), distance=scr_enemy)
+        self.playSoundEffect(self.tk_choice(self.enemy_death_snd), distance=scr_enemy, env_damp=.5)
         
         return EnemyDeathSeq(angle_deg=self.enemy_targetAngleDeg, 
                              g_profile=self.tk_choice(self.enemy_gore_profile),
