@@ -128,14 +128,14 @@ class EntityPicker(tk.Frame, GlobalGameDataEditor):
         self.ep_labelinfo.grid(row=0, column=0, padx=5, sticky=self.ed_sticky_w)
         
         tokens = EntityOptionMenuContent.entity_content_load()
-        _tokenizer = self.ed_namedtuple('Token', 'content id func')
+        _tokenizer = self.ed_namedtuple('Token', ['content', 'id', 'func'])
 
         self.entity_valid_id[7] = _tokenizer(tokens['id_enemy'],   'ID_ENEMY', self.__ep_entity_enemy)
         self.entity_valid_id[8] = _tokenizer(tokens['id_pickups'], 'ID_PICKUP', self.__ep_entity_pickup)
 
-        self.ep_entity_id = EntityOptionMenu(self, self.entity_data['c_id'], "Entity Id:", 1, 0)
-        self.ep_entity_content = EntityOptionMenu(self, self.entity_data['c_content'], "Content Id:", 2, 0)
-        self.ep_entity_value = EntityOptionMenu(self, self.entity_data['c_value'], "Content Value:", 3, 0)
+        self.ep_entity_id = EntityOptionMenu(self, self.entity_data['c_id'], "Entity id:", 1, 0)
+        self.ep_entity_content = EntityOptionMenu(self, self.entity_data['c_content'], "Content id:", 2, 0)
+        self.ep_entity_value = EntityOptionMenu(self, self.entity_data['c_value'], "Content value:", 3, 0)
 
         self.ep_set_state()     # Default to hidden
         

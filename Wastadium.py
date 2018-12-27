@@ -16,7 +16,7 @@ from Timer import DeltaTimer
 from GadgetLoader import *
 from PickUps import Pickups
 from Tokenizers import *
-from MapParser import MapParser
+from MapParser import MapParser, MAP_ALL_TAGS, MAP_GROUND, MAP_DATA_EXT
 
 from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF
 
@@ -369,7 +369,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         Setup and handle all world related and external modules loading
 
     """
-
+    locals().update(**MAP_ALL_TAGS)
+    
     #__slots__ = ()
     
     # Holds all the enemies of the map by ID
@@ -406,21 +407,22 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
     def __init__(self, x, y, low_id='', mid_id=''):
         self.texture = self.low_textures[low_id]['tex_main']
+        
         self.pos = (x * 32 + self.tk_res_half[0] - 16,
                     y * 32 + self.tk_res_half[1] - 16)
         self.w_tex_effect = self.low_textures[low_id]['tex_effect_id']
         self.w_sound_hit = self.low_textures[low_id]['tex_hit_sound_id']
         
-        # These will get replaced (Currently random cell collision)
-        if any((x, y)):
-            self.collision = self.tk_choice((False, False, False, False, False, False, False, True, False))
-            self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if self.collision else False
-            if self.collision:
-                self.texture = self.mid_textures[mid_id][6]
-                self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id']
-                self.w_sound_hit = self.mid_textures[mid_id]['tex_hit_sound_id']         
-        else:
-            self.collision = False
+        # # These will get replaced (Currently random cell collision)
+        # if any((x, y)):
+        #     self.collision = self.tk_choice((False, False, False, False, False, False, False, True, False))
+        #     self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if self.collision else False
+        #     if self.collision:
+        #         self.texture = self.mid_textures[mid_id][6]
+        #         self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id']
+        #         self.w_sound_hit = self.mid_textures[mid_id]['tex_hit_sound_id']         
+        # else:
+        self.collision = False
 
         #self.w_texture_low = self.low_textures[low_id]['tex_main']
         #self.w_texture_obj = None
@@ -595,14 +597,23 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
 
     @classmethod
-    def build_map(cls, map_path=None):
+    def build_map(cls, map_name=None):
         """
-            Build the world around the player and populate it with stuff to kill
-            also handles the cleaning of the last map and resets everything
+            Build the world
+
+            map_name -> Name of the mapfile 
+                        (Suffix will be added based on the parser rules by the parser)
 
             return -> None
 
         """
+        disk_data = cls.mp_load("basement")
+        # Convert the IOBytes objects to pygame surfaces (Ground needs 'convert()' only, since it doesn't have alpha component)
+        disk_data[MAP_GROUND] = {key: (cls.tk_image.load(value).convert() if key == MAP_GROUND else \
+                                       cls.tk_image.load(value).convert_alpha()) for key, value in disk_data[MAP_GROUND].iteritems()}
+
+        data_tag = MAP_DATA_EXT.split('.')[0] 
+        general = disk_data[data_tag][cls.MAP_GENERAL_XML]
 
         cls.clear_effects()     
 
@@ -610,12 +621,15 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.clear_pickups()
 
-        player_spawn_pos = 0, 0   # is read from the mapfile
-        cls.w_map_size = 64, 64   # is read from the mapfile
+        # Spawn and end should be in the stated order, but check just incase they get swapped
+        spawn_index = 0 if general[cls.MAP_PLR_BEGIN_XML][0].id == 'id_spawn' else 1
+        spawn_index = general[cls.MAP_PLR_BEGIN_XML][spawn_index] 
+        
+        cls.w_map_size = general[cls.MAP_DIMENSION_XML]
 
         cls.cell_x, cls.cell_y = 0, 0
-        cls.cell_x -= 32 * player_spawn_pos[0]
-        cls.cell_y -= 32 * player_spawn_pos[1]
+        cls.cell_x -= 32 * spawn_index.x
+        cls.cell_y -= 32 * spawn_index.y 
 
         cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y
 
@@ -623,21 +637,27 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_entities_dynamic = [[set() for x in xrange(cls.w_map_size[0] / cls.tk_entity_sector_s)] \
                                          for y in xrange(cls.w_map_size[1] / cls.tk_entity_sector_s)]
 
-        # Set the entities boundaries
+        # Set the entity boundaries
         cls.w_ent_cell_size = (cls.w_map_size[0] / cls.tk_entity_sector_s,
                                cls.w_map_size[1] / cls.tk_entity_sector_s)
- 
         
         cls.w_micro_cells[:] = []
-        for y in xrange(cls.w_map_size[1]):
-            row = []
-            for x in xrange(cls.w_map_size[0]):
-                row.append(cls(x, y, 'debug_floor', 'concrete_wall_01'))
-            cls.w_micro_cells.append(row)
+        for y, column in enumerate(disk_data[data_tag][cls.MAP_CELL_XML]):
+            segment = []
+            for x, row in enumerate(column):
+                cell = row
+                segment.append(cls(x, y, cell.low, '' if cell.mid is None else cell.mid))
+            cls.w_micro_cells.append(segment)
+        
+        #cls.w_micro_cells[:] = []
+        #for y in xrange(cls.w_map_size[1]):
+        #    row = []
+        #    for x in xrange(cls.w_map_size[0]):
+        #        row.append(cls(x, y, 'debug_floor', 'concrete_wall_01'))
+        #    cls.w_micro_cells.append(row)
 
         cls.gib_reset(cls.w_micro_cells)
         
-
         # Next step is to combine the smaller cells in to bigger ones to make world rendering faster
         # and have easier way to blit stuff on the world layer
         frag_s = cls.tk_macro_cell_size    # Max fragment size
@@ -729,8 +749,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
             lights = [(160 + 16, 32   + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
                       (160 + 16, 128  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
-                      (256 + 16, 256  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
-                      (512 + 16, 512  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
+                      (256 + 16, 256  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
 
             lights = [Id_Light(*l) for l in lights]
 
@@ -746,7 +765,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
         num_of_enemies = 1
         enemies = [(5, 
-                    5, 'prisoner') for _ in xrange(num_of_enemies)]
+                    5, 'punisher') for _ in xrange(num_of_enemies)]
 
         enemies = [Id_Enemy(*e) for e in enemies]
         cls.w_spawnEnemies(enemies)

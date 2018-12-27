@@ -12,7 +12,7 @@ import pygame.image as pyimage
 
 from Tokenizers import *
 from Tokenizers import Ed_CellPoint, PackerParserToken, PackerParserCell
-from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE
+from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE, GlobalGameDataEditor
 
 from ast import literal_eval
 from collections import OrderedDict
@@ -37,7 +37,7 @@ MAP_PATH_BASE = 'maps'
 MAP_SURFACE_EXT = 'png'
 
 # File tags inside pack
-MAP_DATA_EXT  = 'data.xml'
+MAP_DATA_EXT  = 'data.xml'      # Keep the name and suffix in same string!
 MAP_GROUND    = 'id_ground'
 MAP_OBJECTS   = 'id_objects'
 MAP_WALLS     = 'id_walls'
@@ -200,6 +200,7 @@ class Packer(object):
         """
         if path.exists(filepath) and zipfile.is_zipfile(filepath):
             cls.__filepath = filepath
+            return True
         else:
             return -1
     
@@ -207,9 +208,14 @@ class Packer(object):
     @classmethod
     def decompressAndParse(cls, editor_loader=False):
         """
-            Decompress the mapfile. Validate and parse the contents
+            Decompress the mapfile
+            Validate and parse the contents
 
-            return -> None
+            editor_loader -> If 'True' load and parse everything in the mapfile
+                             game itself needs only small portion of the data
+                             if 'False' returns dict with surface: Layer images, data: XML data 
+
+            return -> XML data if editor, else surfaces and xml data
 
         """
         if cls.__filepath is None:
@@ -233,10 +239,12 @@ class Packer(object):
                 return cls.parseXML(zr, files[data])
 
             else:
-                # Load surfaces (Ground surface doesn't need alpha component)
-                surfaces = {key: BytesIO(zr.read(files[layer])).convert() if key == lr01 else
-                                 BytesIO(zr.read(files[layer])).convert_alpha() for key in (lr01, lr02, lr03)}
-                return surfaces     
+                # These needs to be converted to surfaces outside the function
+                # Since pygame.image relies on display being initialized
+                surfaces = {files[key].split('.')[0]: BytesIO(zr.read(files[key])) for key in (lr01, lr02, lr03)}
+
+                return {MAP_GROUND: surfaces, 
+                        MAP_DATA_EXT.split('.')[0]: cls.parseXML(zr, files[data], editor_loader=False)}
     
     
     @classmethod
@@ -257,12 +265,14 @@ class Packer(object):
 
 
     @classmethod
-    def parseXML(cls, handler, xml_zip_file):
+    def parseXML(cls, handler, xml_zip_file, editor_loader=True):
         """
             Validate and parse the xml file locating in the map archive
 
             handler -> zip handler
             xml_zip_file -> Archive filepath
+            editor_loader -> if 'True' parse everything
+                             else parse minimal amount needed for the game 
 
             return -> Parsed data for building the map
 
@@ -283,13 +293,18 @@ class Packer(object):
                 for key, value in childrens.iteritems():
                     if key not in cls.p_parserFunctions: 
                         continue
+
+                    if not editor_loader:
+                        # Game doesn't need all data
+                        if key in (MAP_DECAL_XML): continue
                     
                     if key == MAP_GENERAL_XML:
                         xml_data[key] = cls.p_parserFunctions[key].parse(data_fetcher=value, operation='r')
                     else:    
                         xml_data[key] = cls.p_parserFunctions[key].parse(data=value, operation='r')
 
-                xml_data[MAP_CELL_XML] = cls.parseWorldData(data=childrens[MAP_CELL_XML], operation='r')    
+                xml_data[MAP_CELL_XML] = cls.parseWorldData(data=childrens[MAP_CELL_XML], operation='r', 
+                                                            editor_loader=editor_loader)    
 
             except (WastadiumEditorException, Exception) as e:
                 if IDE_TRACEBACK: mp_getLastException()
@@ -306,6 +321,11 @@ class Packer(object):
             Parse general map data
             -   SpawnPos/EndPos
             -   World size
+
+            xml_root ->
+            data_fetcher -> 
+            name ->
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -347,8 +367,6 @@ class Packer(object):
             return r_data
     
         
-    
-
     @classmethod
     @dataParseCheck
     def parseCollisions(cls, xml_root=None, data=None, name='', operation='w'):
@@ -360,6 +378,7 @@ class Packer(object):
             xml_root -> xml root object
             data -> Data to be written
             name -> Field name on the xml
+            operation -> 'r', 'w'
 
             return -> None
         
@@ -394,6 +413,7 @@ class Packer(object):
             xml_root -> xml root object
             data -> Data to be written
             name -> Field name on the xml
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -428,6 +448,7 @@ class Packer(object):
             xml_root -> xml root object
             data -> Data to be written
             name -> Field name on the xml
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -468,6 +489,7 @@ class Packer(object):
             xml_root -> xml root object
             data -> Data to be written
             name -> Field name on the xml
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -511,6 +533,7 @@ class Packer(object):
             xml_root -> xml root object
             data -> Data to be written
             name -> Field name on the xml
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -561,6 +584,7 @@ class Packer(object):
             xml_root -> xml root object
             data -> Data to be written
             name -> Field name on the xml
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -589,9 +613,14 @@ class Packer(object):
 
 
     @classmethod
-    def parseWorldData(cls, xml_root=None, data=None, name='', operation='w'):
+    def parseWorldData(cls, xml_root=None, data=None, name='', operation='w', editor_loader=True):
         """
-            TBD
+            Parse cell data
+
+            xml_root ->
+            data ->
+            name -> 
+            operation -> 'r', 'w'
 
             return -> None
 
@@ -626,7 +655,22 @@ class Packer(object):
                 x, y = [int(c) for c in pos.split('.')]
                 low, mid, obj, link = [literal_eval(c) for c in child.text.split('.')]
                 
-                row.append(PackerParserCell(low=low, mid=mid, obj=obj, link=link))
+                if editor_loader:
+                    row.append(PackerParserCell(low=low, mid=mid, obj=obj, link=link))
+                
+                else:
+                    obj_token = None
+                    if obj[0] is not None:
+                        # Get macro cell and position relative to that cell
+                        macro, pos = link[-2][-1]
+
+                        # Game uses special collision for objects which is created at runtime
+                        # Supply the coordinates for every objects (TopLeft and BottomRight)
+                        cx = (macro[0] * GlobalGameDataEditor.ed_chunk_size_raw + pos[0]) >> 5
+                        cy = (macro[1] * GlobalGameDataEditor.ed_chunk_size_raw + pos[1]) >> 5
+                        obj_token = ((cx, cy), link[-1])
+
+                    row.append(PackerParserCell(low=low[0], mid=mid[0], obj=obj_token, link=None))
                 
                 if x == row_length:
                     final_matrix.append(row)
@@ -751,7 +795,7 @@ class MapParser(Packer):
 
     
     @classmethod
-    def mp_load(cls, editor_loader=False):
+    def mp_load(cls, filename='', editor_loader=False):
         """
             Load and parse map files
 
@@ -760,18 +804,21 @@ class MapParser(Packer):
             return -> None
 
         """ 
+        # Note: This editor section should be moved to decompressAndParse function
+        #       Only useful during debugging on its on __main__
         if editor_loader:
             valid = cls.getValidFilePath(mp_file.askopenfilename(initialdir=MAP_PATH_BASE, 
                                                                  filetypes=(MAP_FORMAT_EXT_FULL, )))
             if valid == -1:
                 return None
-
             #cls.decompressAndParse(editor_loader=1)
 
         else:
-            pass
+            cls.getValidFilePath(path.join(MAP_PATH_BASE, '{}.{}'.format(filename, MAP_PACK_PREFERRED_EXT)))
+            return cls.decompressAndParse()   
 
 
 if __name__ == '__main__':
+    pass
     #MapParser.mp_load(editor_loader=True)
-    EpisodeParser.parseEpisodeFiles()
+    #EpisodeParser.parseEpisodeFiles()

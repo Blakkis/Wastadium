@@ -509,7 +509,7 @@ class GlobalGameDataEditor(object):
     ed_fps = 8192
     ed_bg_color = 0x50, 0x50, 0x50
     ed_sdl_driver = 'windib'    # SDL driver see: https://www.libsdl.org/release/SDL-1.2.15/docs/html/sdlenvvars.html
-    ed_chunk_size = 8           # Dont change this
+    ed_chunk_size = 8           # Dont change this (This should match with the game ConfigsModule also)
     ed_chunk_size_raw = ed_chunk_size * 32
     
     # Row, column chunks per frame

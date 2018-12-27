@@ -45,6 +45,16 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
         # Start the common event timer
         cls.tk_time.set_timer(cls.menu_timer.get_event(), 10)
 
+    @classmethod
+    def ph_go_back_soundeffect(cls, snd_id=188, return_type=None):
+        """
+            Provide common exit sound effect for menues
+
+            return -> None
+        """
+        cls.playSoundEffect(snd_id)
+        return return_type
+
     
     @classmethod
     def ph_flash_effect(cls, surface, pos):
@@ -265,11 +275,14 @@ class MenuMain(PagesHelp, EventManager):
 
         self.last_select = -1  # Keep the last selected option highlighted even if mouse is not hovering on it
         
+        # Note: Move the lambdas inside the RectSurface function call
         self.options = self.tk_ordereddict()
-        self.options[0] = (RectSurface(self.font_48.render("New Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180),  
+        self.options[0] = (RectSurface(self.font_48.render("New Game", 1, (0xff, 0x0, 0x0)), 
+                           snd_hover_over=180, snd_click=181),  
                            lambda surface: self.__menu_ref_functions['episode'].run(surface))
         
-        self.options[1] = (RectSurface(self.font_48.render("Options", 1, (0xff, 0x0, 0x0)), snd_hover_over=180),   
+        self.options[1] = (RectSurface(self.font_48.render("Options", 1, (0xff, 0x0, 0x0)), 
+                           snd_hover_over=180, snd_click=181),   
                            lambda surface: self.__menu_ref_functions['options'].run(surface, enable_quit=False))
         
         self.options[2] = (RectSurface(self.font_48.render("Exit Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180), 
@@ -350,6 +363,7 @@ class MenuMain(PagesHelp, EventManager):
                         self.menu_timer.get_ticks.reset()
 
                     if click: 
+                        self.options[key][0].rs_click()     # Just to make the sound when clicked
                         self.options[key][1](surface)
 
                 if key == self.last_select:
@@ -414,7 +428,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
-                        return
+                        return self.ph_go_back_soundeffect()
 
                 elif event.type == self.tk_event_mouseup:
                     if event.button == 4:    # Wheel up
@@ -909,13 +923,13 @@ class MenuOptions(PagesHelp):
         self.mo_options = self.tk_ordereddict()
 
         self.mo_options[0] = RectSurface(self.mo_font_1.render("Volume", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=188, func=lambda: 0)
+                                                               snd_hover_over=180, snd_click=181, func=lambda: 0)
         
         self.mo_options[1] = RectSurface(self.mo_font_1.render("Controls", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=188, func=lambda: 1)
+                                                               snd_hover_over=180, snd_click=181, func=lambda: 1)
         
         self.mo_options[2] = RectSurface(self.mo_font_1.render("Exit", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=188, func=self.tk_quitgame)
+                                                               snd_hover_over=180, snd_click=181, func=self.tk_quitgame)
 
         self.mo_functions = {-1: self.mo_root_settings,
                               0: self.mo_sound_settings,
@@ -941,7 +955,7 @@ class MenuOptions(PagesHelp):
         # Note: Move all this in to its own class
         self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
         self.mo_music_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_music_volume['radial'].rs_mask, 1), 
-                                                   snd_click=188, _id=0) 
+                                                   snd_click=181, _id=0) 
         
         self.mo_music_volume['mask'].rs_updateRect(self.tk_res_half[0] - self.mo_music_volume['mask'].rs_getSize()[0] - 128 * self.menu_scale,
                                                    self.tk_res_half[1] - self.mo_music_volume['mask'].rs_getSize()[1] / 2)
@@ -952,7 +966,7 @@ class MenuOptions(PagesHelp):
 
         self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
         self.mo_effect_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_effect_volume['radial'].rs_mask, 1), 
-                                                    snd_click=188, _id=1)
+                                                    snd_click=181, _id=1)
         
         self.mo_effect_volume['mask'].rs_updateRect(self.tk_res_half[0] + 128 * self.menu_scale,
                                                     self.tk_res_half[1] - self.mo_effect_volume['mask'].rs_getSize()[1] / 2)
@@ -1027,12 +1041,16 @@ class MenuOptions(PagesHelp):
                     if event.key == self.tk_user['esc'] and not self.mo_uk_editme:
                         # Quit the options menu entirely
                         if self.mo_display_func == -1:
-                            return False
+                            return self.ph_go_back_soundeffect(return_type=False)
 
                         # Go back to root
                         else:
+                            self.ph_go_back_soundeffect()
+                            # Reset userkey change if exiting the menu
                             if self.mo_display_func == 1: 
                                 self.mo_uk_editme = ''
+                            
+                            # Go back to root
                             self.mo_display_func = -1
 
                     self.__mo_validate_userkey(surface, event.key, stage=2)
@@ -1242,8 +1260,8 @@ class MenuManager(object):
             return -> None
 
         """
-        if '-nosplash' not in read_argv:
-            self.all_menus['m_intro'].run(surface)
+        #if '-nosplash' not in read_argv:
+        #    self.all_menus['m_intro'].run(surface)
 
         self.all_menus['m_main'].set_reference_functions(options=self.all_menus['m_options'],
                                                          episode=self.all_menus['m_episode'])
