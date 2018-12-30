@@ -5,7 +5,7 @@ import zipfile
 
 from pygame import image, surface, SRCALPHA
 from shutil import make_archive, rmtree
-from os import path, makedirs, rename, getcwd
+from os import path, makedirs, rename, getcwd, remove
 
 from io import BytesIO
 import pygame.image as pyimage
@@ -21,9 +21,22 @@ from glob import iglob
 
 from traceback import print_exc as mp_getLastException
 
+# Enable print based exceptions 
+IDE_TRACEBACK = False
 
-# Enable to get print based exceptions 
-IDE_TRACEBACK = True
+
+# Game might show errors via MessageBox which creates un-needed Tkinter window
+def ROOT_ENABLE_HIDE():
+    # Since messagebox requires Tk window, we are going to create
+    # one, but hide it
+    from Tkinter import Tk
+
+    __GAME_TK_ROOT = Tk()
+    __GAME_TK_ROOT.overrideredirect(True)
+    __GAME_TK_ROOT.withdraw()
+
+    return __GAME_TK_ROOT
+
 
 
 __all__ = 'MapParser',
@@ -126,7 +139,7 @@ class EpisodeParser(object):
     @classmethod
     def parseEpisodeFiles(cls):
         """
-            Parse campaign files which contains the play order for the campaign maps
+            Parse campaign files which contains the play order for the episode maps
 
             return -> None
 
@@ -160,8 +173,6 @@ class EpisodeParser(object):
                             continue
 
                     cls.all_valid_campaigns[name].add(map_name.split('.')[0])     
-
-
 
 
 class Packer(object):
@@ -225,7 +236,7 @@ class Packer(object):
         with zipfile.ZipFile(cls.__filepath) as zr:
             files = zr.namelist() 
             try:
-                # Check these files exist inside the pack
+                # Check these files exist inside the pack (This is for editor. Game checks these files twice, fix it?)
                 data = files.index(MAP_DATA_EXT)
                 lr01 = files.index('{}.{}'.format(MAP_GROUND,  MAP_SURFACE_EXT))
                 lr02 = files.index('{}.{}'.format(MAP_OBJECTS, MAP_SURFACE_EXT))
@@ -682,7 +693,7 @@ class Packer(object):
     @classmethod
     def bindParsers(cls):
         """
-            Bind all the parser functions with their' associated XML id's
+            Bind/Bundle all the parser functions with their' associated XML id's
 
             return -> None
 
@@ -707,7 +718,6 @@ class Packer(object):
         
         cls.p_parserFunctions[MAP_PICKUP_XML] = \
             PackerParserToken(parse=cls.parsePickups, id=cls.E_ID_PICKUP)
-
 
 
 class MapParser(Packer):
@@ -738,31 +748,42 @@ class MapParser(Packer):
                                              filetypes=(MAP_FORMAT_EXT_FULL, ))
         if not filename: 
             return None
+        try:
+            # Create directory for the map in the target base path
+            map_path = path.join(getcwd(), MAP_PATH_BASE, filename)
+            makedirs(map_path)
 
-        # Create directory for the map in the target base path
-        map_path = path.join(getcwd(), MAP_PATH_BASE, filename)
-        makedirs(map_path)
+            root = xmlParse.Element('root')
 
-        root = xmlParse.Element('root')
+            for key, parser in cls.p_parserFunctions.iteritems():
+                if key == MAP_GENERAL_XML:
+                    parser.parse(root, name=key, data_fetcher=data_fetcher)
+                else:
+                    parser.parse(root, data=data_fetcher(parser.id), name=key, operation='w')
 
-        for key, parser in cls.p_parserFunctions.iteritems():
-            if key == MAP_GENERAL_XML:
-                parser.parse(root, name=key, data_fetcher=data_fetcher)
-            else:
-                parser.parse(root, data=data_fetcher(parser.id), name=key, operation='w')
+            cls.parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
 
-        cls.parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
+            # Build all the layers and save them
+            width_height = data_fetcher('w_Size', layers=False)[2:4]
+            for l_id, name_id in ((cls.E_ID_GROUND, MAP_GROUND), (cls.E_ID_OBJECT, MAP_OBJECTS), (cls.E_ID_WALL, MAP_WALLS)):
+                cls.parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, width_height, l_id) 
 
-        # Build all the layers and save them
-        width_height = data_fetcher('w_Size', layers=False)[2:4]
-        for l_id, name_id in ((cls.E_ID_GROUND, MAP_GROUND), (cls.E_ID_OBJECT, MAP_OBJECTS), (cls.E_ID_WALL, MAP_WALLS)):
-            cls.parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, width_height, l_id) 
-
-        # Build the final xml output
-        final_tree = xmlParse.ElementTree(root)
-        final_tree.write(path.join(map_path, MAP_DATA_EXT))
-
-        cls.compress(filename, map_path)
+            # Build the final xml output
+            final_tree = xmlParse.ElementTree(root)
+            final_tree.write(path.join(map_path, MAP_DATA_EXT))
+            
+            # Pack everything
+            cls.compress(filename, map_path)
+        
+        except (WastadiumEditorException, Exception) as e:
+            if IDE_TRACEBACK: mp_getLastException()
+            else: mp_error.showerror(MAP_ASSERT_ERROR, e)
+            # Error occured during saving. Delete the Folder/File
+            try:
+                if path.exists(map_path): rmtree(map_path)  
+            except Exception:
+                bad_file = '{}.{}'.format(map_path, MAP_PACK_PREFERRED_EXT) 
+                if path.exists(bad_file): remove(bad_file) 
 
     
     @classmethod

@@ -337,29 +337,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
         # Update the last seen player position as new waypoint
         if not waypoint_track: self.enemy_targetPos = ix * 32, iy * 32; 
         
-        return 1 
-
-
-    def __check_fov_debug(self, ePos, rAngle, surface):
-        # Enemy position
-        self.tk_draw_circle(surface, (0xff, 0xff, 0x0), ePos, 16, 1)   
-        
-        # View distance
-        self.tk_draw_circle(surface, (0xff, 0xff, 0x0), ePos, self.enemy_fov[0] - 4, 1)
-
-        view_angle = self.enemy_fov[1 + self.enemy_state] 
-        # View angle
-        self.tk_draw_line(surface, (0x0, 0x0, 0xff), ePos,
-                         (ePos[0] - self.tk_sin(rAngle - view_angle) * self.enemy_fov[0],
-                          ePos[1] - self.tk_cos(rAngle - view_angle) * self.enemy_fov[0]), 1)
-
-        self.tk_draw_line(surface, (0x0, 0x0, 0xff), ePos,
-                         (ePos[0] - self.tk_sin(rAngle) * self.enemy_fov[0],
-                          ePos[1] - self.tk_cos(rAngle) * self.enemy_fov[0]), 1)
-        
-        self.tk_draw_line(surface, (0x0, 0x0, 0xff), ePos,
-                         (ePos[0] - self.tk_sin(rAngle + view_angle) * self.enemy_fov[0],
-                          ePos[1] - self.tk_cos(rAngle + view_angle) * self.enemy_fov[0]), 1)    
+        return 1   
     
     
     def check_fov(self, ePos, rAngle, pAngle, surface=None):
@@ -373,8 +351,6 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
             return -> None
 
         """
-        #self.__check_fov_debug(ePos, rAngle, surface)
-
         # See if the player is within enemy fov distance 
         dist = self.tk_hypot(ePos[0] - self.tk_res_half[0], ePos[1] - self.tk_res_half[1])
         

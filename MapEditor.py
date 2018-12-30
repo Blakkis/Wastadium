@@ -918,7 +918,11 @@ class TkinterResources(VisualResources):
         nm_button = tk.Button(nm_frame, text='Create', command=lambda: self.__bf_beforeNewMap(nm_frame))
         nm_button.grid(sticky=self.ed_sticky_vert, padx=5, pady=5)
 
+        # Put the toplevel center of the screen
         ed_centerWidget(nm_frame)
+        
+        # Set the root wait for toplevel quit
+        root.wait_window(nm_frame)
         
         return nm_frame
 

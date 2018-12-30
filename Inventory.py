@@ -40,7 +40,7 @@ class Inventory(Weapons, GadgetLoader):
 
     
     @classmethod
-    def inv_Reset(cls, **kw):
+    def inv_reset(cls, **kw):
         """
             Setup the basics of inventory
 

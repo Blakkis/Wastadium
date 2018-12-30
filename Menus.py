@@ -32,7 +32,7 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
         # Provide a same background for all the menus
         cls.menu_background = cls.__ph_createBackground(1)
 
-        # SHOULD BE REPLACED WITH THE TIMER class tick timer!
+        # Note: What the fuck was i thinging here? - Replace this menu_timer bullshit with get_ticks()
         # Provide common timer for every menu class
         cls.menu_base_event = cls.tk_uEvent 
         cls.menu_timer = MenuEventDispatch(get_event=lambda t=None: cls.menu_base_event if t is None \

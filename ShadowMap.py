@@ -3,9 +3,11 @@ from PreProcessor import PreProcessor
 
 
 
-# NOTE: This can be optimized further
-# Start the shadowing from the mid to borders in clockwise and create shadow frustrum to test most outer blocks 
-# inside the frustrum to cancel them from casting shadows
+# Note: Rather than casting shadow from each wall
+# one could pre-calculate all the horizontal and vertical wall slices
+# and cast bigger shadow from them
+
+# Obviously, there's alot more room for improvement on this module
 
 __all__ = 'Shadows', 'CharacterShadows'
 

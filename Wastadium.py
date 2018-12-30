@@ -16,22 +16,24 @@ from Timer import DeltaTimer
 from GadgetLoader import *
 from PickUps import Pickups
 from Tokenizers import *
-from MapParser import MapParser, MAP_ALL_TAGS, MAP_GROUND, MAP_DATA_EXT
+from VictoryCondition import VictoryCondition
 
-from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF
+from MapParser import ROOT_ENABLE_HIDE
+__TKINTER_ROOT_FOR_ERRORS = ROOT_ENABLE_HIDE()
 
+from MapParser import MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, MAP_GROUND, MAP_OBJECTS, MAP_WALLS
 
-# Investigate map_layers[1] and remove it 
-# Its effect layer, thus disabled
-# CHANGE w_ambientTone to work with ground and walls (See arguments)
+from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF, NOFRAME
+ 
 
 # NOTES:
 #   Refactor!
 #   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
 #   Replace the current framerate to consumer based framerate ( Need to separate login/render )
+#   Note: You can glitch if you hold down the window while the game is running
    
 
-
+# Note: Move this in to separate module
 class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, 
            CharacterShadows, DeltaTimer, TkWorldDataShared):
     """
@@ -363,8 +365,8 @@ def hero_handle(self, surface, key_event=-1):
 
 class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons, 
             WeaponCasings, DecalGibsHandler, MessSolver, CharacterShadows,
-            FootSteps, uiElements, SoundMusic, GadgetLoader, TkWorldDataShared,
-            MapParser):
+            FootSteps, uiElements, SoundMusic, GadgetLoader, VictoryCondition, 
+            TkWorldDataShared, MapParser):
     """
         Setup and handle all world related and external modules loading
 
@@ -405,36 +407,26 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     w_offset = 0, 0
 
 
-    def __init__(self, x, y, low_id='', mid_id=''):
-        self.texture = self.low_textures[low_id]['tex_main']
+    def __init__(self, x, y, low_id='', mid_id='', collision=False):
+        self.pos = self.world_to_screen_coords(x, y)
         
-        self.pos = (x * 32 + self.tk_res_half[0] - 16,
-                    y * 32 + self.tk_res_half[1] - 16)
-        self.w_tex_effect = self.low_textures[low_id]['tex_effect_id']
-        self.w_sound_hit = self.low_textures[low_id]['tex_hit_sound_id']
+        if mid_id:
+            #self.texture = self.mid_textures[mid_id][6]
+            self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id']
+            self.w_sound_hit = self.mid_textures[mid_id]['tex_hit_sound_id']
         
-        # # These will get replaced (Currently random cell collision)
-        # if any((x, y)):
-        #     self.collision = self.tk_choice((False, False, False, False, False, False, False, True, False))
-        #     self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if self.collision else False
-        #     if self.collision:
-        #         self.texture = self.mid_textures[mid_id][6]
-        #         self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id']
-        #         self.w_sound_hit = self.mid_textures[mid_id]['tex_hit_sound_id']         
-        # else:
-        self.collision = False
-
-        #self.w_texture_low = self.low_textures[low_id]['tex_main']
-        #self.w_texture_obj = None
-        #self.w_texture_mid = self.mid_textures[mid_id][6]
+        else:
+            #self.texture = self.low_textures[low_id]['tex_main']
+            self.w_tex_effect = self.low_textures[low_id]['tex_effect_id']
+            self.w_sound_hit = self.low_textures[low_id]['tex_hit_sound_id']
         
-        #self.w_collision = False
-        #self.w_occluder = False
+        self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if collision else False  
         
         # Sound id when walking over this cell
         self.w_sound_walk = self.low_textures[low_id]['tex_walk_sound_id']
         
-        # Corpses can stain this cell with guts
+        # Corpses can stain this cell with guts, thus allowing footsteps to be left behind
+        # when walking over this cell
         self.w_footstep_stain_id = 0
     
 
@@ -448,6 +440,19 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         return repr('{}x{}'.format(*self.pos))
 
 
+    @classmethod
+    def world_to_screen_coords(cls, x, y):
+        """
+            Convert World coordinates to screen coordinates
+
+            x, y -> Cell index coordinates
+
+            return -> World coordinates
+        """
+        return (x * 32 + cls.tk_res_half[0] - 16,
+                y * 32 + cls.tk_res_half[1] - 16)
+
+    
     @classmethod
     def setup_gradients(cls):
         """
@@ -479,7 +484,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.setup_gradients()
         
         # Init/load all external modules
-
         # 
         cls.load_textures()
         
@@ -496,7 +500,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.load_gadgets()
 
         #
-        cls.inv_Reset()
+        cls.inv_reset()
 
         # 
         cls.setup_footsteps()
@@ -531,6 +535,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         #
         cls.cs_setup_character_shadows()
 
+        #
+        cls.setup_victory_module(font=cls.ElementFonts[0])
+
         
       
     @classmethod
@@ -540,7 +547,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
             x,y -> Move direction
             obj_col -> Player hitbox
-            surface -> Active screen surface (For visual debugging)
+            surface -> Active screen surface
 
             return -> None
             
@@ -552,13 +559,12 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         collisions.extend(cls.get_ent_col(-int(cls.cell_x - 16) >> 6,
                                           -int(cls.cell_y - 16) >> 6))
 
-        # Normalize the speed when going diagonally
+        # Limit diagonal movement speed
         keys = cls.tk_key_pressed()
         if (keys[cls.tk_user['up']]    or keys[cls.tk_user['down']]) and \
            (keys[cls.tk_user['right']] or keys[cls.tk_user['left']]):
-            # Or perhaps don't..?
-            x /= cls.tk_sqrt(2)
-            y /= cls.tk_sqrt(2)
+            x /= 1.4142135623730951     # sqrt(2)
+            y /= 1.4142135623730951     # sqrt(2)
         
         # Move the world(Player)
         cls.cell_x += x; cls.cell_y += y
@@ -567,8 +573,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         rl_rect = cls.tk_rect(0, 0, 4, 28)
         tb_rect = cls.tk_rect(0, 0, 28, 4)
 
-        # NOTE: Collision should push back to contact with the surface
-        #       change this
+        # Note: Change this old collision check
+        #       This a dump way to do this
 
         # Move the collision boxes either side of the box for collision testing
         rl_rect.center = obj_col.midright if x < 0 else obj_col.midleft 
@@ -595,6 +601,24 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Share world position
         cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y 
 
+    
+    @classmethod
+    def world_parse_to_chunks(cls, surface):
+        """
+            Parse surface to smaller subsurfaces
+
+            return -> None
+
+        """
+        # Chunk square
+        chunk_size = cls.tk_macro_cell_size * 32
+
+        return [[(cls.world_to_screen_coords(ex * cls.tk_macro_cell_size, ey * cls.tk_macro_cell_size), 
+                  surface.subsurface(x, y, chunk_size, chunk_size)) \
+                 for ex, x in enumerate(xrange(0, cls.w_map_size[0] * 32, chunk_size))] \
+                 for ey, y in enumerate(xrange(0, cls.w_map_size[1] * 32, chunk_size))]
+
+
 
     @classmethod
     def build_map(cls, map_name=None):
@@ -602,7 +626,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             Build the world
 
             map_name -> Name of the mapfile 
-                        (Suffix will be added based on the parser rules by the parser)
+                        (Suffix will be added based on the parser rules, by the parser)
 
             return -> None
 
@@ -623,13 +647,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         # Spawn and end should be in the stated order, but check just incase they get swapped
         spawn_index = 0 if general[cls.MAP_PLR_BEGIN_XML][0].id == 'id_spawn' else 1
-        spawn_index = general[cls.MAP_PLR_BEGIN_XML][spawn_index] 
+        spawn = general[cls.MAP_PLR_BEGIN_XML][spawn_index] 
         
         cls.w_map_size = general[cls.MAP_DIMENSION_XML]
 
         cls.cell_x, cls.cell_y = 0, 0
-        cls.cell_x -= 32 * spawn_index.x
-        cls.cell_y -= 32 * spawn_index.y 
+        cls.cell_x -= 32 * spawn.x
+        cls.cell_y -= 32 * spawn.y 
 
         cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y
 
@@ -641,140 +665,63 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_ent_cell_size = (cls.w_map_size[0] / cls.tk_entity_sector_s,
                                cls.w_map_size[1] / cls.tk_entity_sector_s)
         
+        # Build the cells
         cls.w_micro_cells[:] = []
         for y, column in enumerate(disk_data[data_tag][cls.MAP_CELL_XML]):
             segment = []
             for x, row in enumerate(column):
                 cell = row
-                segment.append(cls(x, y, cell.low, '' if cell.mid is None else cell.mid))
+                collision = 1 if (x, y) in disk_data[data_tag][cls.MAP_COLLISION_XML] else 0 
+                segment.append(cls(x, y, cell.low, ('' if cell.mid is None else cell.mid), collision))
+            
             cls.w_micro_cells.append(segment)
-        
-        #cls.w_micro_cells[:] = []
-        #for y in xrange(cls.w_map_size[1]):
-        #    row = []
-        #    for x in xrange(cls.w_map_size[0]):
-        #        row.append(cls(x, y, 'debug_floor', 'concrete_wall_01'))
-        #    cls.w_micro_cells.append(row)
 
         cls.gib_reset(cls.w_micro_cells)
+
         
-        # Next step is to combine the smaller cells in to bigger ones to make world rendering faster
-        # and have easier way to blit stuff on the world layer
-        frag_s = cls.tk_macro_cell_size    # Max fragment size
+        # Cut the layers in to chunks
+        chunk_size = cls.tk_macro_cell_size * 32
+
+        disk_data[MAP_GROUND][MAP_GROUND].blit(disk_data[MAP_GROUND][MAP_OBJECTS], (0, 0))    # Blit the objects layer to ground layer
+        cls.w_map_layers[0] = cls.world_parse_to_chunks(cls.w_ambientColor(disk_data[MAP_GROUND][MAP_GROUND]))
+
+        cls.w_map_layers[2] = cls.world_parse_to_chunks(cls.w_ambientColor(disk_data[MAP_GROUND][MAP_WALLS]))
        
-        macro_cells = []        # Ground layer
-        macro_cells_walls = []  # Walls layer
-        
-        # Effect layer is optional which holds sun shadows, pointlights and other static world effects 
-        if not cls.tk_no_effect_layer: macro_cells_effects = []     # Not in-use
+        # width and height of chunks
+        cls.w_map_size_macro = (cls.w_map_size[0] / cls.tk_macro_cell_size,
+                                cls.w_map_size[1] / cls.tk_macro_cell_size)
 
-        # Turn the smaller cells in to bigger cells by combining them 
-        #
-        #       [[1,2,3,4]                   
-        #        [2,2,3,4]                   [[1,2,2,2], [3,4,3,4]]
-        #        [3,3,3,4] Converted to ->   [[3,3,4,4], [3,4,4,4]]
-        #        [4,4,4,4]                                    
+        # Setup shadow map
+        cls.shadow_map.s_loadSurfaceMap(cls.w_map_layers[0]) 
 
-        frag_w = cls.w_map_size[0] / frag_s
-        frag_h = cls.w_map_size[1] / frag_s
-        cls.w_map_size_macro = frag_w, frag_h
-        w_cnt = 0
-        h_cnt = 0
-        
-        while h_cnt <= cls.w_map_size[1] - frag_s:
-            w_cnt = 0
-            while w_cnt <= cls.w_map_size[0] - frag_s:
-                # Combine the smaller cells to bigger cells
-                layer_1 = cls.tk_surface((32 * frag_s, 32 * frag_s))                    # Ground
-                
-                if not cls.tk_no_effect_layer:
-                    layer_2 = cls.tk_surface((32 * frag_s, 32 * frag_s))                # Effects (Currently not in-use)
-                
-                layer_3 = cls.tk_surface((32 * frag_s, 32 * frag_s), cls.tk_srcalpha)   # Walls/Effects
-                
-                pos = 0, 0
-                for d in xrange(0, frag_s):
-                    for enum, cell in enumerate(cls.w_micro_cells[d+h_cnt][w_cnt:cls.tk_macro_cell_size+w_cnt]):
-                        # Store the first TopLeft cell pos as main coordinates
-                        if not d and not enum:
-                            pos = cell.pos
+        # Apply static map shadows
+        cls.w_applyStaticShadows()
 
-                        if cell.collision:
-                            layer_3.blit(cell.texture, (32 * enum, 32 * d))
-                        else:
-                            layer_1.blit(cell.texture, (32 * enum, 32 * d))
-                        
-                        # # Remove the texture from the cells, they dont need it anymore
-                        # if isinstance(cell.texture, tuple):
-                        #     # (Cell.texture, Cell.Effects)
-                        #     buf = cell.texture[1]
-                        #     del cell.texture
-                        #     cell.texture = buf
-                        # else:
-                        #     # The texture doesn't contain any effects,
-                        #     # None is the default value to indicate skip 
-                        #     # spawning effect from firing an object with gun
-                        #     cell.texture = None 
-                
-                # Create a copy of the original, so no surface bonds are formed
-                #cls.tk_draw_rect(layer_1, (0xff, 0xff, 0x0), layer_1.get_rect(), 1)
-                macro_cells.append((pos, layer_1.copy()))
-                macro_cells_walls.append((pos, layer_3.copy()))
-                
-                if not cls.tk_no_effect_layer: 
-                    macro_cells_effects.append((pos, layer_2.copy()))
-                
-                w_cnt += frag_s
-            h_cnt += frag_s
+        # Note: The radius is fixed to 160. Might open it up in the future for edit
+        format_lights = [light._replace(x=light.x * 32 + 16, y=light.y * 32 + 16, 
+                                        radius=160, color=light.color + (0x0, )) \
+                         for light in disk_data[data_tag][cls.MAP_LIGHT_XML]]
 
-        # Each cell is ((pos), texture) format
-        # Last step is to organize the list to chunks so the spatial alg can work on it
-        # Layer_0 = Ground
-        cls.w_map_layers[0] = [macro_cells[i:i+cls.w_map_size[0] / frag_s] 
-                               for i in xrange(0, len(macro_cells), cls.w_map_size[1] / frag_s)]
+        # Apply lights to the world
+        cls.w_applyLights(format_lights)
 
-        cls.shadow_map.s_loadSurfaceMap(cls.w_map_layers[0])
-
-        # Layer_2 = Walls which cast shadows and contains map effects layer also 
-        cls.w_map_layers[2] = [macro_cells_walls[i:i+cls.w_map_size[0] / frag_s] \
-                               for i in xrange(0, len(macro_cells_walls), cls.w_map_size[1] / frag_s)]  
-
-        if not cls.tk_no_effect_layer:
-            # Apply tone mapping to ground and wall layers
-            cls.w_ambientTone(True, True)
-
-            # Apply static map shadows
-            cls.w_applyStaticShadows()
-            
-            # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-            lights = [(160 + 16, 32   + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
-                      (160 + 16, 128  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0)),
-                      (256 + 16, 256  + 16, 128 + 32, (0xff, 0xff, 0xff,  0x0))]
-
-            lights = [Id_Light(*l) for l in lights]
-
-            # Apply lights to the world
-            cls.w_applyLights(lights)
-
-            # Load light positions for character shadows
-            cls.cs_load_lights(lights, cls.w_map_size_macro)
+        # Load light positions for character shadows
+        cls.cs_load_lights(format_lights, cls.w_map_size_macro)
             
         # Gradient the world boundaries to darkness
-        cls.w_applyEdgeGradient(frag_w, frag_h)
- 
-        # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        num_of_enemies = 1
-        enemies = [(5, 
-                    5, 'punisher') for _ in xrange(num_of_enemies)]
+        cls.w_applyEdgeGradient(*cls.w_map_size_macro)
 
-        enemies = [Id_Enemy(*e) for e in enemies]
-        cls.w_spawnEnemies(enemies)
+        # Fill the world with stuff to kill
+        cls.w_spawnEnemies(disk_data[data_tag][cls.MAP_ENEMY_XML])
 
-        # READ FROM THE FILE AND PARSE TO NAMEDTUPLE
-        pickups = [(64, 64, 'hot_meal', 'test', 100)]
-        
-        pickups = [Id_Pickup(*p) for p in pickups]
-        cls.spawn_pickups(pickups)
+        # Reset and set victory conditions
+        cls.reset_victory_condition(len(disk_data[data_tag][cls.MAP_ENEMY_XML]),
+                                    general[cls.MAP_PLR_BEGIN_XML][spawn_index ^ 1])
+
+        # Position for pickups needs to be converted to map positions
+        cls.spawn_pickups([pickup._replace(x=pickup.x * 32, y=pickup.y * 32, id=pickup.id, 
+                                           content=pickup.content, value=pickup.value) \
+                           for pickup in disk_data[data_tag][cls.MAP_PICKUP_XML]])
         
         # Create lightmap for shadowing
         if not cls.tk_no_shadow_layer: Shadows.s_load_lightmap(cls.w_micro_cells)
@@ -817,28 +764,22 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
 
     @classmethod
-    def w_ambientTone(cls, ground=True, walls=False):
+    def w_ambientColor(cls, surface, ambient_color=None):
         """
-            Apply ambient coloring to the world
+            Apply ambient coloring to surface
 
-            ground -> Apply ambient tone to the ground?
-            walls  -> Apply ambient tone to the walls?
-
-            return -> None
+            return -> Toned surface
 
         """
-        if not any((ground, walls)): return None
-        
-        for column in xrange(len(cls.w_map_layers[0])):
-            for row in xrange(len(cls.w_map_layers[0][0])):
-                ambient_surface = cls.tk_surface(cls.w_map_layers[0][column][row][1].get_size(), cls.tk_srcalpha)
-                ambient_surface.fill(cls.tk_ambient_color_tone)
-                
-                if ground: cls.w_map_layers[0][column][row][1].blit(ambient_surface, (0, 0), 
-                                                                    special_flags=cls.tk_blend_rgba_mult)
+        if ambient_color is None:
+            ambient_color = cls.tk_ambient_color_tone
 
-                if walls: cls.w_map_layers[2][column][row][1].blit(ambient_surface, (0, 0), 
-                                                                   special_flags=cls.tk_blend_rgba_mult) 
+        ambient_surface = cls.tk_surface(surface.get_size(), cls.tk_srcalpha)
+        ambient_surface.fill(ambient_color)
+
+        surface.blit(ambient_surface, (0, 0), special_flags=cls.tk_blend_rgba_mult)
+
+        return surface
     
     
     @classmethod
@@ -984,11 +925,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         sl = 16
 
         # Shadows are casted topleft(Allow customize?)
-        for enum1, y in enumerate(cls.w_micro_cells):
-            for enum2, x in enumerate(y):
+        for enum1, column in enumerate(cls.w_micro_cells):
+            for enum2, row in enumerate(column):
                 # Which layer this wall is part of
                 pos = 32 * enum2, 32 * enum1
-                if x.collision:
+                if row.collision:
                     # Build a quadrilateral stretching from each block to topleft 
                     # (Possible allow direction customization?)
                     cls.tk_draw_polygon(static_shadow_map, cls.tk_wall_shadow_color, 
@@ -1000,8 +941,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                                          (pos[0] + 32,            pos[1])))
 
         # Cut the entire map in to sections and replace the original one's with the  map effects applied
-        for enum1, y in enumerate(cls.w_map_layers[0]):
-            for enum2, x in enumerate(y):
+        for enum1, column in enumerate(cls.w_map_layers[0]):
+            for enum2, row in enumerate(column):
                 size = 32 * cls.tk_macro_cell_size
                 shadow_surface = static_shadow_map.subsurface((size * enum2, 
                                                                size * enum1,
@@ -1627,7 +1568,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         return near_collisions
 
 
-
 class Main(World, DeltaTimer):
     """
         Main stage
@@ -1662,7 +1602,7 @@ class Main(World, DeltaTimer):
         """
         self.dt_tick()
 
-        paused = 0          # Pause game
+        escape = 0          # Pause game
         ignore_delta = 0    # Delta calculation goes wild after pause
                             # so ignore the the last tick after pause function is done
         
@@ -1679,9 +1619,9 @@ class Main(World, DeltaTimer):
                 # to the ones who need it
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']: 
-                        ignore_delta = paused = 1 
+                        ignore_delta = escape = 1 
 
-                    key_event = event.key   
+                    key_event = event.key
 
             self.render_map(0, self.screen)
             
@@ -1711,10 +1651,12 @@ class Main(World, DeltaTimer):
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
 
+            victory = self.check_if_victory_achieved(self.screen)
+
             self.tk_display.flip()
 
-            if paused: 
-                paused = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)
+            if escape and not victory: 
+                escape = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)
 
     
 

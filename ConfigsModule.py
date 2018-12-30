@@ -14,7 +14,7 @@ from datetime import timedelta
 from sys import exit as exit_system
 from numpy import copyto, roll, zeros, dot
 from numpy import sum as _sum
-#from numpy.linalg import norm as normalize
+#from numpy.linalg import norm
 from ast import literal_eval
 from glob import iglob
 from copy import deepcopy
@@ -52,6 +52,18 @@ class TkWorldDataShared(object):
     # Common data shared between classes
     w_share = {'WorldPosition': (0, 0),        
                'ShadowOffset':  (0, 0)}    # Used with shadow casting
+
+    @classmethod
+    def getWorldIndex(cls):
+        """
+            Convert the World position to Cell indexes
+
+            return -> World index
+        """
+        x, y = cls.w_share['WorldPosition']
+        x, y = int(-x) + 16 >> 5, int(-y) + 16 >> 5
+
+        return x, y
 
 
 class TkRect(pygame.Rect):
@@ -271,6 +283,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_mouse_pos = pygame.mouse.get_pos
     tk_mouse_vis = pygame.mouse.set_visible
     tk_mouse_pressed = pygame.mouse.get_pressed
+    tk_mouse_focus = pygame.mouse.get_focused
     tk_rotozoom = pygame.transform.rotozoom
     tk_rotate = pygame.transform.rotate
     tk_flip = pygame.transform.flip
