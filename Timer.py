@@ -22,7 +22,7 @@ class DeltaTimer(object):
 
         ticks = cls.__dt_ticks()  
         if not ignore_delta:
-            cls.dt_deltas['delta_ms'] = min(0.025, dt)   # Lock delta from going below delta of 40fps
+            cls.dt_deltas['delta_ms'] = dt   # Lock delta from going below delta of 40fps
             cls.dt_deltas['ticks'] = ticks
 
         return 0

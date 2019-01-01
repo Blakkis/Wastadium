@@ -574,7 +574,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         tb_rect = cls.tk_rect(0, 0, 28, 4)
 
         # Note: Change this old collision check
-        #       This a dump way to do this
+        #       This is a dump way to do this
 
         # Move the collision boxes either side of the box for collision testing
         rl_rect.center = obj_col.midright if x < 0 else obj_col.midleft 
@@ -685,6 +685,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         disk_data[MAP_GROUND][MAP_GROUND].blit(disk_data[MAP_GROUND][MAP_OBJECTS], (0, 0))    # Blit the objects layer to ground layer
         cls.w_map_layers[0] = cls.world_parse_to_chunks(cls.w_ambientColor(disk_data[MAP_GROUND][MAP_GROUND]))
 
+        # Paint the uphanging wires before cutting the wall surface in to chunks
+        cls.w_apply_wires(disk_data[MAP_GROUND][MAP_WALLS], disk_data[data_tag][cls.MAP_WIRE_XML], stage=0) 
+
         cls.w_map_layers[2] = cls.world_parse_to_chunks(cls.w_ambientColor(disk_data[MAP_GROUND][MAP_WALLS]))
        
         # width and height of chunks
@@ -695,7 +698,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.shadow_map.s_loadSurfaceMap(cls.w_map_layers[0]) 
 
         # Apply static map shadows
-        cls.w_applyStaticShadows()
+        cls.w_applyStaticShadows(disk_data[data_tag][cls.MAP_WIRE_XML])
 
         # Note: The radius is fixed to 160. Might open it up in the future for edit
         format_lights = [light._replace(x=light.x * 32 + 16, y=light.y * 32 + 16, 
@@ -910,7 +913,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
     
     @classmethod
-    def w_applyStaticShadows(cls):
+    def w_applyStaticShadows(cls, list_of_wires=None):
         """
             Apply 'sun' casted static shadows
 
@@ -924,7 +927,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Length of the shadows
         sl = 16
 
-        # Shadows are casted topleft(Allow customize?)
+        # 'Sun' is located bottomright(Allow customization?)
         for enum1, column in enumerate(cls.w_micro_cells):
             for enum2, row in enumerate(column):
                 # Which layer this wall is part of
@@ -932,13 +935,16 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 if row.collision:
                     # Build a quadrilateral stretching from each block to topleft 
                     # (Possible allow direction customization?)
-                    cls.tk_draw_polygon(static_shadow_map, cls.tk_wall_shadow_color, 
+                    cls.tk_draw_polygon(static_shadow_map, cls.tk_static_shadow_color, 
                                         ((pos[0],                 pos[1]),
                                          (pos[0],                 pos[1] + 32),
                                          (pos[0] - sl,            pos[1] + 24 - (sl - 8)),
                                          (pos[0] - sl,            pos[1] - sl),
                                          (pos[0] + 24 - (sl - 8), pos[1] - sl),
                                          (pos[0] + 32,            pos[1])))
+
+        if list_of_wires is not None:
+            cls.w_apply_wires(static_shadow_map, list_of_wires, stage=1, shadow_length=sl)
 
         # Cut the entire map in to sections and replace the original one's with the  map effects applied
         for enum1, column in enumerate(cls.w_map_layers[0]):
@@ -970,6 +976,32 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 if e1 == wy - 1: cell[1].blit(cls.grad_textures[3], (0, 0))     # Bottom 
                 if e2 == 0:      cell[1].blit(cls.grad_textures[0], (0, 0))     # Left
                 if e2 == wx - 1: cell[1].blit(cls.grad_textures[2], (0, 0))     # Right
+
+
+    @classmethod
+    def w_apply_wires(cls, target_surface, list_of_wires=None, stage=0, shadow_length=None):
+        """
+            TBD
+
+            target_surface -> Surface receiving the wires or shadows
+            list_of_wires -> List of 'Id_Wire' tokens
+            stage -> 0: Paint the actual opaque wires
+                     1: Cast the shadows from the wires
+            shadow_token -> Token to control how the shadows are formed (Used in stage '1')
+
+            return -> None
+        """
+        if stage == 0:
+            for wire in list_of_wires: 
+                cls.tk_draw_aaline(target_surface, wire.color, wire.p1, wire.p2, 1)
+
+        if stage == 1:
+            shadow_color = cls.tk_static_shadow_color
+            for wire in list_of_wires:
+                x1, y1 = wire.p1
+                x2, y2 = wire.p2
+                cls.tk_draw_line(target_surface, shadow_color, (x1 - shadow_length, y1 - shadow_length), 
+                                                               (x2 - shadow_length, y2 - shadow_length), 1)
 
 
     @classmethod
@@ -1258,9 +1290,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                             cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[gy][gx].w_sound_hit), 
                                                 distance=(dx, dy), env_damp=.5)
 
-                else:
-                    # Energy dispatched went out from this world
-                    pass
+                #else:
+                #    # Energy dispatched went out from this world
+                #    pass
         
         # Trail/End_effects
         raw_dist = int(cls.tk_hypot(efx - test_rect.center[0], 
@@ -1428,6 +1460,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.spawn_effect(token[0], token[1], angle=token[2])  
         
         if health <= 0:
+            cls.subtractEnemyCountForVictory()
             # Begin enemy death sequency
             token = cls.w_enemies[enemy_id].enemy_killed((sx, sy))
 
@@ -1647,15 +1680,12 @@ class Main(World, DeltaTimer):
 
             self.handle_pickups_messages(self.screen)
 
-            self.uioverlay.drawOverlay(self.screen)
+            hud_token = self.uioverlay.drawOverlay(self.screen)
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
-
-            victory = self.check_if_victory_achieved(self.screen)
-
             self.tk_display.flip()
 
-            if escape and not victory: 
+            if escape and not hud_token['victory']: 
                 escape = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)
 
     

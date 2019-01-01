@@ -3,6 +3,7 @@ from TextureLoader import uiElements
 from Weapons import Weapons
 from EventManager import EventManager
 from Inventory import Inventory
+from VictoryCondition import VictoryCondition
 
 
 __all__ = 'uiOverlay', 'uiGameTimer' 
@@ -80,7 +81,7 @@ class uiGameTimer(GlobalGameData):
 
 
     
-class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer):
+class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryCondition):
     
     def __init__(self):            
         # NOTE: Most of these hardcoded stuff is for the textures which do not scale with resolution (in-game)
@@ -216,6 +217,10 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer):
         if ammo_id != -1: self.drawOverlayAmmo(surface, ammo_id)
              
         surface.blit(*self.tk_drawCursor(self.ElementCursors[0]))
+
+        hud_token = {'victory': self.check_if_victory_achieved(surface)}
+
+        return hud_token
 
     
     def drawOverlayAmmo(self, surface, ammo_id):

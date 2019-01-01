@@ -18,6 +18,7 @@ __all__ = ('MenuManager')
 
 class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
 
+    
     @classmethod
     def ph_initData(cls):
         """
@@ -39,12 +40,13 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
                                                      else cls.menu_timer.get_ticks.m_add(.05) if t == cls.menu_base_event else 0,  
                                            get_ticks=cls.tk_counter(0)) 
         
-        # Call this function when the menu_timer event is caught in event handling
-        #cls.menu_timer_inc = lambda cls: cls.menu_timer.get_ticks.m_add(.05) 
+        cls.interactive_background = ActiveBackGround()
+        cls.scanline_effect = ScanLineGenerator(8, 4)   # Currently Mainmenu uses this effect
 
         # Start the common event timer
         cls.tk_time.set_timer(cls.menu_timer.get_event(), 10)
 
+    
     @classmethod
     def ph_go_back_soundeffect(cls, snd_id=188, return_type=None):
         """
@@ -271,7 +273,7 @@ class MenuMain(PagesHelp, EventManager):
         
         self.version_id = self.font_16.render('ver: ' + self.tk_version, 1, (0xff, 0x0, 0x0)) 
 
-        self.scanline = ScanLineGenerator(8, 4)
+        #self.scanline = ScanLineGenerator(8, 4)
 
         self.last_select = -1  # Keep the last selected option highlighted even if mouse is not hovering on it
         
@@ -290,12 +292,10 @@ class MenuMain(PagesHelp, EventManager):
 
         # Get the total height of all the options
         self.options_height = (sum([h[0].rs_getSize()[1] for h in self.options.itervalues()]) + self.gfont.get_height()) / 2
-
-        self.active_bg = ActiveBackGround()
         
         # Update scanline y position
         EventManager.__init__(self)
-        self.Event_newEvent(self.scanline.slg_speed, self.scanline.slg_update)
+        self.Event_newEvent(self.scanline_effect.slg_speed, self.scanline_effect.slg_update)
     
     
     def set_reference_functions(self, **kw): 
@@ -329,7 +329,7 @@ class MenuMain(PagesHelp, EventManager):
 
                 if event.type == self.tk_event_mouseup: click = 1
 
-            self.active_bg.ab_render(surface, tick)
+            self.interactive_background.ab_render(surface, tick)
 
             # Give some random wiggle for certain ui elements
             if tick: twitch = 4 if self.tk_randrange(0, 100) > 95 else 0
@@ -372,7 +372,7 @@ class MenuMain(PagesHelp, EventManager):
                 surface.blit(surf, (x, y))
 
             # -- Set everything above this function to be affected by the scanline --
-            self.scanline.slg_scanlineEffect(surface)
+            self.scanline_effect.slg_scanlineEffect(surface)
 
             surface.blit(self.version_id, (8, self.tk_resolution[1] - (self.version_id.get_height() + 4)))
 
@@ -393,9 +393,6 @@ class MenuCampaign(PagesHelp, EpisodeParser):
         self.episodes = {key: RectSurface(self.tk_renderText(self.font_24, key, True, (0xff, 0x0, 0x0), shadow=True),
                                           snd_hover_over=180) \
                          for key in self.all_valid_campaigns.iterkeys()}
-
-        # Decorations
-        self.active_bg = ActiveBackGround() 
 
         self.selection_bg = self.tk_draw_rounded_rect(int(256 * self.menu_scale), 
                                                       (self.tk_resolution[1] - 8) - int(64 * self.menu_scale), 
@@ -442,7 +439,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
 
                 if self.menu_timer.get_event(event.type): tick = 1
 
-            self.active_bg.ab_render(surface, tick)
+            self.interactive_background.ab_render(surface, tick)
 
             surface.blit(self.pre_text['select_ep'], (self.tk_res_half[0] - self.pre_text['select_ep'].get_width() / 2, 0))
 
@@ -922,14 +919,27 @@ class MenuOptions(PagesHelp):
         
         self.mo_options = self.tk_ordereddict()
 
-        self.mo_options[0] = RectSurface(self.mo_font_1.render("Volume", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=181, func=lambda: 0)
+        self.mo_options[0] = RectSurface(self.tk_renderText(self.mo_font_1, 
+                                         "Volume", True, (0xff, 0x0, 0x0), shadow=True), 
+                                         snd_hover_over=180, snd_click=181, func=lambda: 0)
         
-        self.mo_options[1] = RectSurface(self.mo_font_1.render("Controls", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=181, func=lambda: 1)
+        self.mo_options[1] = RectSurface(self.tk_renderText(self.mo_font_1, 
+                                         "Controls", True, (0xff, 0x0, 0x0), shadow=True), 
+                                         snd_hover_over=180, snd_click=181, func=lambda: 1)
         
-        self.mo_options[2] = RectSurface(self.mo_font_1.render("Exit", 1, (0xff, 0x0, 0x0)), 
-                                                               snd_hover_over=180, snd_click=181, func=self.tk_quitgame)
+        self.mo_options[2] = RectSurface(self.tk_renderText(self.mo_font_1, 
+                                         "Exit", True, (0xff, 0x0, 0x0), shadow=True), 
+                                         snd_hover_over=180, snd_click=181, func=self.tk_quitgame)
+
+        w = max([x.rs_getSize()[0] for x in self.mo_options.itervalues()])
+        h = sum([x.rs_getSize()[1] for x in self.mo_options.itervalues()])
+        
+        # 2 backgrounds for options menu. One with all menu elements height and 
+        #                                 one with minus the exit surface height
+        self.mo_background = [self.tk_draw_rounded_rect(w + int(48 * self.menu_scale), 
+                                                        h + int(48 * self.menu_scale), 8, (0xff, 0x0, 0x0), 0x60, False),
+                              self.tk_draw_rounded_rect(w + int(48 * self.menu_scale), (h - self.mo_options[2].rs_getSize()[1]) + \
+                                                        int(48 * self.menu_scale), 8, (0xff, 0x0, 0x0), 0x60, False)] 
 
         self.mo_functions = {-1: self.mo_root_settings,
                               0: self.mo_sound_settings,
@@ -993,7 +1003,8 @@ class MenuOptions(PagesHelp):
         self.mo_uk_prerendered[-1] = self.mo_font_3.render("Assign key", True, (0xff, 0x0, 0x80))
  
         self.mo_uk_layout = {'x': self.tk_res_half[0],
-                             'y': self.tk_res_half[1] - (self.mo_uk_prerendered['esc'][0].rs_getSize()[1] * (len(self.mo_uk_prerendered)) - 1) / 2} 
+                             'y': self.tk_res_half[1] - (self.mo_uk_prerendered['esc'][0].rs_getSize()[1] * 
+                                                         (len(self.mo_uk_prerendered)) - 1) / 2} 
 
         self.mo_uk_editme = ''    # Store the last selected key
 
@@ -1022,9 +1033,13 @@ class MenuOptions(PagesHelp):
             mx, my = self.tk_mouse_pos()
 
             surface.blit(self.menu_background if pause_bg is None else pause_bg, (0, 0))   
+            
+            background_index = 1 if pause_bg is None else 0
+            surface.blit(self.mo_background[background_index], 
+                        (self.tk_res_half[0] - self.mo_background[0].get_width()  / 2, 
+                         self.tk_res_half[1] - self.mo_background[0].get_height() / 2))
 
-            click_down = 0
-            click_up = 0
+            click_down = click_up = tick = 0
             
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_mousedown:
@@ -1033,8 +1048,7 @@ class MenuOptions(PagesHelp):
                 elif event.type == self.tk_event_mouseup:
                     click_up = event.button
 
-                elif self.menu_timer.get_event(event.type):
-                    pass 
+                elif self.menu_timer.get_event(event.type): tick = 1 
 
 
                 elif event.type == self.tk_event_keyup:
@@ -1054,6 +1068,9 @@ class MenuOptions(PagesHelp):
                             self.mo_display_func = -1
 
                     self.__mo_validate_userkey(surface, event.key, stage=2)
+
+            if pause_bg is None:
+                self.interactive_background.ab_render(surface, tick)
 
             self.mo_functions[self.mo_display_func](surface, mx, my, click_up, 
                                                     hide_quit=enable_quit, 

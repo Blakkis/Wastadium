@@ -194,7 +194,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_entity_sector_s = 2    # Dont change this.
     
     # Map effect 
-    tk_wall_shadow_color =  0x14, 0x14, 0x14, 0x40
+    tk_static_shadow_color =  0x14, 0x14, 0x14, 0x60
     tk_ambient_color_tone = 0xcc, 0xcc, 0xcc
     tk_blend_rgba_mult = pygame.BLEND_RGBA_MULT
     tk_blend_rgba_add  = pygame.BLEND_RGBA_ADD
