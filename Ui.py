@@ -179,7 +179,7 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         self.healthBar.scroll(-1, 0) 
 
 
-    def drawOverlay(self, surface):
+    def drawOverlay(self, surface, **kw):
         """
             Draw the overlay during gameplay
 
@@ -218,7 +218,7 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
              
         surface.blit(*self.tk_drawCursor(self.ElementCursors[0]))
 
-        hud_token = {'victory': self.check_if_victory_achieved(surface)}
+        hud_token = {'victory': self.check_if_victory_achieved(surface, quick_exit_key=kw['escape'])}
 
         return hud_token
 

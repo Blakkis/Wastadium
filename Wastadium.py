@@ -1623,7 +1623,7 @@ class Main(World, DeltaTimer):
         # Initialize everything 
         World.initVisualsAndExtModules()
 
-        self.menus.setup_playstate(self.screen, World.build_map, self.gameloop)
+        self.menus.mainRun(self.screen, World.build_map, self.gameloop)
 
         
     def gameloop(self):
@@ -1680,13 +1680,16 @@ class Main(World, DeltaTimer):
 
             self.handle_pickups_messages(self.screen)
 
-            hud_token = self.uioverlay.drawOverlay(self.screen)
+            hud_token = self.uioverlay.drawOverlay(self.screen, escape=escape)
 
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
             self.tk_display.flip()
 
-            if escape and not hud_token['victory']: 
-                escape = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)
+            if hud_token['victory'] == -1: 
+                return None
+            else:
+                if escape and not hud_token['victory']: 
+                    escape = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)
 
     
 

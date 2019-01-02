@@ -42,7 +42,7 @@ class SoundMusic(GlobalGameData):
         for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'music.cfg')):
             cls.all_music[int(line[0])] = cls.tk_path.join('soundmusic', 'music', line[1])
 
-        #cls.tk_mixer_music.load(cls.all_music[0])
+        #print cls.tk_mixer_music.load(cls.all_music[0])
         #cls.tk_mixer_music.set_volume(cls.sm_volumes[0])
         #cls.tk_mixer_music.play(-1) 
 
@@ -102,5 +102,8 @@ class SoundMusic(GlobalGameData):
       	
         return channel
 
+    @classmethod
+    def playMusic(cls, _id):
+        pass
 
     

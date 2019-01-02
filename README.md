@@ -11,14 +11,9 @@ inspiration comes from "Hotline Miami" and old finnish game called "TapanKaikki"
 
 
 TODO:
-  - Add music
   - Add more textures
-  - Build campaign menu
   - Build report menu
   - Build intro/outro fader
-  - Add options menu to in-game options
-  - Create new enemies
-  - Editor settings menu if needed?
   - Create the JaaBabe background images
   - Add buy/sell functionality to shop
   - Work on the Wastadium launcher

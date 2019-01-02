@@ -75,15 +75,15 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared):
 
     
     @classmethod
-    def check_if_victory_achieved(cls, surface, quick_exit_key=False):
+    def check_if_victory_achieved(cls, surface, quick_exit_key=None):
         """
             Check if any victory conditions has been reached
 
             surface -> Active screen surface
             quick_exit_key -> Skip the mission complete sequency
 
-            return -> 'True' if the mission complete sequency is going else 'False'
-                      '-1' if sequency complete  
+            return -> 'True' if the mission complete sequency is going, else 'False'
+                      '-1' if sequency is complete (Signal for the gameloop to quit)  
 
         """
         if not cls.victory_data['complete']:
@@ -95,6 +95,9 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared):
                 cls.display_endpoint_beacon(surface)
             
         if cls.victory_data['complete']:
+            if quick_exit_key:
+                cls.victory_data['msg_spiral_dist'] = 0    
+
             msg_completed = cls.victory_data['msg_completed'] 
             ticks = cls.dt_getTicks() * 0.002
 
@@ -111,7 +114,8 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared):
 
             surface.blit(msg_completed, (x, y))
 
-            return True
+            done = bool(cls.victory_data['msg_spiral_dist'])
+            return done if done else -1
 
         return False
 

@@ -250,12 +250,10 @@ class MenuIntro(PagesHelp, EventManager):
 
 
 class MenuMain(PagesHelp, EventManager):
-    # NOTE: There's room for 2 lines of text under different categories of items (Weapons, ammo, gadgets)
+    # Note: There's room for 2 lines of text under different categories of items (Weapons, ammo, gadgets)
     
-    # Function references
-    __menu_ref_functions = {} 
+    __ref_functions = {} 
 
-    
     def __init__(self):
         self.font_96 = self.tk_font(self.ElementFonts[0], int(96 * self.menu_scale))
         self.font_48 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
@@ -281,11 +279,11 @@ class MenuMain(PagesHelp, EventManager):
         self.options = self.tk_ordereddict()
         self.options[0] = (RectSurface(self.font_48.render("New Game", 1, (0xff, 0x0, 0x0)), 
                            snd_hover_over=180, snd_click=181),  
-                           lambda surface: self.__menu_ref_functions['episode'].run(surface))
+                           lambda surface: self.__ref_functions['episode'].run(surface))
         
         self.options[1] = (RectSurface(self.font_48.render("Options", 1, (0xff, 0x0, 0x0)), 
                            snd_hover_over=180, snd_click=181),   
-                           lambda surface: self.__menu_ref_functions['options'].run(surface, enable_quit=False))
+                           lambda surface: self.__ref_functions['options'].run(surface, enable_quit=False))
         
         self.options[2] = (RectSurface(self.font_48.render("Exit Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180), 
                            lambda *args: self.tk_quitgame())
@@ -298,13 +296,13 @@ class MenuMain(PagesHelp, EventManager):
         self.Event_newEvent(self.scanline_effect.slg_speed, self.scanline_effect.slg_update)
     
     
-    def set_reference_functions(self, **kw): 
+    def menu_set_references(self, **kw): 
         """
             Set reference functions for the buttons on the menu
 
             return -> None
         """
-        self.__menu_ref_functions.update(**kw)
+        self.__ref_functions.update(**kw)
     
     
     def run(self, surface):
@@ -316,6 +314,7 @@ class MenuMain(PagesHelp, EventManager):
             return -> None
 
         """
+        if self.__ref_functions['intro'] is not None: self.__ref_functions['intro'].run(surface)
         while 1:
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
@@ -383,6 +382,8 @@ class MenuMain(PagesHelp, EventManager):
 
 
 class MenuCampaign(PagesHelp, EpisodeParser):
+
+    __ref_functions = {}
     
     def __init__(self):
         self.parseEpisodeFiles()
@@ -391,15 +392,16 @@ class MenuCampaign(PagesHelp, EpisodeParser):
         self.font_32 = self.tk_font(self.ElementFonts[0], int(32 * self.menu_scale))
 
         self.episodes = {key: RectSurface(self.tk_renderText(self.font_24, key, True, (0xff, 0x0, 0x0), shadow=True),
-                                          snd_hover_over=180) \
+                                          snd_hover_over=180, snd_click=181, 
+                                          func=lambda episode: self.__ref_functions['episode_roll'](episode)) \
                          for key in self.all_valid_campaigns.iterkeys()}
 
         self.selection_bg = self.tk_draw_rounded_rect(int(256 * self.menu_scale), 
                                                       (self.tk_resolution[1] - 8) - int(64 * self.menu_scale), 
                                                       8, (0xff, 0x0, 0x0), 0x60, False) 
         
-        self.selection_bg_pos = (self.tk_res_half[0] - self.selection_bg.get_width() / 2,
-                                 (self.tk_res_half[1] - self.selection_bg.get_height() / 2) + 8 * self.menu_scale)
+        self.selection_bg_pos = (self.tk_res_half[0] - self.selection_bg.get_width()  / 2,
+                                (self.tk_res_half[1] - self.selection_bg.get_height() / 2) + 8 * self.menu_scale)
 
         self.pre_text = {'select_ep': self.tk_renderText(self.font_32, "Select Episode", True, (0xff, 0x0, 0x0), shadow=True)}
         
@@ -414,6 +416,15 @@ class MenuCampaign(PagesHelp, EpisodeParser):
         
         # Last selected value
         self.last_select = -1 
+
+
+    def campaign_set_references(self, **kw): 
+        """
+            Set reference functions for the buttons on the menu
+
+            return -> None
+        """
+        self.__ref_functions.update(**kw)
     
     
     def run(self, surface):
@@ -421,14 +432,17 @@ class MenuCampaign(PagesHelp, EpisodeParser):
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
 
-            tick = 0
+            tick = click = 0
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
                         return self.ph_go_back_soundeffect()
 
                 elif event.type == self.tk_event_mouseup:
-                    if event.button == 4:    # Wheel up
+                    if event.button == 1:
+                        click = 1
+
+                    elif event.button == 4:    # Wheel up
                         self.selection_bg_scroll -= 1
 
                     elif event.button == 5:  # Wheel down
@@ -467,6 +481,9 @@ class MenuCampaign(PagesHelp, EpisodeParser):
                         if self.last_select != enum:
                             self.last_select = enum    
                             self.menu_timer.get_ticks.reset()
+
+                        if click: 
+                            return ep_surf.rs_click(episode)
 
                 elif enum < self.selection_bg_max_items + self.selection_bg_max_hide_items:
                     alpha_level = enum - self.selection_bg_max_items 
@@ -934,8 +951,8 @@ class MenuOptions(PagesHelp):
         w = max([x.rs_getSize()[0] for x in self.mo_options.itervalues()])
         h = sum([x.rs_getSize()[1] for x in self.mo_options.itervalues()])
         
-        # 2 backgrounds for options menu. One with all menu elements height and 
-        #                                 one with minus the exit surface height
+        # 2 backgrounds for options menu. One with all menu elements height and   (Game)
+        #                                 one with minus the exit surface height  (Menu)
         self.mo_background = [self.tk_draw_rounded_rect(w + int(48 * self.menu_scale), 
                                                         h + int(48 * self.menu_scale), 8, (0xff, 0x0, 0x0), 0x60, False),
                               self.tk_draw_rounded_rect(w + int(48 * self.menu_scale), (h - self.mo_options[2].rs_getSize()[1]) + \
@@ -970,8 +987,8 @@ class MenuOptions(PagesHelp):
         self.mo_music_volume['mask'].rs_updateRect(self.tk_res_half[0] - self.mo_music_volume['mask'].rs_getSize()[0] - 128 * self.menu_scale,
                                                    self.tk_res_half[1] - self.mo_music_volume['mask'].rs_getSize()[1] / 2)
         
-        self.mo_music_volume['vol_id'] = self.mo_font_1.render('Music Volume', True, 
-                                                               self.mo_music_volume['radial'].rs_color)
+        self.mo_music_volume['vol_id'] = self.tk_renderText(self.mo_font_1, "Music Volume", True, 
+                                         self.mo_music_volume['radial'].rs_color, shadow=True)
 
 
         self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
@@ -981,26 +998,44 @@ class MenuOptions(PagesHelp):
         self.mo_effect_volume['mask'].rs_updateRect(self.tk_res_half[0] + 128 * self.menu_scale,
                                                     self.tk_res_half[1] - self.mo_effect_volume['mask'].rs_getSize()[1] / 2)
 
-        self.mo_effect_volume['vol_id'] = self.mo_font_1.render('Effects Volume', True, 
-                                                                self.mo_music_volume['radial'].rs_color)
+        self.mo_effect_volume['vol_id'] = self.tk_renderText(self.mo_font_1, "Effects Volume", True, 
+                                          self.mo_music_volume['radial'].rs_color, shadow=True)
 
         # Contains current x, y delta and id of the slider being used
         self.mo_snd_delta_id = None
 
-        
-        # ---- Controls variables
+        # ---- Control variables
         self.mo_uk_prerendered = {}
         
+        pre_max_w = 0   # Needed to build the background
+        suf_max_w = 0   # -- || --
+        full_h    = 0   # Sum of all keys height
+        
         for key in self.tk_user.keys():
-            pre = self.mo_font_3.render(key.upper(), True, (0xff, 0x0, 0x0))
+            pre = self.tk_renderText(self.mo_font_3, key.upper(), True, (0xff, 0x0, 0x0), shadow=True)
             pre = RectSurface(pre, snd_hover_over=180)
+            w, h = pre.rs_getSize() 
+            pre_max_w = w if w > pre_max_w else pre_max_w 
             
-            suf = self.mo_font_3.render(self.tk_key_name(self.tk_user[key]), True, (0xff, 0x0, 0x0))
-            suf = RectSurface(suf, snd_hover_over=180)
+            suf = self.tk_renderText(self.mo_font_3, self.tk_key_name(self.tk_user[key]), True, (0xff, 0x0, 0x0), shadow=True)  
+            suf = RectSurface(suf)
 
             self.mo_uk_prerendered[key] = [pre, suf]
 
-        self.mo_uk_prerendered[-1] = self.mo_font_3.render("Assign key", True, (0xff, 0x0, 0x80))
+            full_h += h
+
+        #self.mo_uk_prerendered[-1] = self.mo_font_3.render("Assign key", True, (0xff, 0x0, 0x80))
+        self.mo_uk_prerendered[-1] = self.tk_renderText(self.mo_font_3, "Assign key", True, (0xff, 0x0, 0x80), shadow=True)
+
+        suf_max_w = self.mo_uk_prerendered[-1].get_width()
+
+        self.mo_background_keys = self.tk_draw_rounded_rect(pre_max_w + suf_max_w + int(160 * self.menu_scale), 
+                                                            full_h + int(32 * self.menu_scale), 
+                                                            8, (0xff, 0x0, 0x0), 0x60, False)
+
+        self.tk_draw_aaline(self.mo_background_keys, (0xff, 0x0, 0x0), 
+                            (self.mo_background_keys.get_width() / 2, 16), 
+                            (self.mo_background_keys.get_width() / 2, self.mo_background_keys.get_height() - 16), 1)
  
         self.mo_uk_layout = {'x': self.tk_res_half[0],
                              'y': self.tk_res_half[1] - (self.mo_uk_prerendered['esc'][0].rs_getSize()[1] * 
@@ -1034,10 +1069,11 @@ class MenuOptions(PagesHelp):
 
             surface.blit(self.menu_background if pause_bg is None else pause_bg, (0, 0))   
             
-            background_index = 1 if pause_bg is None else 0
-            surface.blit(self.mo_background[background_index], 
-                        (self.tk_res_half[0] - self.mo_background[0].get_width()  / 2, 
-                         self.tk_res_half[1] - self.mo_background[0].get_height() / 2))
+            if self.mo_display_func == -1:
+                background_index = 1 if pause_bg is None else 0
+                surface.blit(self.mo_background[background_index], 
+                            (self.tk_res_half[0] - self.mo_background[0].get_width()  / 2, 
+                             self.tk_res_half[1] - self.mo_background[0].get_height() / 2))
 
             click_down = click_up = tick = 0
             
@@ -1081,7 +1117,6 @@ class MenuOptions(PagesHelp):
             self.tk_display.flip()
 
 
-    
     def mo_root_settings(self, surface, mx, my, click, hide_quit=False, **kw):
         """
             Display the root settings
@@ -1133,7 +1168,7 @@ class MenuOptions(PagesHelp):
 
             value = vol['radial'].rs_render_slider(surface, vol['mask'].rs_getPos('topleft'))
 
-            volume_value = self.mo_font_2.render(str(value) if value else 'OFF', True, vol['radial'].rs_color)
+            volume_value = self.mo_font_2.render(str(int(100 * value)) if value else 'OFF', True, vol['radial'].rs_color)
             surface.blit(volume_value, (vol['mask'].rs_getPos('centerx') - volume_value.get_width() / 2, 
                                         vol['mask'].rs_getPos('centery') - volume_value.get_height() / 2))
 
@@ -1162,6 +1197,8 @@ class MenuOptions(PagesHelp):
             return -> None
 
         """ 
+        surface.blit(self.mo_background_keys, (self.tk_res_half[0] - self.mo_background_keys.get_width()  / 2, 
+                                               self.tk_res_half[1] - self.mo_background_keys.get_height() / 2 - 16 * self.menu_scale))
         r = 0
         # Keep the order consistent (Might wanna use orderedDict and manually set the order)
         # Currently ordered by the last char which puts esc at the top
@@ -1185,8 +1222,6 @@ class MenuOptions(PagesHelp):
                 indicate_selected = 16 if key == self.mo_uk_editme else 0 
 
             surface.blit(surf, (pos[0] + indicate_selected * abs(self.tk_sin(self.menu_timer.get_ticks())), pos[1]))
-
-            #print 'Yeah?'
 
             r += pre_f.rs_getSize()[1]
 
@@ -1253,13 +1288,22 @@ class MenuReport(PagesHelp):
             self.tk_display.flip()
 
 
-class MenuManager(object):
+class MenuManager(EpisodeParser):
+    """
+        Handles the setup how everything is organized
+
+        'm_main' should be the first one to be call'd (Intro before if available)
+        then 'm_episode' stacks top of m_main. 
+
+        After that, all functions should call and exit
+        to avoid recursive problems 
+    """
     # 'MenuMain' should be the first function call'd
 
     def __init__(self):
         PagesHelp.ph_initData()
         
-        # NOTE: These should be visible to every menues, 
+        # NOTE: These should be visible to every menu's, 
         #       so we could get rid of the 'set_reference_function' bullshit 
         self.all_menus = {'m_intro':   MenuIntro(),
                           'm_main':    MenuMain(),
@@ -1269,23 +1313,22 @@ class MenuManager(object):
                           'm_options': MenuOptions(),
                           'm_report':  MenuReport()}
 
+        self.all_menus['m_main'].menu_set_references(intro=None if '-nosplash' in read_argv else self.all_menus['m_intro'], 
+                                                     options=self.all_menus['m_options'],
+                                                     episode=self.all_menus['m_episode'])
 
-    def setup_playstate(self, surface, world_build_function, game_loop_function):
+        self.all_menus['m_episode'].campaign_set_references(episode_roll=self.episodeRoll)
+
+
+    def mainRun(self, surface, world_build_function, game_loop_function):
         """
             TBD
 
             return -> None
 
         """
-        #if '-nosplash' not in read_argv:
-        #    self.all_menus['m_intro'].run(surface)
-
-        self.all_menus['m_main'].set_reference_functions(options=self.all_menus['m_options'],
-                                                         episode=self.all_menus['m_episode'])
-        #self.all_menus['m_main'].run(surface)
-
-        world_build_function()
-        game_loop_function()
+        self.episode_set_references(build=world_build_function, run=game_loop_function)
+        self.all_menus['m_main'].run(surface)
 
 
 

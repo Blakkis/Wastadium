@@ -135,6 +135,7 @@ class EpisodeParser(object):
     # All campaigns with atleast one valid map file
     all_valid_campaigns = {}
 
+    __ref_functions = {}
     
     @classmethod
     def parseEpisodeFiles(cls):
@@ -149,12 +150,12 @@ class EpisodeParser(object):
                 # Check that the file contains atleast one valid map
                 # (Doesn't validate the content of the pack files) *Propably should do it here
                 name = path.split(cfg)[-1].split('.')[0]
-                cls.all_valid_campaigns[name] = set() 
+                cls.all_valid_campaigns[name] = list() 
                 
                 for line in read:
                     if not line.startswith('-'): continue
                     
-                    map_name = line.split('-')[-1]
+                    map_name = line.split('-')[-1].rstrip()
 
                     # Allow both with extension suffix and without
                     if map_name.endswith(".{}".format(MAP_PACK_PREFERRED_EXT)):
@@ -172,7 +173,34 @@ class EpisodeParser(object):
                         if not hash(tuple(checksum_files.namelist())) == MAP_FILES_CHECKSUM:
                             continue
 
-                    cls.all_valid_campaigns[name].add(map_name.split('.')[0])     
+                    cls.all_valid_campaigns[name].append(map_name.split('.')[0])
+
+    
+    @classmethod
+    def episodeRoll(cls, episode_name):
+        """
+            Begin episode playback
+
+            episode_name -> avaiable id in 'cls.all_valid_campaigns' 
+
+            return -> None
+        """     
+        for m in cls.all_valid_campaigns[episode_name]:
+            cls.__ref_functions['build'](m)
+            cls.__ref_functions['run']()
+            #print "Build map..."
+            #print "Play map..."
+            #print "After report..."
+            #print "Shop..."
+
+            print "\n-----\n"
+
+        return None
+
+    
+    @classmethod
+    def episode_set_references(cls, **kw):
+        cls.__ref_functions.update(**kw)    
 
 
 class Packer(object):
