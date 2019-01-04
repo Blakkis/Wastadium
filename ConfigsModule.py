@@ -181,7 +181,7 @@ class GlobalGameData(DefaultConfigParser):
 
 
     # Special 
-    tk_name = 'Wastedium'
+    tk_name = 'Wastadium'
     tk_dev_name = 'JaaTeam'
     tk_version = '1.0'
     tk_fps = DefaultConfigParser.def_values['max_fps']

@@ -1,6 +1,5 @@
 from ConfigsModule import GlobalGameData, TkWorldDataShared
-from glob import iglob
-from ast import literal_eval
+from MapParser import W_errorToken
 
 
 __all__ = ('Weapons', 'WeaponCasings')
@@ -31,6 +30,7 @@ class Weapons(GlobalGameData):
         
     
     @classmethod
+    @W_errorToken("Error Initializing Weapons!")
     def load_weapons(cls, editor_only=False, **kw):
         """
             Loads and setups all weapons/ammo data
@@ -66,7 +66,7 @@ class Weapons(GlobalGameData):
         # Lines with multiple data
         multi_strings = ('w_fire_effects', 'w_trail_effects', 'w_explosion_effects', 'w_data')
         
-        for weapon in iglob(cls.tk_path.join(src_weapon_path_cfg, '*.cfg')):
+        for weapon in cls.tk_iglob(cls.tk_path.join(src_weapon_path_cfg, '*.cfg')):
             name = weapon.split('\\')[-1].split('.')[0]
 
             # Editor needs names only (Leave values incase something is needed in the future)
@@ -85,7 +85,7 @@ class Weapons(GlobalGameData):
                 else:
                     # All the offsets are trigonometry values which can be pre-calculated
                     if line[0].endswith('offset'):
-                        d = literal_eval(line[1])
+                        d = cls.tk_literal_eval(line[1])
                         if line[0] == 'w_casing_offset':
                             w_cfg['w_casing_dist']  = d[1], d[3]
                             w_cfg['w_casing_angle'] = (cls.tk_atan2(d[0], d[1]), cls.tk_atan2(d[2], d[3]))
@@ -96,7 +96,7 @@ class Weapons(GlobalGameData):
 
                     else:
                         # The rest are simple key=value
-                        w_cfg[line[0]] = literal_eval(line[1])
+                        w_cfg[line[0]] = cls.tk_literal_eval(line[1])
 
             # Store the weapon token
             cls.all_weapons[name] = cls.parse_weapon_content(w_cfg, editor_only) 

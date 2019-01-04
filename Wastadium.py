@@ -21,10 +21,12 @@ from VictoryCondition import VictoryCondition
 from MapParser import ROOT_ENABLE_HIDE
 __TKINTER_ROOT_FOR_ERRORS = ROOT_ENABLE_HIDE()
 
-from MapParser import MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, MAP_GROUND, MAP_OBJECTS, MAP_WALLS
+from MapParser import (MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, WastadiumEditorException, 
+                       MAP_GROUND, MAP_OBJECTS, MAP_WALLS, W_errorHandler, W_errorToken,
+                       INIT_ERROR)
 
 from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF, NOFRAME
- 
+
 
 # NOTES:
 #   Refactor!
@@ -461,6 +463,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
 
         """
+        #image.load("gradient.png").convert_alpha()
         # Create 4 surfaces with black color gradienting toward the other side
         temp = cls.tk_surface((32 * cls.tk_macro_cell_size, 32 * cls.tk_macro_cell_size), cls.tk_srcalpha)
         span = 16
@@ -476,67 +479,89 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     @classmethod
     def initVisualsAndExtModules(cls):
         """
-            Load, build and initialize all textures used by the world
+            Load/Setup all external modules
 
             return -> None
             
         """
-        cls.setup_gradients()
-        
-        # Init/load all external modules
-        # 
-        cls.load_textures()
-        
-        # 
-        cls.load_effects()
+        # Run all sections and report all failed modules.
+        # However keep in mind, that some modules rely on other modules for extra data
+        # so if their parent module fails, they will fail too
 
-        # 
-        cls.setup_casings()
+        error_section = []
+        try:
+            # 
+            error_section.append(cls.load_textures())
+            
+            # 
+            error_section.append(cls.load_effects())
 
-        # 
-        cls.load_weapons()
+            # 
+            error_section.append(cls.load_weapons())
 
-        #
-        cls.load_gadgets()
+            #
+            error_section.append(cls.load_gadgets())
 
-        #
-        cls.inv_reset()
+            # 
+            error_section.append(cls.setup_footsteps())
 
-        # 
-        cls.setup_footsteps()
+            # 
+            error_section.append(Enemies.build_all_enemies())
 
-        # 
-        Enemies.build_all_enemies()
+            #
+            error_section.append(cls.load_elements()) 
 
-        # 
-        cls.shadow_map = Shadows()
+            # 
+            error_section.append(cls.readSoundMusic())
 
-        # 
-        cls.hero = Hero()
+            # 
+            error_section.append(cls.load_decalsGibs())
 
-        #
-        cls.load_elements() 
+            #
+            error_section.append(cls.load_pickups(font=cls.ElementFonts[1]))
+            
+            # Put all functions loading external data above this check
+            if any([check is not None for check in error_section]):
+                raise WastadiumEditorException
 
-        # 
-        cls.uioverlay = uiOverlay() 
+            # No need to load/setup the rest if error has occured as they will fail to init too
+            #
+            cls.setup_gradients()
 
-        # 
-        cls.readSoundMusic()
+            # 
+            cls.setup_casings()
 
-        # 
-        cls.load_decalsGibs()
+            # inv_reset does setup too 
+            cls.inv_reset()
 
-        # 
-        cls.menus = MenuManager()
+            # 
+            cls.shadow_map = Shadows()
 
-        #
-        cls.load_pickups(font=cls.ElementFonts[1])
+            # 
+            cls.hero = Hero()
 
-        #
-        cls.cs_setup_character_shadows()
+            # 
+            cls.uioverlay = uiOverlay() 
 
-        #
-        cls.setup_victory_module(font=cls.ElementFonts[0])
+            # 
+            cls.menus = MenuManager()
+
+            #
+            cls.cs_setup_character_shadows()
+
+            #
+            cls.setup_victory_module(font=cls.ElementFonts[0])
+            
+        except (WastadiumEditorException, Exception) as e:
+            clean_error = [x + '\n' for x in error_section if x is not None]
+            if clean_error:
+                error = "The Following Modules Failed To Setup/Initialize\n\n" + ''.join(clean_error)
+                error += "\nMake sure the names match between configs and files!\n"
+            else:
+                error = e
+
+            W_errorHandler(error, INIT_ERROR)
+            cls.tk_quitgame()
 
         
       

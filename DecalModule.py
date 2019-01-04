@@ -1,6 +1,7 @@
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from SoundModule import SoundMusic
 from Timer import DeltaTimer
+from MapParser import W_errorToken
 
 __all__ = ('MessSolver', 'DecalGibsHandler')
 
@@ -419,6 +420,7 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem, TkWorldDataShared):
 
 
     @classmethod
+    @W_errorToken("Error Initializing Gibbing Module!")
     def load_decalsGibs(cls):
         """
             Load all decals and gibs

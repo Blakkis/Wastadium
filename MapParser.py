@@ -21,6 +21,7 @@ from glob import iglob
 
 from traceback import print_exc as mp_getLastException
 
+
 # Enable print based exceptions 
 IDE_TRACEBACK = False
 
@@ -83,18 +84,47 @@ for key in locals().keys():
     if key.startswith('MAP_') and key.endswith('_XML'):
         MAP_ALL_TAGS[key] = locals()[key]
 
-
-# ----
+#
+# ---- Exceptions (Note: Move these in to their own module)
 
 class WastadiumEditorException(Exception):
     pass 
 
 
+def W_errorHandler(e, error_id=''):
+    if IDE_TRACEBACK: mp_getLastException()
+    else: mp_error.showerror(error_id, e)
+
+
+# Note: Since users can edit the files, i tried to provide as much context for errors as possible
+def W_errorToken(section_tag):
+    """
+        Use this decorator to mark setup/init functions
+        to pinpoint which function is failing and why
+    """
+    def wrapper(func):
+        def wrapped(*args, **kw):
+            """
+                Return 'None' on success (Exception if kw defines "editor_only" then return result)
+                       'section_tag' on failure
+            """
+            try:
+                result = func(*args, **kw)
+            except Exception:
+                return section_tag
+            
+            return result if 'editor_only' in kw else None
+            
+        return wrapped
+    return wrapper    
+
+
 # Error names(+ codes if needed for parsing?)
 
-MAP_PLAYER_MISSING   = "Player Missing! - 0x{}"    .format(0x1 << 1)
-MAP_ASSERT_ERROR     = "Assert Error! - 0x{}"      .format(0x1 << 2)
-MAP_CORRUPTION_ERROR = "Map File Corrupted! - 0x{}".format(0x1 << 3) 
+MAP_PLAYER_MISSING   = "Player Missing!"
+MAP_ASSERT_ERROR     = "Assert Error!"
+MAP_CORRUPTION_ERROR = "Map File Corrupted!"
+INIT_ERROR           = "Init Error!" 
 
 XML_PARSING_ERROR     = "Error Parsing The XML File!"
 XML_PARSING_SUB_ERROR = "Error Parsing The Following XML Section: {}!"
@@ -124,8 +154,7 @@ def dataParseCheck(func):
             return r
         # Should not happen. But just incase
         except Exception as e:
-            if IDE_TRACEBACK: mp_getLastException()
-            else: mp_error.showerror(MAP_ASSERT_ERROR, e)
+            W_errorHandler(e, MAP_ASSERT_ERROR)
  
     return wrapped
 
@@ -271,8 +300,7 @@ class Packer(object):
                 lr03 = files.index('{}.{}'.format(MAP_WALLS,   MAP_SURFACE_EXT))
 
             except Exception as e:
-                if IDE_TRACEBACK: mp_getLastException()
-                else: mp_error.showerror(MAP_CORRUPTION_ERROR, e)
+                W_errorHandler(e, MAP_CORRUPTION_ERROR)
 
             if editor_loader:
                 return cls.parseXML(zr, files[data])
@@ -346,9 +374,7 @@ class Packer(object):
                                                             editor_loader=editor_loader)    
 
             except (WastadiumEditorException, Exception) as e:
-                if IDE_TRACEBACK: mp_getLastException()
-                else: mp_error.showerror(MAP_CORRUPTION_ERROR, e)
-                
+                W_errorHandler(e, XML_PARSING_ERROR)
                 xml_data.clear()
 
         return xml_data
@@ -804,8 +830,8 @@ class MapParser(Packer):
             cls.compress(filename, map_path)
         
         except (WastadiumEditorException, Exception) as e:
-            if IDE_TRACEBACK: mp_getLastException()
-            else: mp_error.showerror(MAP_ASSERT_ERROR, e)
+            W_errorHandler(e)
+            
             # Error occured during saving. Delete the Folder/File
             try:
                 if path.exists(map_path): rmtree(map_path)  

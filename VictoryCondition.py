@@ -1,6 +1,7 @@
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from Timer import DeltaTimer
 
+
 # Note: Currently the game contains 2 victory conditions.
 #	1: Kill all enemies
 #	2: Reach the endgoal(Also kill all enemies satisfies this condition)

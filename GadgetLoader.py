@@ -1,5 +1,5 @@
 from ConfigsModule import GlobalGameData
-
+from MapParser import W_errorToken
 
 __all__ = ('GadgetLoader', 'LaserSightModule')
 
@@ -16,6 +16,7 @@ class GadgetLoader(GlobalGameData):
 
     
     @classmethod
+    @W_errorToken("Error Initializing Gadgets!")
     def load_gadgets(cls):
         """
             TBD

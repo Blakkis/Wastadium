@@ -1,4 +1,5 @@
 from ConfigsModule import GlobalGameData
+from MapParser import W_errorToken
 
 
 class SoundMusic(GlobalGameData):
@@ -23,6 +24,7 @@ class SoundMusic(GlobalGameData):
 
     
     @classmethod
+    @W_errorToken("Error Initializing Sound/Music Module!")
     def readSoundMusic(cls):
         """
             Read and parse sound effects and music

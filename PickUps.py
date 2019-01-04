@@ -1,6 +1,7 @@
 from Inventory import Inventory
 from Timer import DeltaTimer
 from ConfigsModule import TkWorldDataShared
+from MapParser import W_errorToken
 
 
 __all__ = 'Pickups',
@@ -48,6 +49,7 @@ class Pickups(Inventory):
 
     
     @classmethod
+    @W_errorToken("Error Initializing Pickups Module!")
     def load_pickups(cls, editor_only=False, **kw):
         """
             Load and parse pickups

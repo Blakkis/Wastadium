@@ -5,6 +5,7 @@ from Timer import DeltaTimer
 from ConfigsModule import TkWorldDataShared
 from SoundModule import SoundMusic
 from Tokenizers import EnemyDeathSeq 
+from MapParser import W_errorToken
 
 import PathFinder
 
@@ -629,10 +630,10 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
 
 
     @classmethod
+    @W_errorToken("Error Initializing Enemy Module!")
     def build_all_enemies(cls, editor_only=False):
         """
             Read/Build all the enemies from config
-            Called once during startup
 
             editor_only -> Load minimalistic data about the enemies for the editor
 
@@ -642,7 +643,6 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
         # Source path for enemy configs
         src_path_cfg = cls.tk_path.join('configs', 'enemies')
         
-
         # Line containing string data
         non_literal_eval = ('tex_legs',   'tex_torso', 'e_weapon', 'snd_death', 
                             'tex_bsplat', 'tex_death', 'gore_profile', 'snd_pain',

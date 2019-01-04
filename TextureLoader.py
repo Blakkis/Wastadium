@@ -1,5 +1,6 @@
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from SoundModule import SoundMusic
+from MapParser import W_errorToken
 
 # NOTE:
 #   Change this module name to better describe it since it does more than texture loading
@@ -34,21 +35,22 @@ class TextureLoader(GlobalGameData):
     
     
     @classmethod
+    @W_errorToken("Error Loading Textures!")
     def load_textures(cls, world_textures_only=False):
         """
             Load all textures and assign id number for them to be stored on the
             class dictionaries
+
+            world_textures_only -> Load only world textures
             
             return -> None
             
         """
-
         # Source path for world configs
         src_world_path_cfg = cls.tk_path.join('configs', 'world')
 
         # World textures path
         world_path_tex = cls.tk_path.join('textures', 'worldtextures')
-
 
         # Store the spritesheet, so there's no need to load the spritesheet
         # again to subsurface and disgard it.
@@ -341,6 +343,7 @@ class EffectsLoader(SoundMusic, GlobalGameData, TkWorldDataShared):
     
 
     @classmethod
+    @W_errorToken("Error Loading Effects!")
     def load_effects(cls):
         """
             Load all the effects
@@ -461,6 +464,7 @@ class FootSteps(GlobalGameData):
 
 
     @classmethod
+    @W_errorToken("Error Initializing Footsteps!")    # < -- Ghost
     def setup_footsteps(cls):
         """ 
             Build and store all footsteps that player and enemies can spawn
@@ -529,6 +533,7 @@ class uiElements(GlobalGameData):
 
     
     @classmethod
+    @W_errorToken("Error initializing Hud Elements!")
     def load_elements(cls):
         """
             Load and setup UiElements such as fonts, cursors, icons
@@ -542,7 +547,7 @@ class uiElements(GlobalGameData):
         # Font texture path
         fnt_path_tex = cls.tk_path.join('textures', 'fonts')
 
-        # UIElement texture path 
+        # Hud elements texture path 
         ui_elem_path_tex = cls.tk_path.join('textures', 'uielements')
 
         # Load all cursor textures
@@ -555,7 +560,7 @@ class uiElements(GlobalGameData):
         for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'fonts.cfg'), 'r'):
             cls.ElementFonts[int(line[0])] = cls.tk_path.join(fnt_path_tex, line[1])
 
-        # Load all UIElement textures
+        # Load all Hud element textures
         for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'elements.cfg'), 'r'):
             cls.ElementTextures[int(line[0])] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, 
                                                 line[1])).convert_alpha() 

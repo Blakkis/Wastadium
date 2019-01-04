@@ -2,7 +2,6 @@ from ConfigsModule import GlobalGameData, TkWorldDataShared
 from PreProcessor import PreProcessor
 
 
-
 # Note: Rather than casting shadow from each wall
 # one could pre-calculate all the horizontal and vertical wall slices
 # and cast bigger shadow from them
