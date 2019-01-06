@@ -13,7 +13,7 @@ from MapParser import EpisodeParser
 from sys import argv as read_argv
 
 
-__all__ = ('MenuManager')
+__all__ = ('MenuManager', )
 
 
 class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
@@ -315,6 +315,9 @@ class MenuMain(PagesHelp, EventManager):
 
         """
         if self.__ref_functions['intro'] is not None: self.__ref_functions['intro'].run(surface)
+        
+        self.playMusic(0, -1)
+        
         while 1:
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
@@ -363,7 +366,7 @@ class MenuMain(PagesHelp, EventManager):
 
                     if click: 
                         self.options[key][0].rs_click()     # Just to make the sound when clicked
-                        self.options[key][1](surface)
+                        self.options[key][1](surface)       
 
                 if key == self.last_select:
                     surf, x, y = self.ph_flash_effect(surf, (x, y))
@@ -403,7 +406,8 @@ class MenuCampaign(PagesHelp, EpisodeParser):
         self.selection_bg_pos = (self.tk_res_half[0] - self.selection_bg.get_width()  / 2,
                                 (self.tk_res_half[1] - self.selection_bg.get_height() / 2) + 8 * self.menu_scale)
 
-        self.pre_text = {'select_ep': self.tk_renderText(self.font_32, "Select Episode", True, (0xff, 0x0, 0x0), shadow=True)}
+        self.pre_text = {'select_ep': self.tk_renderText(self.font_32, "Select Episode", True, 
+                                                        (0xff, 0x0, 0x0), shadow=True)}
         
         # Max number of items inside the selection rect
         self.selection_bg_max_items = 8
@@ -483,6 +487,9 @@ class MenuCampaign(PagesHelp, EpisodeParser):
                             self.menu_timer.get_ticks.reset()
 
                         if click: 
+                            # This calls the episode_roller
+                            # once player has played all the levels
+                            # return to mainmenu
                             return ep_surf.rs_click(episode)
 
                 elif enum < self.selection_bg_max_items + self.selection_bg_max_hide_items:
@@ -915,17 +922,44 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
 
 class MenuIntroOutro(PagesHelp):
+    
     def __init__(self):
         pass
 
     def run(self, surface):
+        static = surface.copy()
+
+        fadeout_surface = self.tk_surface(surface.get_size(), self.tk_srcalpha)
+        fadeout_factor = 0
+        
+        self.dt_tick()
         while 1:
-            surface.fill(self.tk_bg_color)
+            self.dt_tick()
+            fadeout_surface.fill((0x0, 0x0, 0x0, int(fadeout_factor) & 0xff))
+
+            if int(fadeout_factor) & 16: self.outro_effect(static, fadeout_factor)
+            surface.blit(static, (0, 0))
+
+            fadeout_factor += 64 * self.dt_getDelta()
 
             for event in self.tk_eventDispatch():
-                pass
+                if event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']:
+                        fadeout_factor = 0xff
 
-            self.tk_display.flip() 
+            surface.blit(fadeout_surface, (0, 0))
+
+            self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
+            self.tk_display.flip()
+
+            if fadeout_factor >= 0xff: return None
+
+    
+    def outro_effect(self, surface, factor):
+        array = self.tk_surfarray.pixels3d(surface)
+        sway = int(8 * self.tk_sin(int(factor + 1)))
+        sway = 1 if sway == 0 else sway 
+        array[::sway, ::sway, 1:] = 0x20
 
 
 class MenuOptions(PagesHelp):
@@ -1182,7 +1216,8 @@ class MenuOptions(PagesHelp):
             if self.mo_snd_delta_id is not None: 
                 if vol['mask'].rs_id == self.mo_snd_delta_id[2]:
                     vol['radial'].rs_slide(mx, my, vol['mask'].rs_getPos('center'))
-                    self.editVolume(enum, value, self.mo_snd_delta_id[2], play_sound_cue=enum)  
+                    print self.mo_snd_delta_id[2]
+                    self.editVolume(enum, value, True, play_sound_cue=enum)  
 
 
     
@@ -1253,7 +1288,7 @@ class MenuOptions(PagesHelp):
 
             # Valid
             self.tk_user[self.mo_uk_editme] = key
-            new = self.mo_font_3.render(self.tk_key_name(key), True, (0xff, 0x0, 0x0))
+            new = self.tk_renderText(self.mo_font_3, self.tk_key_name(key), True, (0xff, 0x0, 0x0), shadow=True)
             self.mo_uk_prerendered[self.mo_uk_editme][1].rs_updateSurface(new)
             self.mo_uk_editme = ''
 
@@ -1327,7 +1362,8 @@ class MenuManager(EpisodeParser):
             return -> None
 
         """
-        self.episode_set_references(build=world_build_function, run=game_loop_function)
+        self.episode_set_references(build=world_build_function, run=game_loop_function,
+                                    inout=self.all_menus['m_inout'])
         self.all_menus['m_main'].run(surface)
 
 

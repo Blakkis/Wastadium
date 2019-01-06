@@ -216,13 +216,12 @@ class EpisodeParser(object):
         """     
         for m in cls.all_valid_campaigns[episode_name]:
             cls.__ref_functions['build'](m)
-            cls.__ref_functions['run']()
+            surface = cls.__ref_functions['run']()
+            cls.__ref_functions['inout'].run(surface)
             #print "Build map..."
             #print "Play map..."
             #print "After report..."
             #print "Shop..."
-
-            print "\n-----\n"
 
         return None
 

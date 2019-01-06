@@ -50,8 +50,9 @@ class TkCounter(object):
 class TkWorldDataShared(object):
     
     # Common data shared between classes
-    w_share = {'WorldPosition': (0, 0),        
-               'ShadowOffset':  (0, 0)}    # Used with shadow casting
+    w_share = {'WorldPosition':      (0, 0),    # Up-to-date world position
+               'WorldPositionDelta': (0, 0),    # Delta between last and current world position        
+               'ShadowOffset':       (0, 0)}    # Used with shadow casting
 
     @classmethod
     def getWorldIndex(cls):
@@ -205,17 +206,17 @@ class GlobalGameData(DefaultConfigParser):
     tk_casing_rleaccel = pygame.RLEACCEL
 
     # Option 
-    tk_no_effect_layer  = 0     # Partially used. Explain where/why
+    #tk_no_effect_layer  = 0     # Partially used. Explain where/why
     tk_no_shadow_layer  = 0
     tk_no_footsteps     = 0
     tk_no_effects       = 0
-    tk_no_char_shadows  = 1
+    tk_no_char_shadows  = 0
     tk_control_scheme   = 0     # 0: Tank, 1: Axis
     tk_shadow_quality   = 1     # 1: High quality (Experimental and Slow) 
-                                # Actually the entire shadow casting is shit(Needs massive overhaul)
+                                # Actually, the entire shadow casting is shit(Needs massive overhaul)
     
     # Lightmap 
-    tk_shadow_color =      0x0, 0x0, 0x0, 0xaa
+    tk_shadow_color      = 0x0, 0x0, 0x0, 0xaa
     tk_shadow_mask_color = 0x0, 0x0, 0x0, 0xaa
 
     res_x = int(math.ceil(float(float(tk_resolution[0] / 2) / 32)))
@@ -250,6 +251,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_randrange = random.randrange
     tk_uniform = random.uniform
     tk_sample = random.sample
+    tk_shuffle = random.shuffle
     
     #tk_event_trigger = EventTrigger
     #tk_countdown_trigger = EventTriggerCountDown

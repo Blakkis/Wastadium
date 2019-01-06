@@ -385,7 +385,7 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem, TkWorldDataShared):
         for y in xrange(h):
             row = []
             for x in xrange(w):
-                row.append(1 if _map[y][x].collision else 0)
+                row.append(1 if _map[y][x].w_collision else 0)
             final.append(tuple(row))
 
         cls.dh_decal_data['dh_world'] = final   

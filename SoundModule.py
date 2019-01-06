@@ -11,12 +11,14 @@ class SoundMusic(GlobalGameData):
     all_music = {}
 
     # Default volumes for sound and music
-    sm_volumes = {0: 1.0,   # Music
+    sm_volumes = {0: 0.0,   # Music
                   1: 1.0}   # Effects
 
     # Volume range for falloff of the sound
     sm_max_hearing_range = 350.0
     sm_falloff = 1.0 / sm_max_hearing_range 
+
+    snd_data = {'tracklist': None}
 
     
     def __init__(self):
@@ -43,14 +45,15 @@ class SoundMusic(GlobalGameData):
         # Music (Only pathnames)
         for line in cls.tk_readFile(cls.tk_path.join(src_path_cfg, 'music.cfg')):
             cls.all_music[int(line[0])] = cls.tk_path.join('soundmusic', 'music', line[1])
-
-        #print cls.tk_mixer_music.load(cls.all_music[0])
-        #cls.tk_mixer_music.set_volume(cls.sm_volumes[0])
-        #cls.tk_mixer_music.play(-1) 
+        
+        # Music playlist
+        # Note: 0 is special and should be reserved for menu
+        tracklist = [t for t in sorted(cls.all_music.keys()) if t > 0]
+        cls.snd_data['tracklist'] = cls.tk_deque(tracklist)
 
     
     @classmethod
-    def editVolume(cls, volume_id, volume, edit=False, play_sound_cue=False):
+    def editVolume(cls, volume_id, volume, edit=True, play_sound_cue=False):
         """
             Edit volume
 
@@ -62,15 +65,14 @@ class SoundMusic(GlobalGameData):
             return -> None
         """
         if edit:
-            # Music
             if volume_id == 0 and volume != cls.sm_volumes[volume_id]:
-                print 'Music!'
+                cls.sm_volumes[volume_id] = volume
+                cls.tk_mixer_music.set_volume(volume)
 
             # Effects
             elif volume_id == 1 and volume != cls.sm_volumes[volume_id]:
                 cls.sm_volumes[volume_id] = volume
-                if play_sound_cue: 
-                    cls.playSoundEffect(188)     
+                if play_sound_cue: cls.playSoundEffect(188)     
 
 
     @classmethod
@@ -104,8 +106,25 @@ class SoundMusic(GlobalGameData):
       	
         return channel
 
-    @classmethod
-    def playMusic(cls, _id):
-        pass
-
     
+    @classmethod
+    def playMusic(cls, _id=0, loops=0, tracklist_play=False):
+        """
+            TBD
+
+            return -> None
+
+        """
+        if _id not in cls.all_music:
+            return None
+
+        if tracklist_play:
+            track_id = cls.snd_data['tracklist'][0]
+            cls.snd_data['tracklist'].rotate(-1)
+            cls.tk_mixer_music.load(cls.all_music[track_id])
+        else:
+            cls.tk_mixer_music.load(cls.all_music[_id])
+        
+        cls.tk_mixer_music.set_volume(cls.sm_volumes[0])
+        cls.tk_mixer_music.play(loops)
+ 

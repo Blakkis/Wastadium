@@ -464,7 +464,7 @@ class FootSteps(GlobalGameData):
 
 
     @classmethod
-    @W_errorToken("Error Initializing Footsteps!")    # < -- Ghost
+    @W_errorToken("Error Initializing Footsteps!") 
     def setup_footsteps(cls):
         """ 
             Build and store all footsteps that player and enemies can spawn

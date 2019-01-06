@@ -14,15 +14,14 @@ class DeltaTimer(object):
     __dt_ticks = get_ticks
 
     dt_deltas = {'delta_ms': 0,
-                 'ticks': 8}
+                 'ticks': 0}
 
     @classmethod
     def dt_tick(cls, limit_fps=0, ignore_delta=0):
-        dt = cls.__dt_clock.tick(limit_fps) / float(1000)
-
+        dt = cls.__dt_clock.tick(limit_fps) / 1000.0
         ticks = cls.__dt_ticks()  
         if not ignore_delta:
-            cls.dt_deltas['delta_ms'] = dt   # Lock delta from going below delta of 40fps
+            cls.dt_deltas['delta_ms'] = min(0.025, dt)   # Lock delta from going below delta of 40fps
             cls.dt_deltas['ticks'] = ticks
 
         return 0
@@ -66,6 +65,7 @@ class MsDelayTrigger(DeltaTimer):
         if self.ms <= 0: 
             self.ms = self.dms
             return 1
+        
         self.ms -= self.dt_deltas['delta_ms']
         return 0
 

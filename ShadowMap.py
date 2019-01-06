@@ -147,7 +147,7 @@ class Shadows(GlobalGameData, TkWorldDataShared):
         for y in xrange(cls.shadow_map_size[1]):
             row = []
             for x in xrange(cls.shadow_map_size[0]):
-                row.append(1 if lightmap[y][x].collision else 0)
+                row.append(1 if lightmap[y][x].w_collision else 0)
             final.append(tuple(row))
 
         cls.shadow_map[:] = final

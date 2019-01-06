@@ -3,16 +3,18 @@ from TextureLoader import uiElements
 from Weapons import Weapons
 from EventManager import EventManager
 from Inventory import Inventory
-from VictoryCondition import VictoryCondition
+from VictoryCondition import VictoryCondition, BookKeeping
 
 
 __all__ = 'uiOverlay', 'uiGameTimer' 
 
 # NOTE: Replace the hardcoded shit with more robust system
 
-class uiGameTimer(GlobalGameData):
 
-    ui_data = {'g_timer':      None,        # Timer
+class uiGameTimer(GlobalGameData, BookKeeping):
+
+    # Note: Rename ui to hud
+    ui_data = {'g_timer':      None,        # Game timer
                'g_timer_bg':   None,        # Decorative
                'g_timer_fg':   None,        # - || -
                'g_timer_text':[None, None], # Rendered timer surface
@@ -20,14 +22,18 @@ class uiGameTimer(GlobalGameData):
 
     
     @classmethod
-    def tick_timer(cls):
+    def tick_timer(cls, reset=False):
         """
             Tick the timer and update the timer surface 
 
             return -> None
 
         """
-        cls.ui_data['g_timer'] += 1
+        if reset:
+            cls.ui_data['g_timer'] = cls.tk_counter(0)
+        else:
+            if not cls.record['complete']:
+                cls.ui_data['g_timer'] += 1
 
         t = str(cls.tk_timedelta(seconds=cls.ui_data['g_timer']()))
         cls.ui_data['g_timer_text'][0] = cls.tk_renderText(cls.ui_data['g_font'], t, 1, (0xff, 0x0, 0x0), shadow=1)  

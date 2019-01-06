@@ -1,5 +1,5 @@
 import random
-random.seed(0xdeadbeef12)
+#random.seed(0xdeadbeef12)
 
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from Weapons import *
@@ -29,10 +29,9 @@ from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF, NOFRAME
 
 
 # NOTES:
-#   Refactor!
+#   Refactor! (More getters and setters) (Things are communicating too deeply)
 #   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
 #   Replace the current framerate to consumer based framerate ( Need to separate login/render )
-#   Note: You can glitch if you hold down the window while the game is running
    
 
 # Note: Move this in to separate module
@@ -44,7 +43,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
     """
     def __init__(self):
 
-        self.char_rect = self.tk_rect((0, 0, 32, 32))   # Collision box
+        self.char_rect = self.tk_rect((0, 0, 32, 32))  
         self.char_center = self.tk_res_half[0] - 16, self.tk_res_half[1] - 16
         self.char_rect.move_ip(self.char_center)
 
@@ -91,13 +90,15 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                 # Get the ground material sound effect for walking over it
                 self.playSoundEffect(self.tk_choice(World.w_micro_cells[wy][wx].w_sound_walk)) 
             
-            # Get the id for the bloody foot texture
-            stain_id = World.w_micro_cells[wy][wx].w_footstep_stain_id 
-            if stain_id > 0:
-                self.footstep_id = stain_id
-                self.footstep_cycle = iter(xrange(8, 40))   
+            if not self.tk_no_footsteps:
+                # Get the id for the bloody foot texture
+                stain_id = World.w_micro_cells[wy][wx].w_footstep_stain_id 
+                if stain_id > 0:
+                    self.footstep_id = stain_id
+                    self.footstep_cycle = iter(xrange(8, 40))   
 
-        if self.footstep_id:
+        # Leave footstep decals
+        if not self.tk_no_footsteps and self.footstep_id:
             try:
                 cx, cy = self.all_footsteps[self.footstep_id][1]    # Center of the footstep decal
                 img, sAngle = self.all_footsteps[self.footstep_id][self.footstep_cycle.next()] 
@@ -305,8 +306,9 @@ def hero_handle(self, surface, key_event=-1):
             self.hero_footstep(angle)      
 
     # Cast character shadows from lights
-    self.cs_shadow_cast(surface, -self.w_share['WorldPosition'][0] + 16, 
-                                 -self.w_share['WorldPosition'][1] + 16, angle)
+    if not self.tk_no_char_shadows:
+        self.cs_shadow_cast(surface, -self.w_share['WorldPosition'][0] + 16, 
+                                     -self.w_share['WorldPosition'][1] + 16, angle)
 
     # Position where the hero will be built on
     x, y = self.char_center
@@ -404,25 +406,19 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     # Boundaries for entities_cell divided by tk_entity_sector_s
     w_ent_cell_size = 0, 0
     
-    # Used to sync world layers together since player movement (which alters the world position) 
-    # might throw them off eachother 
-    w_offset = 0, 0
-
 
     def __init__(self, x, y, low_id='', mid_id='', collision=False):
         self.pos = self.world_to_screen_coords(x, y)
         
-        if mid_id:
-            #self.texture = self.mid_textures[mid_id][6]
-            self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id']
-            self.w_sound_hit = self.mid_textures[mid_id]['tex_hit_sound_id']
+        # Effect to spawn when bullets interact with this cell
+        self.w_tex_effect = self.mid_textures[mid_id]['tex_effect_id'] if mid_id else \
+                            self.low_textures[low_id]['tex_effect_id']
+
+        # Sound effect when bullets interact with this cell
+        self.w_sound_hit  = self.mid_textures[mid_id]['tex_hit_sound_id'] if mid_id else \
+                            self.low_textures[low_id]['tex_hit_sound_id']
         
-        else:
-            #self.texture = self.low_textures[low_id]['tex_main']
-            self.w_tex_effect = self.low_textures[low_id]['tex_effect_id']
-            self.w_sound_hit = self.low_textures[low_id]['tex_hit_sound_id']
-        
-        self.collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if collision else False  
+        self.w_collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if collision else False  
         
         # Sound id when walking over this cell
         self.w_sound_walk = self.low_textures[low_id]['tex_walk_sound_id']
@@ -465,7 +461,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
         #image.load("gradient.png").convert_alpha()
         # Create 4 surfaces with black color gradienting toward the other side
-        temp = cls.tk_surface((32 * cls.tk_macro_cell_size, 32 * cls.tk_macro_cell_size), cls.tk_srcalpha)
+        temp = cls.tk_surface((32 * cls.tk_macro_cell_size, 
+                               32 * cls.tk_macro_cell_size), cls.tk_srcalpha)
         span = 16
         r, g, b = cls.tk_bg_color
         for enum, alpha in enumerate(xrange(255, 0, -255 / span)):
@@ -551,6 +548,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
             #
             cls.setup_victory_module(font=cls.ElementFonts[0])
+
             
         except (WastadiumEditorException, Exception) as e:
             clean_error = [x + '\n' for x in error_section if x is not None]
@@ -558,7 +556,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 error = "The Following Modules Failed To Setup/Initialize\n\n" + ''.join(clean_error)
                 error += "\nMake sure the names match between configs and files!\n"
             else:
-                error = e
+                error = e.message + '\n' 
+                error += "\nMost likely programming error, contact me\n"
 
             W_errorHandler(error, INIT_ERROR)
             cls.tk_quitgame()
@@ -591,6 +590,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             x /= 1.4142135623730951     # sqrt(2)
             y /= 1.4142135623730951     # sqrt(2)
         
+        dtx, dty = cls.cell_x, cls.cell_y
+
         # Move the world(Player)
         cls.cell_x += x; cls.cell_y += y
 
@@ -624,6 +625,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                         cls.cell_y -= y; check_y = 0
         
         # Share world position
+        cls.w_share['WorldPositionDelta'] = cls.cell_x - dtx, cls.cell_y - dty
         cls.w_share['WorldPosition'] = cls.cell_x, cls.cell_y 
 
     
@@ -657,9 +659,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         """
         disk_data = cls.mp_load("basement")
-        # Convert the IOBytes objects to pygame surfaces (Ground needs 'convert()' only, since it doesn't have alpha component)
+        # Convert the IOBytes objects to pygame surfaces 
+        # (Ground needs 'convert()' only, since it doesn't have alpha component)
         disk_data[MAP_GROUND] = {key: (cls.tk_image.load(value).convert() if key == MAP_GROUND else \
-                                       cls.tk_image.load(value).convert_alpha()) for key, value in disk_data[MAP_GROUND].iteritems()}
+                                       cls.tk_image.load(value).convert_alpha()) \
+                                 for key, value in disk_data[MAP_GROUND].iteritems()}
 
         data_tag = MAP_DATA_EXT.split('.')[0] 
         general = disk_data[data_tag][cls.MAP_GENERAL_XML]
@@ -669,6 +673,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.clear_casings()
 
         cls.clear_pickups()
+
+        cls.uioverlay.tick_timer(reset=True)
 
         # Spawn and end should be in the stated order, but check just incase they get swapped
         spawn_index = 0 if general[cls.MAP_PLR_BEGIN_XML][0].id == 'id_spawn' else 1
@@ -707,13 +713,17 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Cut the layers in to chunks
         chunk_size = cls.tk_macro_cell_size * 32
 
-        disk_data[MAP_GROUND][MAP_GROUND].blit(disk_data[MAP_GROUND][MAP_OBJECTS], (0, 0))    # Blit the objects layer to ground layer
-        cls.w_map_layers[0] = cls.world_parse_to_chunks(cls.w_ambientColor(disk_data[MAP_GROUND][MAP_GROUND]))
+        # Blit the objects layer to ground layer
+        disk_data[MAP_GROUND][MAP_GROUND].blit(disk_data[MAP_GROUND][MAP_OBJECTS], (0, 0))   
+        cls.w_map_layers[0] = cls.world_parse_to_chunks(cls.w_ambientColor( \
+                                                        disk_data[MAP_GROUND][MAP_GROUND]))
 
         # Paint the uphanging wires before cutting the wall surface in to chunks
-        cls.w_apply_wires(disk_data[MAP_GROUND][MAP_WALLS], disk_data[data_tag][cls.MAP_WIRE_XML], stage=0) 
+        cls.w_apply_wires(disk_data[MAP_GROUND][MAP_WALLS], 
+                          disk_data[data_tag][cls.MAP_WIRE_XML], stage=0) 
 
-        cls.w_map_layers[2] = cls.world_parse_to_chunks(cls.w_ambientColor(disk_data[MAP_GROUND][MAP_WALLS]))
+        cls.w_map_layers[2] = cls.world_parse_to_chunks(cls.w_ambientColor( \
+                                                        disk_data[MAP_GROUND][MAP_WALLS]))
        
         # width and height of chunks
         cls.w_map_size_macro = (cls.w_map_size[0] / cls.tk_macro_cell_size,
@@ -907,7 +917,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 ofs32 = True 
                 wall_pos[0] += 16; wall_pos[1] += 16    # Wall segments needs to be pushed back towards center
 
-            # Get all endpoints of the wall (All wall_pos are centered on the walls, so we need to offset them to corner points)
+            # Get all endpoints of the wall (All wall_pos are centered on the walls, 
+            #                                so we need to offset them to corner points)
             wallX = ((wall_pos[0] - 16, wall_pos[1] - 16),      # Topleft 
                      (wall_pos[0] + 16, wall_pos[1] + 16),      # Bottomright
                      (wall_pos[0] + 16, wall_pos[1] - 16),      # Topright
@@ -957,7 +968,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             for enum2, row in enumerate(column):
                 # Which layer this wall is part of
                 pos = 32 * enum2, 32 * enum1
-                if row.collision:
+                if row.w_collision:
                     # Build a quadrilateral stretching from each block to topleft 
                     # (Possible allow direction customization?)
                     cls.tk_draw_polygon(static_shadow_map, cls.tk_static_shadow_color, 
@@ -1119,12 +1130,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
             
         """
-        # Save for the second layer since it gets blitted after the player code
-        if layer: offx = cls.w_offset[0] - cls.cell_x; offy = cls.w_offset[1] - cls.cell_y
-        else:
-            # First layer. Store the ground layer position
-            offx = 0; offy = 0
-            cls.w_offset = cls.cell_x, cls.cell_y
+        ofsx, ofsy = cls.w_share['WorldPositionDelta'] 
 
         near_x, near_y = -int(cls.cell_x) >> 8, -int(cls.cell_y) >> 8 
         
@@ -1137,7 +1143,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 cell_x, cell_y = cls.w_map_layers[layer][y][x][0]
                 
                 # Combine the cell spawn pos and world pos
-                cell_x += cls.cell_x + offx; cell_y += cls.cell_y + offy
+                cell_x += cls.cell_x - ofsx 
+                cell_y += cls.cell_y - ofsy
                 
                 # The tiles on the left and top offsets by one when they go
                 # out of bounds, so they need to be pushed back by one pixel
@@ -1160,7 +1167,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             angle -> Angle(radians)
             f_angle -> Fixed_Angle (Degrees)
             weapon -> Weapon used to fire the shot
-            dual_index -> If the weapon has 2 different firing frames, you can toggle this between 0, 1 to control
+            dual_index -> If the weapon has 2 different firing frames, 
+                          you can toggle this between 0, 1 to control
                           Which one to spawn
             player -> Controls who is firing the weapon and what collisions to check for
             ignore_id -> Enemy id to ignore when firing the weapon (So enemy doesn't shoot itself) 
@@ -1417,7 +1425,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             if not (-1 < rx < cls.w_map_size[0]) or \
                not (-1 < ry < cls.w_map_size[1]): return 1
 
-            if cls.w_micro_cells[ry][rx].collision:
+            if cls.w_micro_cells[ry][rx].w_collision:
                 return 1
 
         return 0
@@ -1485,7 +1493,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.spawn_effect(token[0], token[1], angle=token[2])  
         
         if health <= 0:
-            cls.subtractEnemyCountForVictory()
             # Begin enemy death sequency
             token = cls.w_enemies[enemy_id].enemy_killed((sx, sy))
 
@@ -1584,8 +1591,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 if not -1 < cx < cls.w_map_size[0]:
                     continue 
 
-                if cls.w_micro_cells[cy][cx].collision:
-                    rect = cls.w_micro_cells[cy][cx].collision 
+                if cls.w_micro_cells[cy][cx].w_collision:
+                    rect = cls.w_micro_cells[cy][cx].w_collision 
                     near_collisions.append(cls.tk_rect(rect.x + cls.cell_x,
                                                        rect.y + cls.cell_y,
                                                        32, 32))
@@ -1658,9 +1665,11 @@ class Main(World, DeltaTimer):
             return -> None
             
         """
+        self.playMusic(tracklist_play=True)
+
         self.dt_tick()
 
-        escape = 0          # Pause game
+        escape = 0          # Pause/Escape 
         ignore_delta = 0    # Delta calculation goes wild after pause
                             # so ignore the the last tick after pause function is done
         
@@ -1669,7 +1678,7 @@ class Main(World, DeltaTimer):
 
             self.screen.fill(self.tk_bg_color)
 
-            key_event = -1      # Pass key events to fuctions
+            key_event = -1      # Pass key events to functions
             for event in self.tk_eventDispatch():
                 self.uioverlay.Event_handleEvents(event.type) 
 
@@ -1681,6 +1690,7 @@ class Main(World, DeltaTimer):
 
                     key_event = event.key
 
+            self.w_share['WorldPositionDelta'] = 0, 0
             self.render_map(0, self.screen)
             
             if not self.tk_no_shadow_layer:
@@ -1710,8 +1720,9 @@ class Main(World, DeltaTimer):
             self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
             self.tk_display.flip()
 
-            if hud_token['victory'] == -1: 
-                return None
+            if hud_token['victory'] == -1:
+                # Return the last frame fade-out 
+                return self.screen
             else:
                 if escape and not hud_token['victory']: 
                     escape = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)

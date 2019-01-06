@@ -277,7 +277,8 @@ class WeaponCasings(GlobalGameData, TkWorldDataShared):
                 # Store the img and position so we can work with the last frame before it gets destroyed
                 cls.casings_map[key].casing_last_frame = img, (x, y)
                 
-                surface.blit(img, (x, y))
+                offs_x, offs_y = cls.w_share['WorldPositionDelta']
+                surface.blit(img, (x - offs_x, y - offs_y))
             
             except StopIteration:
                 # Blit the casing to the ground forever

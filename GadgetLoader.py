@@ -37,7 +37,8 @@ class GadgetLoader(GlobalGameData):
                         'g_desc': '-'}
             
             for line in cls.tk_readFile(cfg, 'r'):
-                if line[0] == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
+                if line[0] == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, 
+                                                                             line[1])).convert_alpha()
                 
                 elif line[0] == 'g_price': tex_data[line[0]] = int(line[1]) 
                 

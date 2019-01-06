@@ -332,7 +332,9 @@ class World(VisualResources, MapParser, Packer):
                     cls.es_update('id_wall_cnt', wall_cnt)
             
             # Chop the world into chunks
-            cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, full_world.subsurface(chunk * x, chunk * y, chunk, chunk)) 
+            cls.w_Cells_Layers[buildstep] = [[(chunk * x, chunk * y, full_world.subsurface(chunk * x, 
+                                                                                           chunk * y, 
+                                                                                           chunk, chunk)) 
                                             for x in xrange(cls.w_Size[0])]
                                             for y in xrange(cls.w_Size[1])]
 
@@ -496,7 +498,7 @@ class World(VisualResources, MapParser, Packer):
         if disp_extra[-1]:
             for sector in disp_extra[-1]: cls.ed_draw_rect(surface, (0xff, 0xff, 0x0), sector, 1)
 
-        # Keep spawn/end point render iconst last on the render stack
+        # Keep spawn/end point rendering last on the render stack
         for flag in cls.w_SpawnEnd:
             if flag is None: continue
             pos = cls.w_homePosition(flag.x * 32, flag.y * 32) 
@@ -781,7 +783,7 @@ class World(VisualResources, MapParser, Packer):
     @classmethod
     def __w_ShowCollisionOrigin(cls, surface, x, y):
         """
-            Draw a collision marker for cells with collision enabled
+            Draw a collision marker(X) for cells with collision enabled
 
             surface -> ActiveScreen
             x, y -> Pos
@@ -829,10 +831,10 @@ class TkinterResources(VisualResources):
         """
         cls.es_initVariables()  # Statistic stats
 
-        # Map                              # Debug values
+        # Map                              # Default values
         cls.bf_mapname     = cls.ed_str(); cls.bf_mapname.set('None') 
-        cls.bf_mapwidth    = cls.ed_int(); cls.bf_mapwidth.set(64) 
-        cls.bf_mapheight   = cls.ed_int(); cls.bf_mapheight.set(64) 
+        cls.bf_mapwidth    = cls.ed_int(); cls.bf_mapwidth.set(32) 
+        cls.bf_mapheight   = cls.ed_int(); cls.bf_mapheight.set(32) 
         cls.bf_mapbase_tex = cls.ed_str()
         cls.bf_mapwall_tex = cls.ed_str()
 
@@ -1010,11 +1012,8 @@ class BaseFrame(tk.Tk, TkinterResources):
         self.menuBar.add_cascade(label='Map', menu=self.menuMap)
 
         self.menuBar.add_command(label='Settings', command=lambda: None, state='disabled')
-
-
-        
+     
 # ------
-
 
 class ToolFrame(ed_LabelFrame, TkinterResources):
     """
@@ -1076,7 +1075,6 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         .grid(row=19, columnspan=3, pady=15, padx=5, sticky=self.ed_sticky_vert)
 
 # -------
-
 
 class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
 
@@ -1424,7 +1422,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.es_update('id_framerate', round(self.dt_fps(), 1))
 
     
-
     def pf_chunkSpatialPos(self, wx, wy, cxs, cys):
         """
             Get the position inside chunks
@@ -1439,7 +1436,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                 32 * wy - self.ed_chunk_size_raw * cys) 
 
     
-
     def pf_chunkClearArea(self, layer, chunk_index, rect, clean_color=(0x0, 0x0, 0x0, 0x0)):
         """
             Clean the specified chunk area with clear alpha color
@@ -1455,7 +1451,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.ed_draw_rect(self.w_Cells_Layers[layer][chunk_index[1]][chunk_index[0]][-1], 
                           clean_color, rect)
         #
-    
     
     
     def pf_mouseSpatialPos(self, mousex, mousey, shift_l=5):
@@ -1587,7 +1582,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             self.__pf_floodFill(index, rot, tex_data['name'], tex_data['rot'] / 90)
     
     
-
     @EditorStatistics.es_update_decorator(_id='id_object_cnt')
     def __pf_applyObject(self, index, x, y, surface=None, action_key=0, set_id=0):
         """
@@ -1695,7 +1689,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
             return -1
     
-
 
     @EditorStatistics.es_update_decorator(_id='id_wall_cnt')
     def __pf_applyWallset(self, index, x, y, surface=None, action_key=0, set_id=0):
@@ -1807,9 +1800,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         angle = self.tso_dataTextures[set_id]['rot']     
         
         rot = self.ed_transform.rotate(tex, angle)
-
-        #rot_w = rot.get_width()
-        #rot_h = rot.get_height()
 
         rot_w, rot_h = rot.get_size()
 
@@ -1950,7 +1940,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             pcolor = 0xff, 0x0, 0x80    # Invalid placement 
         
         self.ed_draw_rect(surface, pcolor, (x, y, 32, 32), 1)
-
 
 
     @EditorStatistics.es_update_decorator(_id='id_pickup_cnt')
@@ -2246,8 +2235,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                             (endpx - self.ed_sin(theta + arrow_angle) * 8, 
                              endpy - self.ed_cos(theta + arrow_angle) * 8), 1)
         
-
-
 
 class Main(GlobalGameDataEditor, DeltaTimer):
     def __init__(self):

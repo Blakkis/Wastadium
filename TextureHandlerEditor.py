@@ -136,16 +136,20 @@ class TextureSelectOverlay(GlobalGameDataEditor):
                     cls.tso_textureFrames[cls.tso_setMode].func(surface, click)
             else:
                 # Blit the review frame
-                prevw = cls.tso_texReview[cls.tso_setMode].get_width() + 4  # Needed as anchor for the data tex about the texture 
+                # Needed as anchor for the data tex about the texture
+                prevw = cls.tso_texReview[cls.tso_setMode].get_width() + 4  
                 surface.blit(cls.tso_texReview[cls.tso_setMode], (cls.ed_resolution[0] - prevw, 4))
 
                 # Display data about the texture next to preview
                 if cls.tso_dataTextures[cls.tso_setMode]['name']:
-                    name = cls.tso_font.render(cls.tso_dataTextures[cls.tso_setMode]['name'], 1, (0xff, 0xff, 0xff))
+                    name = cls.tso_font.render(cls.tso_dataTextures[cls.tso_setMode] \
+                    						   ['name'], 1, (0xff, 0xff, 0xff))
                     surface.blit(name, (cls.ed_resolution[0] - (prevw + name.get_width() + 4), 0))
                     
-                    size = cls.tso_font.render('{}x{}'.format(*cls.tso_dataTextures[cls.tso_setMode]['size']), 1, (0xff, 0xff, 0xff))
-                    surface.blit(size, (cls.ed_resolution[0] - (prevw + size.get_width() + 4), name.get_height() - 4)) 
+                    size = cls.tso_font.render('{}x{}'.format(*cls.tso_dataTextures[cls.tso_setMode] \
+                    										  ['size']), 1, (0xff, 0xff, 0xff))
+                    surface.blit(size, (cls.ed_resolution[0] - (prevw + size.get_width() + 4), 
+                    			 name.get_height() - 4)) 
 
         else:
             # Reset texture stuff if user 
@@ -280,7 +284,8 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 
                     cls.tso_textureSelectMode = 0
 
-                    cls.tso_updateDataTexture(set_id=0, size=texture['tex_main'].get_size(), set=0, name=name)
+                    cls.tso_updateDataTexture(set_id=0, size=texture['tex_main'].get_size(), 
+                    						  set=0, name=name)
                     break       
             else:
                 highlight = 0xaa, 0xaa, 0xaa  
@@ -338,7 +343,8 @@ class TextureSelectOverlay(GlobalGameDataEditor):
                     
                     cls.tso_textureSelectMode = 0   
 
-                    cls.tso_updateDataTexture(set_id=mode + 1, size=tex.get_size(), set=mode + 1, name=name)
+                    cls.tso_updateDataTexture(set_id=mode + 1, size=tex.get_size(), 
+                    						  set=mode + 1, name=name)
                     break   
             else:
                 highlight = 0xaa, 0xaa, 0xaa  

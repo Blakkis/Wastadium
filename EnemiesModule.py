@@ -6,12 +6,13 @@ from ConfigsModule import TkWorldDataShared
 from SoundModule import SoundMusic
 from Tokenizers import EnemyDeathSeq 
 from MapParser import W_errorToken
+from VictoryCondition import BookKeeping
 
 import PathFinder
 
 # NOTE: This shit needs total rework
 
-class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared):
+class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared, BookKeeping):
     """
         TBD
     """
@@ -86,6 +87,9 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
         """
         return repr('(pos:{}, id:{})'.format(self.enemy_pos, self.enemy_id))
 
+    
+    def __del__(self):
+        self.enemyKilled(self.enemy_name)    
 
     
     def enemy_getHit(self, dmg_taken, scr_enemy, scr_player):
@@ -736,7 +740,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared)
         for y in xrange(cls.enemy_world_mapsize[1]):
             row = []
             for x in xrange(cls.enemy_world_mapsize[0]):
-                row.append(cls.tk_rect(32 * x, 32 * y, 32, 32) if _map[y][x].collision else 0)
+                row.append(cls.tk_rect(32 * x, 32 * y, 32, 32) if _map[y][x].w_collision else 0)
             world.append(tuple(row))
 
         cls.enemy_world_collisions[:] = world
