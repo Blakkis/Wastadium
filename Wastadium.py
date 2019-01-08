@@ -9,7 +9,7 @@ from TextureLoader import *
 from ShadowMap import *
 from DecalModule import *
 from Ui import *
-from Menus import MenuManager
+from Menus import MenuManager, MenuIntroOutro, MenuReport, MenuShop
 from PreProcessor import PreProcessor
 from Inventory import Inventory
 from Timer import DeltaTimer
@@ -634,10 +634,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
             Parse surface to smaller subsurfaces
 
+            surface -> Target surface
+
             return -> None
 
         """
-        # Chunk square
         chunk_size = cls.tk_macro_cell_size * 32
 
         return [[(cls.world_to_screen_coords(ex * cls.tk_macro_cell_size, ey * cls.tk_macro_cell_size), 
@@ -648,7 +649,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
 
     @classmethod
-    def build_map(cls, map_name=None):
+    @MenuIntroOutro 
+    def build_map(cls, map_name=None, surface=None):
         """
             Build the world
 
@@ -766,6 +768,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         # Create the mess solver map
         cls.convertToRectMap(cls.w_map_layers[0])
+
+        return surface
     
     
     @classmethod
@@ -1634,16 +1638,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
 
 class Main(World, DeltaTimer):
-    """
-        Main stage
-
-    """
     def __init__(self):
         # Center the windowed mode on screen
         self.tk_environ['SDL_VIDEO_CENTERED'] = '1'
         
-        # Audio needs to be initialized before pygame.init 
-        # so arguments can be used for the audio init
+        #
         self.tk_mixer.init(self.tk_audio_frequency, -16, self.tk_audio_channel, self.tk_audio_buffersize)
         self.tk_mixer.set_num_channels(self.tk_audio_max_channels)
 
@@ -1657,7 +1656,10 @@ class Main(World, DeltaTimer):
 
         self.menus.mainRun(self.screen, World.build_map, self.gameloop)
 
-        
+
+    @MenuShop
+    @MenuReport
+    @MenuIntroOutro   
     def gameloop(self):
         """
             Mainloop
@@ -1667,12 +1669,11 @@ class Main(World, DeltaTimer):
         """
         self.playMusic(tracklist_play=True)
 
-        self.dt_tick()
-
         escape = 0          # Pause/Escape 
         ignore_delta = 0    # Delta calculation goes wild after pause
                             # so ignore the the last tick after pause function is done
         
+        self.dt_tick()
         while 1:
             ignore_delta = self.dt_tick(self.tk_fps, ignore_delta=ignore_delta)
 

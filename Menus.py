@@ -12,6 +12,8 @@ from MapParser import EpisodeParser
 
 from sys import argv as read_argv
 
+from functools import partial
+
 
 __all__ = ('MenuManager', )
 
@@ -329,7 +331,9 @@ class MenuMain(PagesHelp, EventManager):
 
                 if self.menu_timer.get_event(event.type): tick = 1
 
-                if event.type == self.tk_event_mouseup: click = 1
+                if event.type == self.tk_event_mouseup: 
+                    if event.button == 1:
+                        click = 1
 
             self.interactive_background.ab_render(surface, tick)
 
@@ -396,7 +400,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
 
         self.episodes = {key: RectSurface(self.tk_renderText(self.font_24, key, True, (0xff, 0x0, 0x0), shadow=True),
                                           snd_hover_over=180, snd_click=181, 
-                                          func=lambda episode: self.__ref_functions['episode_roll'](episode)) \
+                                          func=lambda episode, surface: self.__ref_functions['episode_roll'](episode, surface)) \
                          for key in self.all_valid_campaigns.iterkeys()}
 
         self.selection_bg = self.tk_draw_rounded_rect(int(256 * self.menu_scale), 
@@ -490,7 +494,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
                             # This calls the episode_roller
                             # once player has played all the levels
                             # return to mainmenu
-                            return ep_surf.rs_click(episode)
+                            return ep_surf.rs_click(episode, surface)
 
                 elif enum < self.selection_bg_max_items + self.selection_bg_max_hide_items:
                     alpha_level = enum - self.selection_bg_max_items 
@@ -509,9 +513,37 @@ class MenuCampaign(PagesHelp, EpisodeParser):
 
 
 
-class MenuShop(PagesHelp, Inventory, EventManager):
+class MenuShop(PagesHelp, Inventory):
     
-    def __init__(self):
+    # Since the class works as decorator, the data needed has not been
+    # initialized yet, call the init once during first __call__
+    __shop_initialized = False
+    
+
+    def __init__(self, function=None):
+        self.function = function
+
+
+    def __get__(self, obj, type=None):
+        return partial(self, obj)
+
+    
+    def __call__(self, *args, **kw):
+        if not self.__shop_initialized:
+            self.__shop_initialized = self.init_shop()    
+
+        surface = self.function(*args, **kw)
+        self.run(surface)
+        return surface
+
+   
+    def init_shop(self):
+        """
+            Initialize shop
+
+            return -> 'True' 
+
+        """
         self.ms_font_16 = self.tk_font(self.ElementFonts[1], int(16 * self.menu_scale))
         self.ms_font_height = self.ms_font_16.get_height() 
         
@@ -528,6 +560,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
                             'help_1': self.ms_font_16.render('LMB - Buy | RMB - sell', 1, (0xff, 0x0, 0x0))}
 
         # Provide much nicer background for the icons (32x32, 64x64)
+        # Since my antialising method is slow, its betters to build one and pass that to everyone
         _64 = int(64 * self.menu_scale) 
         csurf_64 = self.tk_draw_rounded_rect(_64, _64, 8, (0xff, 0x0, 0x0), 0x60, True)
         
@@ -542,7 +575,9 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         
         self.ms_setup_healthArmor()
 
-
+        return True
+    
+    # Note: Currency
     def ms_setup_credits(self, bg):
         """
             Credits ui
@@ -591,7 +626,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
         self.ms_armorBar.rs_updateRect(self.ms_armorHealthIcon.rs_getPos('right'),
                                        self.ms_armorHealthIcon.rs_getPos('centery') + \
                                        self.ms_armorHealthIcon.rs_getSize()[1] / 4 - bar_bg.get_height() / 2)
-        
+       
     
     def run(self, surface):
         """
@@ -602,6 +637,7 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             return -> None
 
         """
+        quit_shop = False
         while 1:
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
@@ -611,8 +647,13 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             for event in self.tk_eventDispatch():
                 self.menu_timer.get_event(event.type)
 
-                if event.type == self.tk_event_mouseup: 
-                    click = 1
+                if event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']:
+                        quit_shop = True
+
+                if event.type == self.tk_event_mouseup:
+                    if event.button == 1:
+                        click = 1
 
             mx, my = self.tk_mouse_pos()
 
@@ -627,6 +668,9 @@ class MenuShop(PagesHelp, Inventory, EventManager):
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
             self.tk_display.flip() 
+            
+            # This is to keep the last draw surface drawn for outro effect(Visually more pleasing)
+            if quit_shop: return surface
 
 
     def ms_validate_buy(self):
@@ -923,8 +967,19 @@ class MenuShop(PagesHelp, Inventory, EventManager):
 
 class MenuIntroOutro(PagesHelp):
     
-    def __init__(self):
-        pass
+    def __init__(self, function=None):
+        self.function = function
+    
+    
+    def __get__(self, obj, type=None):
+        return partial(self, obj) 
+
+    
+    def __call__(self, *args, **kw):
+        surface = self.function(*args, **kw)
+        self.run(surface)
+        return surface
+
 
     def run(self, surface):
         static = surface.copy()
@@ -940,7 +995,7 @@ class MenuIntroOutro(PagesHelp):
             if int(fadeout_factor) & 16: self.outro_effect(static, fadeout_factor)
             surface.blit(static, (0, 0))
 
-            fadeout_factor += 64 * self.dt_getDelta()
+            fadeout_factor += 128 * self.dt_getDelta()
 
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
@@ -949,17 +1004,26 @@ class MenuIntroOutro(PagesHelp):
 
             surface.blit(fadeout_surface, (0, 0))
 
-            self.tk_display.set_caption('{}, FPS: {}'.format(self.tk_name, round(self.dt_fps(), 2)))
+            self.tk_display.set_caption(self.tk_name)
             self.tk_display.flip()
 
-            if fadeout_factor >= 0xff: return None
+            if fadeout_factor >= 0xff: return surface
 
     
     def outro_effect(self, surface, factor):
+        """
+            Fadeout the screen
+
+            surface -> Active screen
+            factor -> fadeout effect factor
+
+            return -> None
+        """
         array = self.tk_surfarray.pixels3d(surface)
         sway = int(8 * self.tk_sin(int(factor + 1)))
         sway = 1 if sway == 0 else sway 
         array[::sway, ::sway, 1:] = 0x20
+
 
 
 class MenuOptions(PagesHelp):
@@ -1113,10 +1177,12 @@ class MenuOptions(PagesHelp):
             
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_mousedown:
-                    click_down = event.button
+                    if event.button == 1:
+                        click_down = 1
 
                 elif event.type == self.tk_event_mouseup:
-                    click_up = event.button
+                    if event.button == 1:
+                        click_up = 1
 
                 elif self.menu_timer.get_event(event.type): tick = 1 
 
@@ -1293,18 +1359,29 @@ class MenuOptions(PagesHelp):
             self.mo_uk_editme = ''
 
 
-            
-
-
 class MenuReport(PagesHelp):
-    def __init__(self):
-        self.mr_rating_ranks = {20: "Drive-By",
-                                40: "",
-                                60: "Firearm Instructor",
-                                80: "",
-                                100: "47, Is That You?"}
+    
+    __rating_ranks = {20: "Drive-By",
+                      40: "",
+                      60: "Firearm Instructor",
+                      80: "",
+                      100: "47, Is That You?"}
 
 
+    def __init__(self, function=None):
+        self.function = function
+
+    
+    def __get__(self, obj, type=None):
+        return partial(self, obj)
+
+    
+    def __call__(self, *args, **kw):
+        surface = self.function(*args, **kw)
+        self.run(surface)
+        return surface
+
+    
     def run(self, surface):
         """
             TBD
@@ -1316,12 +1393,41 @@ class MenuReport(PagesHelp):
             surface.fill(self.tk_bg_color)
 
             for event in self.tk_eventDispatch():
-                pass
+                if event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']:
+                        return surface
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
             self.tk_display.flip()
 
+# ---------------------------------
+
+#           Intro (Optional)
+#              |
+#             Menu - - - -
+#              |          |
+#       Episode Select  Options
+#              |           
+#    - - > Build level
+#   |          |
+#   |       *Outro
+#   |          |
+#   |      Play level  - - - - 
+#   |          |              |
+#   |          |           Options
+#   |       *Outro
+#   |       *Report
+#   |        *Shop
+#    - - - - < |
+#              |
+#         *Full report
+#              |
+#      Episode Select(Skip)
+#              |
+#             Menu
+
+# ---------------------------------
 
 class MenuManager(EpisodeParser):
     """
@@ -1340,15 +1446,12 @@ class MenuManager(EpisodeParser):
         
         # NOTE: These should be visible to every menu's, 
         #       so we could get rid of the 'set_reference_function' bullshit 
-        self.all_menus = {'m_intro':   MenuIntro(),
-                          'm_main':    MenuMain(),
+        #       or turn more of them to decorators
+        self.all_menus = {'m_main':    MenuMain(),
                           'm_episode': MenuCampaign(),
-                          'm_shop':    MenuShop(),
-                          'm_inout':   MenuIntroOutro(),
-                          'm_options': MenuOptions(),
-                          'm_report':  MenuReport()}
+                          'm_options': MenuOptions()}
 
-        self.all_menus['m_main'].menu_set_references(intro=None if '-nosplash' in read_argv else self.all_menus['m_intro'], 
+        self.all_menus['m_main'].menu_set_references(intro=None if '-nosplash' in read_argv else MenuIntro(), 
                                                      options=self.all_menus['m_options'],
                                                      episode=self.all_menus['m_episode'])
 
@@ -1362,8 +1465,7 @@ class MenuManager(EpisodeParser):
             return -> None
 
         """
-        self.episode_set_references(build=world_build_function, run=game_loop_function,
-                                    inout=self.all_menus['m_inout'])
+        self.episode_set_references(build=world_build_function, run=game_loop_function)
         self.all_menus['m_main'].run(surface)
 
 

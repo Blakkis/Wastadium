@@ -206,7 +206,7 @@ class EpisodeParser(object):
 
     
     @classmethod
-    def episodeRoll(cls, episode_name):
+    def episodeRoll(cls, episode_name, surface):
         """
             Begin episode playback
 
@@ -214,14 +214,9 @@ class EpisodeParser(object):
 
             return -> None
         """     
-        for m in cls.all_valid_campaigns[episode_name]:
-            cls.__ref_functions['build'](m)
-            surface = cls.__ref_functions['run']()
-            cls.__ref_functions['inout'].run(surface)
-            #print "Build map..."
-            #print "Play map..."
-            #print "After report..."
-            #print "Shop..."
+        for level in cls.all_valid_campaigns[episode_name]:
+            cls.__ref_functions['build'](level, surface)
+            cls.__ref_functions['run']()
 
         return None
 

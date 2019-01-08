@@ -64,6 +64,7 @@ class Inventory(Weapons, GadgetLoader):
         for key, value in cls.all_weapons.iteritems():
             k = 'w_{}'.format(value['w_class'])
             
+            # Each key slot has wheel on it
             if k not in cls.i_playerStats:
                 cls.i_playerStats[k] = cls.tk_deque()
             
