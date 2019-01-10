@@ -23,7 +23,7 @@ from traceback import print_exc as mp_getLastException
 
 
 # Enable print based exceptions 
-IDE_TRACEBACK = False
+IDE_TRACEBACK = True
 
 
 # Game might show errors via MessageBox which creates un-needed Tkinter window

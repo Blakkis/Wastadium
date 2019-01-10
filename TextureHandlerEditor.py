@@ -279,7 +279,7 @@ class TextureSelectOverlay(GlobalGameDataEditor):
 
             if test_rect.collidepoint(cls.ed_mouse.get_pos()):
                 highlight = 0xff, 0xff, 0xff
-                if cls.ed_mouse.get_pressed()[0]:
+                if click:
                     cls.tso_updateTexturePreview(0, texture['tex_main'])
 
                     cls.tso_textureSelectMode = 0

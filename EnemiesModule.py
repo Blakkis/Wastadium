@@ -126,7 +126,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared,
                                    self.tk_degrees(e_angle))
     
 
-    def enemy_killed(self, scr_enemy):
+    def enemy_killed(self, scr_enemy_pos):
         """
             Call this to init enemy death sequence and get a token
 
@@ -139,7 +139,7 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared,
         self.enemy_delete = 1
 
         # Play death sound
-        self.playSoundEffect(self.tk_choice(self.enemy_death_snd), distance=scr_enemy, env_damp=.5)
+        self.playSoundEffect(self.tk_choice(self.enemy_death_snd), distance=scr_enemy_pos, env_damp=.5)
         
         return EnemyDeathSeq(angle_deg=self.enemy_targetAngleDeg, 
                              g_profile=self.tk_choice(self.enemy_gore_profile),

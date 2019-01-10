@@ -118,11 +118,10 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
 class MenuIntro(PagesHelp, EventManager):
     """
         Display the Dev Intro (Which ALWAYS should be skippable!)
- 
 
     """
     def __init__(self):
-        self.intro_time = 4500  # ms
+        self.intro_time = 4500    # Milliseconds
         self.intro_exit_flag = ed_BitToggle(1)
         # Quit the intro takes 2 escape presses
         # First step finishes the fadein animation
@@ -130,11 +129,11 @@ class MenuIntro(PagesHelp, EventManager):
         self.intro_exit_proceed = 0     
 
         # Font
-        self.font = self.tk_font(self.ElementFonts[0], int(128 * self.menu_scale))
+        self.font_0 = self.tk_font(self.ElementFonts[0], int(128 * self.menu_scale))
  
-        w, h = self.font.size(self.tk_dev_name)
+        w, h = self.font_0.size(self.tk_dev_name)
         self.fsurf = self.tk_surface((w, h))
-        self.fsurf.blit(self.font.render(self.tk_dev_name, 1, (0xff, 0x0, 0x0)), (0, 0))
+        self.fsurf.blit(self.font_0.render(self.tk_dev_name, 1, (0xff, 0x0, 0x0)), (0, 0))
 
         # Generate the logo gear (Because why not?)
         self.dsurf = self.__mi_generateGear()
@@ -257,21 +256,21 @@ class MenuMain(PagesHelp, EventManager):
     __ref_functions = {} 
 
     def __init__(self):
-        self.font_96 = self.tk_font(self.ElementFonts[0], int(96 * self.menu_scale))
-        self.font_48 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
-        self.font_16 = self.tk_font(self.ElementFonts[1], int(16 * self.menu_scale))
+        self.font_0 = self.tk_font(self.ElementFonts[0], int(96 * self.menu_scale))
+        self.font_1 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
+        self.font_2 = self.tk_font(self.ElementFonts[1], int(16 * self.menu_scale))
 
         
-        self.gfont = self.font_96.render(self.tk_name, 1, (0xff, 0x0, 0x0))
+        self.gfont = self.font_0.render(self.tk_name, 1, (0xff, 0x0, 0x0))
         self.gfont_pos = (self.tk_res_half[0] - self.gfont.get_width()  / 2,
                           self.tk_res_half[1] - self.gfont.get_height() / 2)
 
 
-        self.gfont_bg = self.font_96.render(self.tk_name, 1, (0xaa, 0x0, 0x0)) 
+        self.gfont_bg = self.font_0.render(self.tk_name, 1, (0xaa, 0x0, 0x0)) 
         self.gfont_bg_pos = (self.tk_res_half[0] - self.gfont_bg.get_width()  / 2,
                              self.tk_res_half[1] - self.gfont_bg.get_height() / 2)  
         
-        self.version_id = self.font_16.render('ver: ' + self.tk_version, 1, (0xff, 0x0, 0x0)) 
+        self.version_id = self.font_2.render('ver: ' + self.tk_version, 1, (0xff, 0x0, 0x0)) 
 
         #self.scanline = ScanLineGenerator(8, 4)
 
@@ -279,15 +278,15 @@ class MenuMain(PagesHelp, EventManager):
         
         # Note: Move the lambdas inside the RectSurface function call
         self.options = self.tk_ordereddict()
-        self.options[0] = (RectSurface(self.font_48.render("New Game", 1, (0xff, 0x0, 0x0)), 
+        self.options[0] = (RectSurface(self.font_1.render("New Game", 1, (0xff, 0x0, 0x0)), 
                            snd_hover_over=180, snd_click=181),  
                            lambda surface: self.__ref_functions['episode'].run(surface))
         
-        self.options[1] = (RectSurface(self.font_48.render("Options", 1, (0xff, 0x0, 0x0)), 
+        self.options[1] = (RectSurface(self.font_1.render("Options", 1, (0xff, 0x0, 0x0)), 
                            snd_hover_over=180, snd_click=181),   
                            lambda surface: self.__ref_functions['options'].run(surface, enable_quit=False))
         
-        self.options[2] = (RectSurface(self.font_48.render("Exit Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180), 
+        self.options[2] = (RectSurface(self.font_1.render("Exit Game", 1, (0xff, 0x0, 0x0)), snd_hover_over=180), 
                            lambda *args: self.tk_quitgame())
 
         # Get the total height of all the options
@@ -395,10 +394,10 @@ class MenuCampaign(PagesHelp, EpisodeParser):
     def __init__(self):
         self.parseEpisodeFiles()
         
-        self.font_24 = self.tk_font(self.ElementFonts[0], int(24 * self.menu_scale))
-        self.font_32 = self.tk_font(self.ElementFonts[0], int(32 * self.menu_scale))
+        self.font_0 = self.tk_font(self.ElementFonts[0], int(24 * self.menu_scale))
+        self.font_1 = self.tk_font(self.ElementFonts[0], int(32 * self.menu_scale))
 
-        self.episodes = {key: RectSurface(self.tk_renderText(self.font_24, key, True, (0xff, 0x0, 0x0), shadow=True),
+        self.episodes = {key: RectSurface(self.tk_renderText(self.font_0, key, True, (0xff, 0x0, 0x0), shadow=True),
                                           snd_hover_over=180, snd_click=181, 
                                           func=lambda episode, surface: self.__ref_functions['episode_roll'](episode, surface)) \
                          for key in self.all_valid_campaigns.iterkeys()}
@@ -410,7 +409,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
         self.selection_bg_pos = (self.tk_res_half[0] - self.selection_bg.get_width()  / 2,
                                 (self.tk_res_half[1] - self.selection_bg.get_height() / 2) + 8 * self.menu_scale)
 
-        self.pre_text = {'select_ep': self.tk_renderText(self.font_32, "Select Episode", True, 
+        self.pre_text = {'select_ep': self.tk_renderText(self.font_1, "Select Episode", True, 
                                                         (0xff, 0x0, 0x0), shadow=True)}
         
         # Max number of items inside the selection rect
@@ -530,34 +529,34 @@ class MenuShop(PagesHelp, Inventory):
     
     def __call__(self, *args, **kw):
         if not self.__shop_initialized:
-            self.__shop_initialized = self.init_shop()    
+            self.__shop_initialized = self.init_shop_data()    
 
         surface = self.function(*args, **kw)
         self.run(surface)
         return surface
 
    
-    def init_shop(self):
+    def init_shop_data(self):
         """
             Initialize shop
 
             return -> 'True' 
 
         """
-        self.ms_font_16 = self.tk_font(self.ElementFonts[1], int(16 * self.menu_scale))
-        self.ms_font_height = self.ms_font_16.get_height() 
+        self.font_0 = self.tk_font(self.ElementFonts[1], int(16 * self.menu_scale))
+        self.ms_font_height = self.font_0.get_height() 
         
         # Pre-rendered texts (Color/Text doesn't change)
-        self.ms_pre_text = {'w_id': self.ms_font_16.render('Id: ',               1, (0xff, 0x0, 0x0)), 
-                            'w_price': self.ms_font_16.render('| Price: ',       1, (0xff, 0x0, 0x0)),
-                            'w_damage': self.ms_font_16.render('| Damage: ',     1, (0xff, 0x0, 0x0)),
-                            'w_range': self.ms_font_16.render('| Range: ',       1, (0xff, 0x0, 0x0)),
-                            'w_firerate': self.ms_font_16.render('| Firerate: ', 1, (0xff, 0x0, 0x0)),
-                            'dual_n': self.ms_font_16.render('Dual',             1, (0x80, 0x0, 0x0)),
-                            'dual_y': self.ms_font_16.render('Dual',             1, (0xff, 0x0, 0x0)),
-                            'owned_n': self.ms_font_16.render('Owned',           1, (0x80, 0x0, 0x0)),
-                            'owned_y': self.ms_font_16.render('Owned',           1, (0xff, 0x0, 0x0)),
-                            'help_1': self.ms_font_16.render('LMB - Buy | RMB - sell', 1, (0xff, 0x0, 0x0))}
+        self.ms_pre_text = {'w_id': self.font_0.render('Id: ',               1, (0xff, 0x0, 0x0)), 
+                            'w_price': self.font_0.render('| Price: ',       1, (0xff, 0x0, 0x0)),
+                            'w_damage': self.font_0.render('| Damage: ',     1, (0xff, 0x0, 0x0)),
+                            'w_range': self.font_0.render('| Range: ',       1, (0xff, 0x0, 0x0)),
+                            'w_firerate': self.font_0.render('| Firerate: ', 1, (0xff, 0x0, 0x0)),
+                            'dual_n': self.font_0.render('Dual',             1, (0x80, 0x0, 0x0)),
+                            'dual_y': self.font_0.render('Dual',             1, (0xff, 0x0, 0x0)),
+                            'owned_n': self.font_0.render('Owned',           1, (0x80, 0x0, 0x0)),
+                            'owned_y': self.font_0.render('Owned',           1, (0xff, 0x0, 0x0)),
+                            'help_1': self.font_0.render('LMB - Buy | RMB - sell', 1, (0xff, 0x0, 0x0))}
 
         # Provide much nicer background for the icons (32x32, 64x64)
         # Since my antialising method is slow, its betters to build one and pass that to everyone
@@ -668,7 +667,7 @@ class MenuShop(PagesHelp, Inventory):
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
             self.tk_display.flip() 
-            
+
             # This is to keep the last draw surface drawn for outro effect(Visually more pleasing)
             if quit_shop: return surface
 
@@ -733,12 +732,12 @@ class MenuShop(PagesHelp, Inventory):
             surface.blit(self.ms_pre_text['w_id'], (px, py))
             px += self.ms_pre_text['w_id'].get_width()
             
-            w_name = self.ms_font_16.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
+            w_name = self.font_0.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
             surface.blit(w_name, (px, py)); px += w_name.get_width() 
 
             for w in ('w_price', 'w_damage', 'w_range', 'w_firerate'):
                 value = self.all_weapons[kw['key']][w]
-                child = self.ms_font_16.render('{} {} '.format(value, 'cr.' if w == 'w_price' else ''), 1, (0xff, 0x0, 0x80))
+                child = self.font_0.render('{} {} '.format(value, 'cr.' if w == 'w_price' else ''), 1, (0xff, 0x0, 0x80))
 
                 px += render_carry(self.ms_pre_text[w], surface, px, py)
                 px += render_carry(child, surface, px, py)         
@@ -747,11 +746,11 @@ class MenuShop(PagesHelp, Inventory):
         elif _set== 1:
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
             
-            w_ammo = self.ms_font_16.render('{} '.format(self.all_ammo_data[kw['key']][0]), 1, (0xff, 0x0, 0x80)) 
+            w_ammo = self.font_0.render('{} '.format(self.all_ammo_data[kw['key']][0]), 1, (0xff, 0x0, 0x80)) 
             px += render_carry(w_ammo, surface, px, py)
 
             px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
-            a_price = self.ms_font_16.render('{} cr.'.format(self.all_ammo_data[kw['key']][1]), 1, (0xff, 0x0, 0x80))
+            a_price = self.font_0.render('{} cr.'.format(self.all_ammo_data[kw['key']][1]), 1, (0xff, 0x0, 0x80))
             px += render_carry(a_price, surface, px, py)
 
         
@@ -759,14 +758,14 @@ class MenuShop(PagesHelp, Inventory):
         elif _set == 2:
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
 
-            w_name = self.ms_font_16.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
+            w_name = self.font_0.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
             px += render_carry(w_name, surface, px, py)
 
             px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
-            g_price = self.ms_font_16.render('{} cr.'.format(self.gl_gadgets[kw['key']]['g_price']), 1, (0xff, 0x0, 0x80))
+            g_price = self.font_0.render('{} cr.'.format(self.gl_gadgets[kw['key']]['g_price']), 1, (0xff, 0x0, 0x80))
             px += render_carry(g_price, surface, px, py)
 
-            g_desc = self.ms_font_16.render(self.gl_gadgets[kw['key']]['g_desc'], 1, (0xff, 0x0, 0x80))
+            g_desc = self.font_0.render(self.gl_gadgets[kw['key']]['g_desc'], 1, (0xff, 0x0, 0x80))
             px += render_carry(g_desc, surface, 16, py + self.ms_font_height) 
 
 
@@ -791,7 +790,7 @@ class MenuShop(PagesHelp, Inventory):
             value.rs_updateRect(16 + (80 * self.menu_scale) * enum, 160 * self.menu_scale)
             surface.blit(*value.rs_renderSurface(position=1))
 
-            ammo_count = self.ms_font_16.render('x{}'.format(self._i_max_ammo), 1, (0xff if self._i_max_ammo else 0x80, 0x0, 0x80))
+            ammo_count = self.font_0.render('x{}'.format(self._i_max_ammo), 1, (0xff if self._i_max_ammo else 0x80, 0x0, 0x80))
             surface.blit(ammo_count, (value.rs_getPos('left'), value.rs_getPos('bottom')))
 
             if hl_ammo is not None and key == hl_ammo:
@@ -815,7 +814,7 @@ class MenuShop(PagesHelp, Inventory):
         """
         for enum, key in enumerate(self.ms_sIcons['mod_keys']):
             value = self.ms_sIcons[key]
-            value.rs_updateRect(16 + 80 * enum, 304 * self.menu_scale)
+            value.rs_updateRect(16 + (80 * self.menu_scale) * enum, 304 * self.menu_scale)
             surface.blit(*value.rs_renderSurface(position=1)) 
 
             owned_i = self.ms_pre_text['owned_n']
@@ -852,13 +851,13 @@ class MenuShop(PagesHelp, Inventory):
             length = self.tk_clamp(float(max_length) / self.i_playerStats[stat][1] * self.i_playerStats[stat][0], 0, max_length)
 
             self.tk_draw_gfx_rect(surface, (px, py - 2, length, bar.rs_getSize()[1] + 4), color)
-            text = self.tk_renderText(self.ms_font_16, "{} / {}".format(*self.i_playerStats[stat]), 
+            text = self.tk_renderText(self.font_0, "{} / {}".format(*self.i_playerStats[stat]), 
                                       1, (0xff, 0x0, 0x80), shadow=1)
             surface.blit(text, (bar.rs_getPos('right') - text.get_width() - 2, 
                                 bar.rs_getPos('bottom') - text.get_height() / 2))
 
             if self.i_playerStats[stat][0] < self.i_playerStats[stat][1]:
-                re_text = self.tk_renderText(self.ms_font_16, 'Replenish!', 1, 
+                re_text = self.tk_renderText(self.font_0, 'Replenish!', 1, 
                                             (0xff, 0x0, 0x40 + 0x80 * abs(self.tk_sin(self.menu_timer.get_ticks()))), shadow=1)
 
                 surface.blit(re_text, (bar.rs_getPos('left') + 2, bar.rs_getPos('top') - re_text.get_height() / 2))
@@ -869,7 +868,7 @@ class MenuShop(PagesHelp, Inventory):
 
         # Credits
         surface.blit(*self.ms_creditsIcon.rs_renderSurface(position=1))
-        credits = self.ms_font_16.render('{:,} cr.'.format(self.i_playerStats['credits']), 1, (0xff, 0x0, 0x80)) 
+        credits = self.font_0.render('{:,} cr.'.format(self.i_playerStats['credits']), 1, (0xff, 0x0, 0x80)) 
 
         surface.blit(credits, (self.ms_creditsIcon.rs_getPos('left') - credits.get_width() - 8,
                                self.ms_creditsIcon.rs_getPos('centery') - credits.get_height() / 2))
@@ -982,6 +981,17 @@ class MenuIntroOutro(PagesHelp):
 
 
     def run(self, surface):
+        """
+            Run the outro 
+
+            surface -> Active screen surface
+
+            return -> Active screen surface
+
+        """
+        # Fades out the music nicely with the outro
+        self.musicStopPlayback(ms=1400)    # Magic number based on how fast the outro moves
+
         static = surface.copy()
 
         fadeout_surface = self.tk_surface(surface.get_size(), self.tk_srcalpha)
@@ -1007,15 +1017,17 @@ class MenuIntroOutro(PagesHelp):
             self.tk_display.set_caption(self.tk_name)
             self.tk_display.flip()
 
-            if fadeout_factor >= 0xff: return surface
+            if fadeout_factor >= 0xff:
+                self.musicStopPlayback()    # Force shutdown (Player skipped the outro) 
+                return surface
 
     
     def outro_effect(self, surface, factor):
         """
-            Fadeout the screen
+            Do some magic to the last captured surface
 
-            surface -> Active screen
-            factor -> fadeout effect factor
+            surface -> Snapshot of the last surface
+            factor -> effect factor
 
             return -> None
         """
@@ -1072,7 +1084,7 @@ class MenuOptions(PagesHelp):
             row += value.rs_getSize()[1] + 16         
 
         self.mo_display_func = -1    # Which menu to display (-1: Root, 0: Volume Control, 1: Controls)
-        self.mo_last_select = -1    # Keep the last selected option highlighted even if mouse is not hovering over it
+        self.mo_last_select =  -1    # Keep the last selected option highlighted even if mouse is not hovering over it
         self.mo_gui_func = {0: self.mo_sound_settings,
                             1: self.mo_userkeys_settings}
 
@@ -1360,16 +1372,65 @@ class MenuOptions(PagesHelp):
 
 
 class MenuReport(PagesHelp):
-    
-    __rating_ranks = {20: "Drive-By",
-                      40: "",
-                      60: "Firearm Instructor",
-                      80: "",
-                      100: "47, Is That You?"}
+
+    __rating_ranks = {20:  "Polygon Reviewer",
+                      40:  "Amateur",
+                      60:  "Experienced",
+                      80:  "Veteran",
+                      100: "Sicario"}
+   
+    # Build all the report decorations during the first __call__
+    __report_initialized = False
 
 
     def __init__(self, function=None):
         self.function = function
+
+
+    def init_report_data(self): 
+        """
+            Init/Setup all data related for reporting player stats from the level playthrough
+
+            return -> None
+
+        """
+        self.font_0 = self.tk_font(self.ElementFonts[1], int(20 * self.menu_scale)) 
+        
+        background = self.tk_draw_rounded_rect(int(512 * self.menu_scale), 
+                                               self.tk_resolution[1] - 32,
+                                               8, (0xff, 0x0, 0x0), 0x60, False)
+
+        self.background = RectSurface(background)
+        self.background.rs_updateRect(self.tk_res_half[0] - self.background.rs_getSize()[0] / 2,
+                                      self.tk_res_half[1] - self.background.rs_getSize()[1] / 2) 
+
+        self.r_tag = self.tk_renderText(self.font_0, "Level Report", True, 
+                                        (0xff, 0x0, 0x0), shadow=True, flags=1)
+
+        self.r_tag_time = self.tk_strftime("%d/%m/%y")
+
+        # Per level(Final report includes more data)
+        self.r_tags = {'name': "Level Report: {}",
+                       'time': "Time: {}",
+                       'data': "Data: {}",
+                       'kill': "Kills: {}",
+                       'pkup': "Pickups: {}"}
+
+        return True    
+
+
+    def build_report(self):
+        """
+            Build the actual report in simplified police report
+
+            return -> None
+
+        """
+        # Get the current date
+        self.r_tag_time = self.tk_strftime("%d/%m/%y")
+        self.r_tag_time = self.tk_renderText(self.font_0, self.r_tag_time, True, 
+                                            (0xff, 0x0, 0x0), shadow=True, flags=1)
+
 
     
     def __get__(self, obj, type=None):
@@ -1377,6 +1438,9 @@ class MenuReport(PagesHelp):
 
     
     def __call__(self, *args, **kw):
+        if not self.__report_initialized:
+            self.__report_initialized = self.init_report_data()
+
         surface = self.function(*args, **kw)
         self.run(surface)
         return surface
@@ -1384,22 +1448,37 @@ class MenuReport(PagesHelp):
     
     def run(self, surface):
         """
-            TBD
+            Run the report menu
 
             return -> None
 
         """
+        self.build_report()
+        
         while 1:
             surface.fill(self.tk_bg_color)
+            surface.blit(self.menu_background, (0, 0))
 
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
                         return surface
 
-            surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
+            surface.blit(*self.background.rs_renderSurface(position=1))
 
+            # Get the topleft position of the background
+            bg_topleft = self.background.rs_getPos('topleft')
+
+            # Report tag shall work as anchor
+            #r_tag_pos = (bg_topleft[0] + 16 * self.menu_scale, bg_topleft[1] + 4 * self.menu_scale) 
+            #surface.blit(self.r_tag, r_tag_pos)
+            
+
+            #surface.blit(self.r_tag_time, (r_tag_pos[0], r_tag_pos[1] + self.r_tag.get_height()))
+
+            surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
             self.tk_display.flip()
+
 
 # ---------------------------------
 
@@ -1429,6 +1508,7 @@ class MenuReport(PagesHelp):
 
 # ---------------------------------
 
+
 class MenuManager(EpisodeParser):
     """
         Handles the setup how everything is organized
@@ -1444,9 +1524,7 @@ class MenuManager(EpisodeParser):
     def __init__(self):
         PagesHelp.ph_initData()
         
-        # NOTE: These should be visible to every menu's, 
-        #       so we could get rid of the 'set_reference_function' bullshit 
-        #       or turn more of them to decorators
+        # Note: Get rid of these. And replace with decorator based
         self.all_menus = {'m_main':    MenuMain(),
                           'm_episode': MenuCampaign(),
                           'm_options': MenuOptions()}
@@ -1460,7 +1538,11 @@ class MenuManager(EpisodeParser):
 
     def mainRun(self, surface, world_build_function, game_loop_function):
         """
-            TBD
+            Start the gameplay
+
+            surface -> Active screen surface
+            world_build_function -> Function to build the level and emit data about it
+            game_loop_function   -> Gameplay loop (Plays the level)
 
             return -> None
 

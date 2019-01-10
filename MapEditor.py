@@ -15,12 +15,16 @@ from Tokenizers import *
 from Tokenizers import Ed_CellPoint
 
 
-# NOTE
+# Note:
 #   Getting Tkinter and Pygame to work together includes some small hacks
 #   Such as controlling the execution of events
 #   I've marked someone of hacks with comment '# -- Hack --'
 #   Tokenizing the data is shit. Switch to something more understandable (namedtuple)
 #   Make the code more understandable
+
+# Note:
+#   
+
 
 
 class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatistics, 
@@ -1738,7 +1742,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                     
                     _5x5_cells.append(row)
 
-                for p in ed_AutoWallSolver.aw_autoWallSolve(_5x5_cells, index, self.w_Size[4:]):
+                for p in ed_AutoWallSolver.aw_autoWallSolve(_5x5_cells, index, self.w_Size[4:6]):
                     cx, cy = p[0] >> 3, p[1] >> 3
 
                     seg_index = self.pf_chunkSpatialPos(p[0], p[1], cx, cy)
@@ -1770,7 +1774,8 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         if action_key == 2 and self.w_Cells_Single[index[1]][index[0]].cell_midTex[0] is not None:
 
             if self.extra_options['auto_wall']:
-                print 'Yeah?'
+                # Implement delete of the wall texture in automode
+                pass
             
             else:
                 self.w_Cells_Single[index[1]][index[0]].cell_midTex = (None, 0, 0)

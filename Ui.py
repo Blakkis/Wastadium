@@ -29,14 +29,21 @@ class uiGameTimer(GlobalGameData, BookKeeping):
             return -> None
 
         """
-        if reset:
-            cls.ui_data['g_timer'] = cls.tk_counter(0)
+        color = 0xff, 0x0, 0x0
+        if reset: cls.ui_data['g_timer'].reset()
         else:
             if not cls.record['complete']:
                 cls.ui_data['g_timer'] += 1
+            
+            color = 0xff, 0x0, 0x80
 
-        t = str(cls.tk_timedelta(seconds=cls.ui_data['g_timer']()))
-        cls.ui_data['g_timer_text'][0] = cls.tk_renderText(cls.ui_data['g_font'], t, 1, (0xff, 0x0, 0x0), shadow=1)  
+        seconds = cls.ui_data['g_timer']()
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+
+        time_out = "{:02d}:{:02d}:{:02d}".format(h, m, s)
+        
+        cls.ui_data['g_timer_text'][0] = cls.tk_renderText(cls.ui_data['g_font'], time_out, True, color, shadow=1)  
 
     
     @classmethod
@@ -65,7 +72,7 @@ class uiGameTimer(GlobalGameData, BookKeeping):
 
         """
         cls.ui_data['g_font'] = font
-        cls.ui_data['g_timer'] = cls.tk_counter(-1)
+        cls.ui_data['g_timer'] = cls.tk_counter(0)
 
         # Get size estimations for the timer
         ew, eh = font.size('99:99:99')
@@ -92,10 +99,10 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
     def __init__(self):            
         # NOTE: Most of these hardcoded stuff is for the textures which do not scale with resolution (in-game)
         
-        self.olFont_1 = self.tk_font(self.ElementFonts[0], 20)
-        self.olFont_2 = self.tk_font(self.ElementFonts[0], 24)
+        self.font_0 = self.tk_font(self.ElementFonts[0], 20)
+        self.font_1 = self.tk_font(self.ElementFonts[0], 24)
 
-        self.setup_timer(self.olFont_1)
+        self.setup_timer(self.font_0)
         
         # Decorations ----
 
@@ -209,12 +216,12 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         surface.blit(self.armorBar,          (pos[0] + 40, pos[1] + 35))    # Armorbar bg
         
         # Health text (Separated from the blit to get the size of the string, so it can be anchored by the right side)
-        text_surf = self.tk_renderText(self.olFont_1, str(self.i_playerStats['health'][0]), 
+        text_surf = self.tk_renderText(self.font_0, str(self.i_playerStats['health'][0]), 
                     1, (0xff, 0x0, 0x0), shadow=1) 
         surface.blit(text_surf, (pos[0] + 134 - text_surf.get_width(), pos[1] + 16))
         
         # Armor text
-        text_surf = self.tk_renderText(self.olFont_1, str(self.i_playerStats['armor'][0]), 
+        text_surf = self.tk_renderText(self.font_0, str(self.i_playerStats['armor'][0]), 
                     1, (0xff, 0x0, 0x0), shadow=1)
         surface.blit(text_surf, (pos[0] + 134 - text_surf.get_width(), pos[1] + 48))  
 
@@ -244,7 +251,7 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         surface.blit(self.AmmoBar, (pos[0] + 48, pos[1] + 2))   # Ammo Count bg
 
         # Ammo count text (Limit the bullet count rendering to 99999)
-        ammo_count_surf = self.tk_renderText(self.olFont_2, str(min(self.i_playerAmmo[ammo_id], 99999)), 
+        ammo_count_surf = self.tk_renderText(self.font_1, str(min(self.i_playerAmmo[ammo_id], 99999)), 
                                              1, (0xff, 0x0, 0x0), shadow=1) 
         
         surface.blit(ammo_count_surf, ((pos[0] + 48) + self.AmmoBar.get_width() / 2 - ammo_count_surf.get_width() / 2, 

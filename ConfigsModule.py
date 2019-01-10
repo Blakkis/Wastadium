@@ -10,7 +10,7 @@ import multiprocessing
 import collections
 import os
 from Timer import *
-from datetime import timedelta
+from time import strftime
 from sys import exit as exit_system
 from numpy import copyto, roll, zeros, dot
 from numpy import sum as _sum
@@ -28,7 +28,7 @@ class TkCounter(object):
     """
         Small counter 
 
-        NOTE: Add logging and caching stuff
+        Note: Add logging and caching stuff
 
         instance.reset() -> Resets the counter to init value
         .instance() -> Returns current value
@@ -261,7 +261,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_trigger_const = MsDelayTrigger
     tk_trigger_down = MsCountdownTrigger
     
-    tk_timedelta = timedelta 
+    tk_strftime = strftime
     tk_path = os.path
     tk_environ = os.environ
     tk_deque = collections.deque

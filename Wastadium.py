@@ -1492,7 +1492,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
              
         """
-
         health, token = cls.w_enemies[enemy_id].enemy_getHit(cls.all_weapons[weapon]['w_damage'], (sx, sy), (tx, ty))
         cls.spawn_effect(token[0], token[1], angle=token[2])  
         

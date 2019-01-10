@@ -1,6 +1,8 @@
 from ConfigsModule import GlobalGameData
 from MapParser import W_errorToken
 
+# Note: Some of the methods could be converted to decorators.
+#       Since they mostly do their job at the start/end of the target functions
 
 class SoundMusic(GlobalGameData):
     
@@ -110,7 +112,11 @@ class SoundMusic(GlobalGameData):
     @classmethod
     def playMusic(cls, _id=0, loops=0, tracklist_play=False):
         """
-            TBD
+            Play music
+
+            _id ->
+            loops -> Num of times to loop the music (-1: infinite)
+            tracklist_play -> Fetch a next in queue soundtrack and spin the wheel for next tracklist fetch
 
             return -> None
 
@@ -127,4 +133,19 @@ class SoundMusic(GlobalGameData):
         
         cls.tk_mixer_music.set_volume(cls.sm_volumes[0])
         cls.tk_mixer_music.play(loops)
+
+    
+    @classmethod
+    def musicStopPlayback(cls, ms=0):
+        """
+            Stop the playback
+
+            ms -> Fadeout the soundtrack (milliseconds)
+
+            return -> None
+        """
+        if ms > 0:
+            cls.tk_mixer_music.fadeout(ms)
+        else:
+            cls.tk_mixer_music.stop()
  
