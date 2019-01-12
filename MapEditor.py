@@ -37,7 +37,7 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
     void_texture = None
 
     # Share data between all childrens
-    data = {}
+    visual_data = {}
 
     
     @classmethod
@@ -59,7 +59,7 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
 
         cls.tso_createTextureSets()
 
-        cls.data['ed_font'] = cls.ed_font(cls.ElementFonts[1], 12)
+        cls.visual_data['ed_font'] = cls.ed_font(cls.ElementFonts[1], 12)
 
     
     @classmethod
@@ -73,14 +73,14 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
             return -> None
         """
         if shadow:
-            w, h = cls.data['ed_font'].size(s) 
+            w, h = cls.visual_data['ed_font'].size(s) 
             surf = cls.ed_surface((w, h), cls.ed_srcalpha)
-            surf.blit(cls.data['ed_font'].render(s, True, (0x0,  0x0,  0x0)),  (-1, 1))
-            surf.blit(cls.data['ed_font'].render(s, True, (0xff, 0xff, 0xff)), ( 0, 0))
+            surf.blit(cls.visual_data['ed_font'].render(s, True, (0x0,  0x0,  0x0)),  (-1, 1))
+            surf.blit(cls.visual_data['ed_font'].render(s, True, (0xff, 0xff, 0xff)), ( 0, 0))
             return surf
         
         else:
-            return cls.data['ed_font'].render(s, True, (0xff, 0xff, 0xff))
+            return cls.visual_data['ed_font'].render(s, True, (0xff, 0xff, 0xff))
 
 
 

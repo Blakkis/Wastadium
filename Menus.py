@@ -9,9 +9,9 @@ from _3d_models import Model3D
 from Tokenizers import MenuEventDispatch
 from Timer import DeltaTimer
 from MapParser import EpisodeParser
+from VictoryCondition import BookKeeping
 
 from sys import argv as read_argv
-
 from functools import partial
 
 
@@ -1371,7 +1371,7 @@ class MenuOptions(PagesHelp):
             self.mo_uk_editme = ''
 
 
-class MenuReport(PagesHelp):
+class MenuReport(PagesHelp, BookKeeping):
 
     __rating_ranks = {20:  "Polygon Reviewer",
                       40:  "Amateur",
@@ -1391,10 +1391,11 @@ class MenuReport(PagesHelp):
         """
             Init/Setup all data related for reporting player stats from the level playthrough
 
-            return -> None
+            return -> 'True' on initialization
 
         """
-        self.font_0 = self.tk_font(self.ElementFonts[1], int(20 * self.menu_scale)) 
+        self.font_0 = self.tk_font(self.ElementFonts[1], int(24 * self.menu_scale))
+        self.font_1 = self.tk_font(self.ElementFonts[1], int(18 * self.menu_scale)) 
         
         background = self.tk_draw_rounded_rect(int(512 * self.menu_scale), 
                                                self.tk_resolution[1] - 32,
@@ -1404,33 +1405,40 @@ class MenuReport(PagesHelp):
         self.background.rs_updateRect(self.tk_res_half[0] - self.background.rs_getSize()[0] / 2,
                                       self.tk_res_half[1] - self.background.rs_getSize()[1] / 2) 
 
-        self.r_tag = self.tk_renderText(self.font_0, "Level Report", True, 
-                                        (0xff, 0x0, 0x0), shadow=True, flags=1)
-
-        self.r_tag_time = self.tk_strftime("%d/%m/%y")
-
-        # Per level(Final report includes more data)
-        self.r_tags = {'name': "Level Report: {}",
-                       'time': "Time: {}",
-                       'data': "Data: {}",
-                       'kill': "Kills: {}",
-                       'pkup': "Pickups: {}"}
+        # Per level data
+        self.r_tags = self.tk_ordereddict()
 
         return True    
 
 
     def build_report(self):
         """
-            Build the actual report in simplified police report
+            Build a level report
 
             return -> None
 
         """
-        # Get the current date
-        self.r_tag_time = self.tk_strftime("%d/%m/%y")
-        self.r_tag_time = self.tk_renderText(self.font_0, self.r_tag_time, True, 
-                                            (0xff, 0x0, 0x0), shadow=True, flags=1)
+        self.r_tags.clear()
 
+        key, value = self.getSetRecord('name')
+        self.r_tags[key] = self.tk_renderText(self.font_0, "Level Report: \"{}\"".format(value),
+                                              True, (0xff, 0x0, 0x0), shadow=True)
+
+        # Current day in DD/MM/YY format (As it should be) wink wink
+        self.r_tags['date'] = self.tk_renderText(self.font_1, self.tk_strftime("%d/%m/%y"), 
+                                                 True, (0xff, 0x0, 0x0), shadow=True) 
+
+        key, value = self.getSetRecord('time')
+        self.r_tags[key] = self.tk_renderText(self.font_0, "Time: {}".format(self.tk_seconds_to_hms(value, to_string=True)),
+                                              True, (0xff, 0x0, 0x0), shadow=True) 
+
+        key, value = self.getSetRecord('kill')
+        self.r_tags[key] = self.tk_renderText(self.font_0, "Kills: 0 / {}".format(value),
+                                              True, (0xff, 0x0, 0x0), shadow=True)
+
+        key, value = self.getSetRecord('pcup')
+        self.r_tags[key] = self.tk_renderText(self.font_0, "Pickups: 0 / {}".format(value),
+                                              True, (0xff, 0x0, 0x0), shadow=True) 
 
     
     def __get__(self, obj, type=None):
@@ -1466,15 +1474,15 @@ class MenuReport(PagesHelp):
 
             surface.blit(*self.background.rs_renderSurface(position=1))
 
-            # Get the topleft position of the background
-            bg_topleft = self.background.rs_getPos('topleft')
+            row = self.background.rs_getPos('top')
+            for key, surf in self.r_tags.iteritems():
+                if key == 'date': continue
+                surface.blit(surf, (self.tk_res_half[0] - surf.get_width() / 2, row)) 
+                row += surf.get_height()  
 
-            # Report tag shall work as anchor
-            #r_tag_pos = (bg_topleft[0] + 16 * self.menu_scale, bg_topleft[1] + 4 * self.menu_scale) 
-            #surface.blit(self.r_tag, r_tag_pos)
-            
-
-            #surface.blit(self.r_tag_time, (r_tag_pos[0], r_tag_pos[1] + self.r_tag.get_height()))
+            x, y = self.background.rs_getPos('bottomleft')
+            date = self.r_tags['date'] 
+            surface.blit(date, (self.tk_res_half[0] - date.get_width() / 2, y - date.get_height()))
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
             self.tk_display.flip()

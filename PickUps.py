@@ -2,6 +2,7 @@ from Inventory import Inventory
 from Timer import DeltaTimer
 from ConfigsModule import TkWorldDataShared
 from MapParser import W_errorToken
+from VictoryCondition import BookKeeping
 
 
 __all__ = 'Pickups',
@@ -30,7 +31,7 @@ class MessagePickup(DeltaTimer):
 
 
 
-class Pickups(Inventory):
+class Pickups(Inventory, BookKeeping):
     # All usable pickups
     pu_pickups = {}
 
@@ -137,6 +138,8 @@ class Pickups(Inventory):
             return -> None
 
         """
+        cls.getSetRecord('pcup', len(list_of_pickups))
+
         for pick in list_of_pickups:
             x, y = pick.x, pick.y 
             

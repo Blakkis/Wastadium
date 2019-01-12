@@ -660,7 +660,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
 
         """
-        disk_data = cls.mp_load("basement")
+        disk_data = cls.mp_load(map_name)
+        cls.getSetRecord('name', map_name)
+
         # Convert the IOBytes objects to pygame surfaces 
         # (Ground needs 'convert()' only, since it doesn't have alpha component)
         disk_data[MAP_GROUND] = {key: (cls.tk_image.load(value).convert() if key == MAP_GROUND else \
@@ -711,7 +713,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         cls.gib_reset(cls.w_micro_cells)
 
-        
         # Cut the layers in to chunks
         chunk_size = cls.tk_macro_cell_size * 32
 

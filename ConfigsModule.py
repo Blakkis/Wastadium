@@ -422,6 +422,23 @@ class GlobalGameData(DefaultConfigParser):
 
 
     @classmethod
+    def tk_seconds_to_hms(cls, seconds, to_string=False):
+        """
+            Translate seconds to hours, minutes, seconds
+
+            seconds -> seconds
+
+            return -> (hours, minutes, seconds)
+        """
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        if to_string:
+            return "{:02d}:{:02d}:{:02d}".format(h, m, s)
+        else:
+            return h, m, s
+
+
+    @classmethod
     def tk_quitgame(cls):
         """
             Quits the Pygame/System
@@ -547,7 +564,7 @@ class GlobalGameData(DefaultConfigParser):
         # ---
         
         # I included them just in-case via bitwise flags
-        
+        # These really need enum style flag names
         if flags != 0:
             font.set_underline(flags & 1)
             font.set_bold(flags & 2)

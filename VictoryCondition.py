@@ -12,37 +12,60 @@ class BookKeeping(object):
 
     """
     
-    record = {'condition_kill_all':     0,
-              'condition_waypoint': False,
-              'complete':           False}
+    task_record = {'condition_kill_all':     0,
+                   'condition_waypoint': False,
+                   'complete':           False,}
 
-    # 
-    casualty_report = {}
+    # Keep task_record of all killed enemies 
+    level_casualty_report = {}
+
+    # Level report
+    level_report = {'time': None,   # Completion time
+                    'name': None,   # Name of the level
+                    'kill': None,   # Kills
+                    'pcup': None}   # Pickups 
+
+    @classmethod
+    def getSetRecord(cls, name, value=None):
+        """
+            Use this function to fetch data/record from other places for after report
+
+            name  -> Key on the level_report dictionary (It needs to exists there!)
+            value -> If value is None, return value and key
+                     else set it.
+
+            return -> None
+        """
+        assert name in cls.level_report, "Name does not exists"
+        if value is None:
+            return name, '-' if cls.level_report[name] is None else cls.level_report[name]
+        else:
+            cls.level_report[name] = value
 
     
     @classmethod
     def enemyKilled(cls, enemy_name=None):
         """
-            TBD
+            Call me, when enemy gets killed
 
             enemy_name -> Name(id) of the enemy_killed
 
             return -> None
 
         """
-        cls.record['condition_kill_all'] -= 1
+        cls.task_record['condition_kill_all'] -= 1
         
         if enemy_name is not None:
-            if enemy_name in cls.casualty_report:
-                cls.casualty_report[enemy_name] += 1
+            if enemy_name in cls.level_casualty_report:
+                cls.level_casualty_report[enemy_name] += 1
             else:
-                cls.casualty_report[enemy_name] = 0
+                cls.level_casualty_report[enemy_name] = 0
 
 
     @classmethod
     def resetRecord(cls, enemy_count, endpoint):
         """
-            Reset level record
+            Reset level records
 
             enemy_count -> see 'reset_victory_condition' 
             endpoint ->    see 'reset_victory_condition' 
@@ -50,10 +73,12 @@ class BookKeeping(object):
             return -> None
 
         """
-        cls.record['condition_kill_all'] = enemy_count
-        cls.record['condition_waypoint'] = endpoint
+        cls.task_record['condition_kill_all'] = enemy_count
+        cls.task_record['condition_waypoint'] = endpoint
 
-        cls.casualty_report.clear()
+        cls.level_casualty_report.clear()
+
+        cls.level_report['kill'] = enemy_count 
 
 
 class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeeping):
@@ -77,10 +102,14 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeepin
     	    return -> None
 
     	"""
-    	cls.victory_data['font'] = cls.tk_font(font, 14)
+    	cls.victory_data['font'] = cls.tk_font(font, 18)
         cls.victory_data['msg_completed'] = cls.tk_renderText(cls.victory_data['font'], 
-                                                              "Mission Completed", 1, 
-                                                              (0xff, 0x0, 0x0), shadow=1)
+                                                              "Mission Completed", True, 
+                                                              (0xff, 0x0, 0x0), shadow=True)
+
+        cls.victory_data['msg_objective'] = cls.tk_renderText(cls.victory_data['font'],
+                                                              "Kill All Or Find Exit", True,
+                                                              (0xff, 0x0, 0x0), shadow=True)
 
 
     @classmethod
@@ -100,7 +129,7 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeepin
                         None if endpoint is None else (endpoint.x, endpoint.y))
 
         # If the map doesn't have anything to kill or exit point. Set to complete
-        cls.record['complete'] = True if enemy_count <= 0 and endpoint is None else False 
+        cls.task_record['complete'] = True if enemy_count <= 0 and endpoint is None else False 
 
 
     @classmethod
@@ -115,8 +144,8 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeepin
         x, y = cls.w_share['WorldPosition']
         ofs_x, ofs_y = cls.w_share['WorldPositionDelta']
 
-        x = int(cls.tk_res_half[0] + x - ofs_x) + cls.record['condition_waypoint'][0] * 32
-        y = int(cls.tk_res_half[1] + y - ofs_y) + cls.record['condition_waypoint'][1] * 32
+        x = int(cls.tk_res_half[0] + x - ofs_x) + cls.task_record['condition_waypoint'][0] * 32
+        y = int(cls.tk_res_half[1] + y - ofs_y) + cls.task_record['condition_waypoint'][1] * 32
 
         cls.tk_draw_gfx_aacircle(surface, x, y, 19 + int(4 * cls.tk_cos(scale)), (0x00, 0x0, 0x0))
         cls.tk_draw_gfx_aacircle(surface, x, y, 20 + int(4 * cls.tk_cos(scale)), (0xff, 0x0, 0x0))
@@ -134,15 +163,15 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeepin
                       '-1' if sequency is complete (Signal for the gameloop to quit)  
 
         """
-        if not cls.record['complete']:
-            if cls.record['condition_kill_all'] <= 0 or \
-            cls.getWorldIndex() == cls.record['condition_waypoint']:
-                cls.record['complete'] = True 
+        if not cls.task_record['complete']:
+            if cls.task_record['condition_kill_all'] <= 0 or \
+            cls.getWorldIndex() == cls.task_record['condition_waypoint']:
+                cls.task_record['complete'] = True 
 
-            if cls.record['condition_waypoint'] is not None:
+            if cls.task_record['condition_waypoint'] is not None:
                 cls.display_endpoint_beacon(surface)
             
-        if cls.record['complete']:
+        if cls.task_record['complete']:
             if quick_exit_key:
                 cls.victory_data['msg_spiral_dist'] = 0    
 

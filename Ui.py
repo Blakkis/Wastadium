@@ -14,11 +14,11 @@ __all__ = 'uiOverlay', 'uiGameTimer'
 class uiGameTimer(GlobalGameData, BookKeeping):
 
     # Note: Rename ui to hud
-    ui_data = {'g_timer':      None,        # Game timer
-               'g_timer_bg':   None,        # Decorative
-               'g_timer_fg':   None,        # - || -
-               'g_timer_text':[None, None], # Rendered timer surface
-               'g_font':       None}        # Font used to render
+    hud_data = {'g_timer':      None,        # Game timer
+                'g_timer_bg':   None,        # Decorative
+                'g_timer_fg':   None,        # - || -
+                'g_timer_text':[None, None], # Rendered timer surface
+                'g_font':       None}        # Font used to render
 
     
     @classmethod
@@ -30,20 +30,19 @@ class uiGameTimer(GlobalGameData, BookKeeping):
 
         """
         color = 0xff, 0x0, 0x0
-        if reset: cls.ui_data['g_timer'].reset()
+        if reset: 
+            cls.hud_data['g_timer'].reset()
         else:
-            if not cls.record['complete']:
-                cls.ui_data['g_timer'] += 1
-            
-            color = 0xff, 0x0, 0x80
+            if not cls.task_record['complete']:
+                cls.hud_data['g_timer'] += 1
+            else:
+                # Highlight the color
+                color = 0xff, 0x0, 0x80
 
-        seconds = cls.ui_data['g_timer']()
-        m, s = divmod(seconds, 60)
-        h, m = divmod(m, 60)
-
-        time_out = "{:02d}:{:02d}:{:02d}".format(h, m, s)
+        seconds = cls.hud_data['g_timer']()
+        time_out = cls.tk_seconds_to_hms(seconds, to_string=True)
         
-        cls.ui_data['g_timer_text'][0] = cls.tk_renderText(cls.ui_data['g_font'], time_out, True, color, shadow=1)  
+        cls.hud_data['g_timer_text'][0] = cls.tk_renderText(cls.hud_data['g_font'], time_out, True, color, shadow=1)  
 
     
     @classmethod
@@ -56,9 +55,18 @@ class uiGameTimer(GlobalGameData, BookKeeping):
             return -> None
 
         """
-        surface.blit(*cls.ui_data['g_timer_bg'])
-        surface.blit(*cls.ui_data['g_timer_fg'])
-        surface.blit(*cls.ui_data['g_timer_text'])
+        surface.blit(*cls.hud_data['g_timer_bg'])
+        
+        # Get the position for aligning the objective msg under it
+        blit, pos = cls.hud_data['g_timer_fg'] 
+        surface.blit(blit, pos)
+        
+        surface.blit(*cls.hud_data['g_timer_text'])
+
+        # Render objective under the timer
+        if not cls.task_record['complete']:
+            obj_tex = cls.victory_data['msg_objective'] 
+            surface.blit(obj_tex, (cls.tk_res_half[0] - obj_tex.get_width() / 2, pos[1]))
 
     
     @classmethod
@@ -71,8 +79,8 @@ class uiGameTimer(GlobalGameData, BookKeeping):
             return -> None
 
         """
-        cls.ui_data['g_font'] = font
-        cls.ui_data['g_timer'] = cls.tk_counter(0)
+        cls.hud_data['g_font'] = font
+        cls.hud_data['g_timer'] = cls.tk_counter(0)
 
         # Get size estimations for the timer
         ew, eh = font.size('99:99:99')
@@ -80,17 +88,17 @@ class uiGameTimer(GlobalGameData, BookKeeping):
         # Background
         bg = cls.tk_gradient_rect(ew + 32, eh, (0xff, 0x0, 0x0), 0xaa)
         bg_pos = cls.tk_res_half[0] - bg.get_width() / 2, 0 
-        cls.ui_data['g_timer_bg'] = bg, bg_pos
+        cls.hud_data['g_timer_bg'] = bg, bg_pos
 
         # Decoration line
         fg = cls.tk_gradient_rect(ew + 64, 2, (0xff, 0x0, 0x0), 0xaa) 
         fg_pos = cls.tk_res_half[0] - fg.get_width() / 2, bg.get_height()   
-        cls.ui_data['g_timer_fg'] = fg, fg_pos
+        cls.hud_data['g_timer_fg'] = fg, fg_pos
 
         # Timer font surface
-        cls.ui_data['g_timer_text'] = [None, None]
+        cls.hud_data['g_timer_text'] = [None, None]
         cls.tick_timer() 
-        cls.ui_data['g_timer_text'][1] = cls.tk_res_half[0] - cls.ui_data['g_timer_text'][0].get_width() / 2, 0 
+        cls.hud_data['g_timer_text'][1] = cls.tk_res_half[0] - cls.hud_data['g_timer_text'][0].get_width() / 2, 0 
 
 
     
@@ -201,8 +209,12 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
             return -> None
 
         """
-        self.render_timer(surface)
-        
+        if self.task_record['complete'] and self.level_report['time'] is None:
+            self.getSetRecord('time', self.hud_data['g_timer']())
+            self.tick_timer()
+
+        self.render_timer(surface)     
+
         # Weapon
         surface.blit(*self.olWeaponElem[:2])
         surface.blit(self.all_weapons_data[self.i_playerStats['weapon']][1], self.olWeaponElem[2])
