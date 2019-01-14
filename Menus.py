@@ -48,6 +48,34 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
         # Start the common event timer
         cls.tk_time.set_timer(cls.menu_timer.get_event(), 10)
 
+
+    # This could be changed to config module function
+    # With more advanced features as "multi color text rendering" 
+    @classmethod
+    def two_color_text(cls, font, _str, sep=':', color_t=(0xff, 0x0, 0x0), color_v=(0xff, 0x0, 0x80), invert_color=False):
+        """
+            Render 2 color text with 'sep' separating the colors
+
+            font -> Font used to render the text
+            _str -> String with 'sep' in somewhere to separate the 2 colors
+            sep  -> color separator
+            color_t -> prefix color
+            color_v -> suffix color
+
+            return -> Final surface with both pre and suffix blitted
+        """
+        text_surf = cls.tk_surface(font.size(_str), cls.tk_srcalpha)
+        
+        pre, suf = _str.split(sep, 1)
+        if invert_color: color_t, color_v = color_v, color_t
+        pre = cls.tk_renderText(font, pre + sep, True, color_t, shadow=True)
+        suf = cls.tk_renderText(font, suf, True, color_v, shadow=True)
+
+        text_surf.blit(pre, (0, 0))
+        text_surf.blit(suf, (text_surf.get_width() - suf.get_width(), 0))
+
+        return text_surf
+
     
     @classmethod
     def ph_go_back_soundeffect(cls, snd_id=188, return_type=None):
@@ -67,7 +95,7 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
 
             surface -> Which surface receives the effect
 
-            return -> Affected surface, position
+            return -> Affected surface, x, y
 
         """
         px, py = pos
@@ -402,7 +430,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
                                           func=lambda episode, surface: self.__ref_functions['episode_roll'](episode, surface)) \
                          for key in self.all_valid_campaigns.iterkeys()}
 
-        self.selection_bg = self.tk_draw_rounded_rect(int(256 * self.menu_scale), 
+        self.selection_bg = self.tk_draw_rounded_rect(int(320 * self.menu_scale), 
                                                       (self.tk_resolution[1] - 8) - int(64 * self.menu_scale), 
                                                       8, (0xff, 0x0, 0x0), 0x60, False) 
         
@@ -518,6 +546,11 @@ class MenuShop(PagesHelp, Inventory):
     # initialized yet, call the init once during first __call__
     __shop_initialized = False
     
+    # Enums
+    __E_WEAPON = 0
+    __E_AMMO   = 1
+    __E_GADGET = 2
+
 
     def __init__(self, function=None):
         self.function = function
@@ -547,16 +580,20 @@ class MenuShop(PagesHelp, Inventory):
         self.ms_font_height = self.font_0.get_height() 
         
         # Pre-rendered texts (Color/Text doesn't change)
-        self.ms_pre_text = {'w_id': self.font_0.render('Id: ',               1, (0xff, 0x0, 0x0)), 
-                            'w_price': self.font_0.render('| Price: ',       1, (0xff, 0x0, 0x0)),
-                            'w_damage': self.font_0.render('| Damage: ',     1, (0xff, 0x0, 0x0)),
-                            'w_range': self.font_0.render('| Range: ',       1, (0xff, 0x0, 0x0)),
+        # text starting with 'help' is special
+        self.ms_pre_text = {'w_id':       self.font_0.render('Id: ',         1, (0xff, 0x0, 0x0)), 
+                            'w_price':    self.font_0.render('| Price: ',    1, (0xff, 0x0, 0x0)),
+                            'w_damage':   self.font_0.render('| Damage: ',   1, (0xff, 0x0, 0x0)),
+                            'w_range':    self.font_0.render('| Range: ',    1, (0xff, 0x0, 0x0)),
                             'w_firerate': self.font_0.render('| Firerate: ', 1, (0xff, 0x0, 0x0)),
-                            'dual_n': self.font_0.render('Dual',             1, (0x80, 0x0, 0x0)),
-                            'dual_y': self.font_0.render('Dual',             1, (0xff, 0x0, 0x0)),
-                            'owned_n': self.font_0.render('Owned',           1, (0x80, 0x0, 0x0)),
-                            'owned_y': self.font_0.render('Owned',           1, (0xff, 0x0, 0x0)),
-                            'help_1': self.font_0.render('LMB - Buy | RMB - sell', 1, (0xff, 0x0, 0x0))}
+                            'dual_n':     self.font_0.render('Dual',         1, (0x80, 0x0, 0x0)),
+                            'dual_y':     self.font_0.render('Dual',         1, (0xff, 0x0, 0x0)),
+                            'owned_n':    self.font_0.render('Owned',        1, (0x80, 0x0, 0x0)),
+                            'owned_y':    self.font_0.render('Owned',        1, (0xff, 0x0, 0x0)),
+                            'help_3':     self.two_color_text(self.font_0, 'LMB/RMB: Buy/Sell', invert_color=True),
+                            'help_2':     self.two_color_text(self.font_0, '+ LSHIFT: Buy/Sell In Bulk', invert_color=True),
+                            'help_1':     self.two_color_text(self.font_0, '+ LCTRL: Sell All', invert_color=True)}
+
 
         # Provide much nicer background for the icons (32x32, 64x64)
         # Since my antialising method is slow, its betters to build one and pass that to everyone
@@ -613,7 +650,8 @@ class MenuShop(PagesHelp, Inventory):
         self.ms_armorHealthIcon = RectSurface(healthArmor_icon)
         self.ms_armorHealthIcon.rs_updateRect(8, self.tk_resolution[1] - (self.ms_armorHealthIcon.rs_getSize()[1] + 8))
 
-        bar_bg = self.tk_surface((128 * self.menu_scale, self.ms_armorHealthIcon.rs_getSize()[1] / 2 - (40 * self.menu_scale)), self.tk_srcalpha)
+        bar_bg = self.tk_surface((128 * self.menu_scale, 
+                                 self.ms_armorHealthIcon.rs_getSize()[1] / 2 - (40 * self.menu_scale)), self.tk_srcalpha)
         bar_bg.fill((0xff, 0x0, 0x0, 0x80))
         
         self.ms_healthBar = RectSurface(bar_bg, snd_hover_over=181, snd_click=183)
@@ -641,7 +679,7 @@ class MenuShop(PagesHelp, Inventory):
             surface.fill(self.tk_bg_color)
             surface.blit(self.menu_background, (0, 0))
 
-            click = 0
+            buy_sell = 0
 
             for event in self.tk_eventDispatch():
                 self.menu_timer.get_event(event.type)
@@ -651,18 +689,32 @@ class MenuShop(PagesHelp, Inventory):
                         quit_shop = True
 
                 if event.type == self.tk_event_mouseup:
-                    if event.button == 1:
-                        click = 1
+                    if event.button == 1:   # LMB
+                        buy_sell = 1
+
+                    elif event.button == 3: # RMB
+                        buy_sell = 2
 
             mx, my = self.tk_mouse_pos()
 
-            weapon = self.ms_render_weapons(surface, hover=(mx, my), click=click)
+            mods = self.tk_get_mods()
+            mod_event = 0
+            # Buy/Sell in bulk
+            if mods & self.tk_user_special['shift_l']: 
+                mod_event = 1
+
+            # Sell all
+            elif mods & self.tk_user_special['ctrl_l']:
+                mod_event = 2
+
+            print mods, mod_event
+            weapon = self.ms_render_weapons(surface, hover=(mx, my), click=buy_sell)
             
-            self.ms_render_ammo(surface, hover=(mx, my), click=click, hl_wpn=weapon)
+            self.ms_render_ammo(surface, hover=(mx, my), hl_wpn=weapon, click=buy_sell, click_mod=mod_event)
 
-            self.ms_render_gadgets(surface, hover=(mx, my), click=click)
+            self.ms_render_gadgets(surface, hover=(mx, my), click=buy_sell)
 
-            self.ms_renderHealthArmorCreditsMenu(surface, hover=(mx, my), click=click)
+            self.ms_renderHealthArmorCreditsMenu(surface, hover=(mx, my), click=buy_sell)
             
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
@@ -672,13 +724,30 @@ class MenuShop(PagesHelp, Inventory):
             if quit_shop: return surface
 
 
-    def ms_validate_buy(self):
+    def ms_validate_buy(self, _set, mod=0, *args, **kw):
         """
-            TBD
+            Validated the buy/sell of the item(s)
+            (Enough money?, already own it?)
+
+            _set -> 1: Weapons
+                    2: Ammo
+                    3: Gadgets
+
+            mod -> Apply special case via keyboard mods(shift, ctrl, etc...)
 
             return -> None
+
         """
-        pass
+        if _set == self.__E_WEAPON:
+            pass
+
+        elif _set == self.__E_AMMO:
+            print mod
+            #self.i_playerStats['credits']
+            pass
+
+        elif _set == self.__E_GADGET:
+            pass
 
     
     def ms_render_weapons(self, surface, **kw):
@@ -704,10 +773,10 @@ class MenuShop(PagesHelp, Inventory):
             
             if value.rs_hover_over(kw['hover']):
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
-                self.ms_render_item_stats(surface, 0, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
+                self.ms_render_item_stats(surface, self.__E_WEAPON, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
                 hl_weapon = key
 
-                if kw['click']: value.rs_click()
+                if kw['click']: value.rs_click(_set=self.__E_WEAPON)
 
         return hl_weapon
 
@@ -728,7 +797,7 @@ class MenuShop(PagesHelp, Inventory):
         render_carry = lambda src, dest, px, py: dest.blit(src, (px, py)).width
 
         # Weapons
-        if _set == 0:
+        if _set == self.__E_WEAPON:
             surface.blit(self.ms_pre_text['w_id'], (px, py))
             px += self.ms_pre_text['w_id'].get_width()
             
@@ -743,7 +812,7 @@ class MenuShop(PagesHelp, Inventory):
                 px += render_carry(child, surface, px, py)         
 
         # Ammo
-        elif _set== 1:
+        elif _set == self.__E_AMMO:
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
             
             w_ammo = self.font_0.render('{} '.format(self.all_ammo_data[kw['key']][0]), 1, (0xff, 0x0, 0x80)) 
@@ -755,7 +824,7 @@ class MenuShop(PagesHelp, Inventory):
 
         
         # Gadgets
-        elif _set == 2:
+        elif _set == self.__E_GADGET:
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
 
             w_name = self.font_0.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
@@ -790,7 +859,8 @@ class MenuShop(PagesHelp, Inventory):
             value.rs_updateRect(16 + (80 * self.menu_scale) * enum, 160 * self.menu_scale)
             surface.blit(*value.rs_renderSurface(position=1))
 
-            ammo_count = self.font_0.render('x{}'.format(self._i_max_ammo), 1, (0xff if self._i_max_ammo else 0x80, 0x0, 0x80))
+            ammo_count = self.i_playerAmmo[key]
+            ammo_count = self.font_0.render('x{}'.format(ammo_count), 1, (0xff if ammo_count else 0x80, 0x0, 0x80 if ammo_count else 0x0))
             surface.blit(ammo_count, (value.rs_getPos('left'), value.rs_getPos('bottom')))
 
             if hl_ammo is not None and key == hl_ammo:
@@ -798,9 +868,9 @@ class MenuShop(PagesHelp, Inventory):
 
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
-                self.ms_render_item_stats(surface, 1, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
+                self.ms_render_item_stats(surface, self.__E_AMMO, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
 
-                if kw['click']: value.rs_click()
+                if kw['click']: value.rs_click(_set=self.__E_AMMO, mod=kw['click_mod'])
 
     
     def ms_render_gadgets(self, surface, **kw):
@@ -822,9 +892,9 @@ class MenuShop(PagesHelp, Inventory):
 
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
-                self.ms_render_item_stats(surface, 2, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
+                self.ms_render_item_stats(surface, self.__E_GADGET, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
 
-                if kw['click']: value.rs_click()
+                if kw['click']: value.rs_click(_set=self.__E_GADGET)
 
 
     def ms_renderHealthArmorCreditsMenu(self, surface, **kw):
@@ -874,8 +944,14 @@ class MenuShop(PagesHelp, Inventory):
                                self.ms_creditsIcon.rs_getPos('centery') - credits.get_height() / 2))
         
         # Help info
-        surface.blit(self.ms_pre_text['help_1'], (16, self.ms_armorHealthIcon.rs_getPos('top') - \
-                                                      self.ms_pre_text['help_1'].get_height()))
+        row = 0
+        for h in sorted([key for key in self.ms_pre_text.iterkeys() if key.startswith('help')]):
+            x = 16
+            
+            height =  self.ms_pre_text[h].get_height()  
+            y = self.ms_armorHealthIcon.rs_getPos('top') - (height + row) 
+            surface.blit(self.ms_pre_text[h], (x, y))
+            row += height
     
 
     def ms_highlight_option(self, x, y, icon_d, surface):
@@ -919,7 +995,7 @@ class MenuShop(PagesHelp, Inventory):
             _s.blit(surf, (csurf_64_d[0] / 2 - surf.get_width()  / 2, 
                            csurf_64_d[1] / 2 - surf.get_height() / 2)) 
 
-            self.ms_sIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184)  
+            self.ms_sIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184, func=self.ms_validate_buy)  
 
         self.ms_sIcons['mod_keys'] = sorted(self.ms_sIcons.keys())
 
@@ -948,7 +1024,7 @@ class MenuShop(PagesHelp, Inventory):
 
             ofsx, ofsy = (csurf_64_d[0] - surf.get_width()) / 2, (csurf_64_d[1] - surf.get_height()) / 2 
             _s.blit(surf, (ofsx, ofsy))
-            self.ms_wIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184)
+            self.ms_wIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184, func=self.ms_validate_buy)
 
         # Ammo
         for key, value in self.all_ammo_data.iteritems():
@@ -957,7 +1033,7 @@ class MenuShop(PagesHelp, Inventory):
 
             ofsx, ofsy = (csurf_64_d[0] - surf.get_width()) / 2, (csurf_64_d[1] - surf.get_height()) / 2
             _s.blit(surf, (ofsx, ofsy))
-            self.ms_aIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=185)
+            self.ms_aIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=185, func=self.ms_validate_buy)
 
         self.ms_wIcons['weapon_keys'] = sorted([key for key in self.ms_wIcons.keys() if len(key.split('-')) != 2])
         self.ms_aIcons['ammo_keys'] = sorted(self.ms_aIcons.keys())
@@ -1255,6 +1331,7 @@ class MenuOptions(PagesHelp):
 
             if key == self.mo_last_select:
                 surf, x, y = self.ph_flash_effect(surf, (x, y))
+                
                 if click and value.rs_hover_over((mx, my)): 
                     self.mo_display_func = value.rs_click()
             
@@ -1373,11 +1450,12 @@ class MenuOptions(PagesHelp):
 
 class MenuReport(PagesHelp, BookKeeping):
 
-    __rating_ranks = {20:  "Polygon Reviewer",
+    __rating_ranks = {'rank': '- Rank -',
+                      20:  "Polygon",
                       40:  "Amateur",
                       60:  "Experienced",
                       80:  "Veteran",
-                      100: "Sicario"}
+                      100: "Agent 47"}
    
     # Build all the report decorations during the first __call__
     __report_initialized = False
@@ -1396,14 +1474,25 @@ class MenuReport(PagesHelp, BookKeeping):
         """
         self.font_0 = self.tk_font(self.ElementFonts[1], int(24 * self.menu_scale))
         self.font_1 = self.tk_font(self.ElementFonts[1], int(18 * self.menu_scale)) 
+        self.font_2 = self.tk_font(self.ElementFonts[0], int(40 * self.menu_scale))
         
         background = self.tk_draw_rounded_rect(int(512 * self.menu_scale), 
                                                self.tk_resolution[1] - 32,
                                                8, (0xff, 0x0, 0x0), 0x60, False)
+        # Decorations for the background
+        self.tk_draw_aaline(background, (0xff, 0x0, 0x0), (16, 16), (16, background.get_height() - 16), 1)
+        self.tk_draw_aaline(background, (0xff, 0x0, 0x0), (background.get_width() - 16, 16), 
+                                                          (background.get_width() - 16, 
+                                                           background.get_height() - 16), 1)
 
         self.background = RectSurface(background)
         self.background.rs_updateRect(self.tk_res_half[0] - self.background.rs_getSize()[0] / 2,
                                       self.tk_res_half[1] - self.background.rs_getSize()[1] / 2) 
+
+        # Render all ranks to surfaces
+        self.__rating_ranks.update({key: self.tk_renderText(self.font_0 if key == 'rank' else self.font_2, value, 
+                                                            True, (0xff, 0x0, 0x0) if key == 'rank' else (0xff, 0x0, 0x80), shadow=1) 
+                                    for key, value in self.__rating_ranks.iteritems()})
 
         # Per level data
         self.r_tags = self.tk_ordereddict()
@@ -1415,30 +1504,34 @@ class MenuReport(PagesHelp, BookKeeping):
         """
             Build a level report
 
+            Current report consist of: (These are values held by the BookKeep)
+                - Level name
+                - Completion time
+                - Kills / kills
+                - Pickups / pickups
+                - Date (Hmmm..)
+
             return -> None
 
         """
         self.r_tags.clear()
 
         key, value = self.getSetRecord('name')
-        self.r_tags[key] = self.tk_renderText(self.font_0, "Level Report: \"{}\"".format(value),
-                                              True, (0xff, 0x0, 0x0), shadow=True)
-
-        # Current day in DD/MM/YY format (As it should be) wink wink
-        self.r_tags['date'] = self.tk_renderText(self.font_1, self.tk_strftime("%d/%m/%y"), 
-                                                 True, (0xff, 0x0, 0x0), shadow=True) 
+        self.r_tags[key] = self.two_color_text(self.font_0, "Level Report: \"{}\"".format(value))
 
         key, value = self.getSetRecord('time')
-        self.r_tags[key] = self.tk_renderText(self.font_0, "Time: {}".format(self.tk_seconds_to_hms(value, to_string=True)),
-                                              True, (0xff, 0x0, 0x0), shadow=True) 
+        self.r_tags[key] = self.two_color_text(self.font_0, "Time: {}".format(self.tk_seconds_to_hms(value, to_string=True))) 
 
         key, value = self.getSetRecord('kill')
-        self.r_tags[key] = self.tk_renderText(self.font_0, "Kills: 0 / {}".format(value),
-                                              True, (0xff, 0x0, 0x0), shadow=True)
+        self.r_tags[key] = self.two_color_text(self.font_0, "Kills: {} / {}".format(*value))
 
         key, value = self.getSetRecord('pcup')
-        self.r_tags[key] = self.tk_renderText(self.font_0, "Pickups: 0 / {}".format(value),
-                                              True, (0xff, 0x0, 0x0), shadow=True) 
+        self.r_tags[key] = self.two_color_text(self.font_0, "Pickups: {} / {}".format(*value))
+
+        # (Left over from old idea)
+        # Current day in DD/MM/YY format (As it should be) wink wink
+        self.r_tags['date'] = self.tk_renderText(self.font_1, '-- {} --'.format(self.tk_strftime("%d/%m/%y")), 
+                                                 True, (0xff, 0x0, 0x0), shadow=True)  
 
     
     def __get__(self, obj, type=None):
@@ -1472,6 +1565,8 @@ class MenuReport(PagesHelp, BookKeeping):
                     if event.key == self.tk_user['esc']:
                         return surface
 
+                self.menu_timer.get_event(event.type)
+
             surface.blit(*self.background.rs_renderSurface(position=1))
 
             row = self.background.rs_getPos('top')
@@ -1483,6 +1578,17 @@ class MenuReport(PagesHelp, BookKeeping):
             x, y = self.background.rs_getPos('bottomleft')
             date = self.r_tags['date'] 
             surface.blit(date, (self.tk_res_half[0] - date.get_width() / 2, y - date.get_height()))
+
+            # What rank did the player get
+            rank = self.__rating_ranks[20]
+            cx, cy = self.background.rs_getPos('center')
+            x, y = (cx - rank.get_width() / 2, cy - rank.get_height() / 2)
+            rank_f, xf, yf = self.ph_flash_effect(rank, (x, y))
+
+            surface.blit(rank_f, (xf, yf))
+            
+            rank_tag = self.__rating_ranks['rank'] 
+            surface.blit(rank_tag, (cx - rank_tag.get_width() / 2, y - rank.get_height()))
 
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
             self.tk_display.flip()
@@ -1532,7 +1638,7 @@ class MenuManager(EpisodeParser):
     def __init__(self):
         PagesHelp.ph_initData()
         
-        # Note: Get rid of these. And replace with decorator based
+        # Note: Get rid of these ref hacks and replace with decorators
         self.all_menus = {'m_main':    MenuMain(),
                           'm_episode': MenuCampaign(),
                           'm_options': MenuOptions()}

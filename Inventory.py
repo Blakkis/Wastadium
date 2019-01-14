@@ -16,7 +16,10 @@ class Inventory(Weapons, GadgetLoader):
     i_playerAmmo  = {}
 
     # Max amout of ammo player can hold for each ammo type
-    _i_max_ammo = 99999
+    __max_ammo = 99999
+
+    # Default weapon for the player (Using anything else than 'fist' might break the game)
+    __default_weapon = 'fist'
 
     
     @classmethod
@@ -26,31 +29,35 @@ class Inventory(Weapons, GadgetLoader):
 
             key -> Weapon wheel id
 
-            return -> None
+            return -> Weapon name from the weapon wheel (Or 'None' if empty)
 
         """
-        k = 'w_{}'.format(cls.tk_key_name(key))
-        weapon_tag = cls.i_playerStats[k][0]
+        wheel = 'w_{}'.format(cls.tk_key_name(key))
+        # Empty weapon wheel, return None
+        if len(cls.i_playerStats[wheel]) == 0:
+            return None
+
+        weapon_tag = cls.i_playerStats[wheel][0]
         cls.i_playerStats['weapon'] = weapon_tag
 
         # Rotate next weapon in wheel
-        cls.i_playerStats[k].rotate(1)
+        cls.i_playerStats[wheel].rotate(1)
 
         return weapon_tag
 
     
     @classmethod
-    def inv_reset(cls, **kw):
+    def setup_inventory(cls, **kw):
         """
             Setup the basics of inventory
 
             return -> None
 
         """
-        cls.i_playerStats['weapon'] = 'uuz62'
+        cls.i_playerStats['weapon'] = cls.__default_weapon 
         cls.i_playerStats['health'] = [10, 100]
         cls.i_playerStats['armor']  = [10, 100]
-        cls.i_playerStats['credits'] = 19284
+        cls.i_playerStats['credits'] = 0
         
         # Setup gadgets booleans
         for key in cls.gl_gadgets: 
@@ -58,17 +65,17 @@ class Inventory(Weapons, GadgetLoader):
 
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count
-            cls.i_playerAmmo[key] = cls._i_max_ammo
+            cls.i_playerAmmo[key] = 0
 
         # Setup weapon wheels
         for key, value in cls.all_weapons.iteritems():
-            k = 'w_{}'.format(value['w_class'])
+            wheel = 'w_{}'.format(value['w_class'])
             
             # Each key slot has wheel on it
-            if k not in cls.i_playerStats:
-                cls.i_playerStats[k] = cls.tk_deque()
+            if wheel not in cls.i_playerStats:
+                cls.i_playerStats[wheel] = cls.tk_deque()
             
-            cls.i_playerStats[k].append(key)
-
-        #print cls.i_playerStats
+            # Give player the default weapon
+            if key == cls.__default_weapon:
+                cls.i_playerStats[wheel].append(key)
      

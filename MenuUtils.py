@@ -43,12 +43,12 @@ class RectSurface(SoundMusic):
         return b
 
     
-    def rs_click(self, *args):
+    def rs_click(self, *args, **kw):
         if self.rs_snd_click is not None:
             self.playSoundEffect(self.rs_snd_click)
 
         if self.rs_function is not None:
-            return self.rs_function(*args)
+            return self.rs_function(*args, **kw)
 
 
     def rs_getSize(self): return self.rs_surface.get_size()

@@ -1,6 +1,3 @@
-import random
-#random.seed(0xdeadbeef12)
-
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from Weapons import *
 from EnemiesModule import Enemies
@@ -24,8 +21,6 @@ __TKINTER_ROOT_FOR_ERRORS = ROOT_ENABLE_HIDE()
 from MapParser import (MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, WastadiumEditorException, 
                        MAP_GROUND, MAP_OBJECTS, MAP_WALLS, W_errorHandler, W_errorToken,
                        INIT_ERROR)
-
-from pygame import FULLSCREEN, HWSURFACE, DOUBLEBUF, NOFRAME
 
 
 # NOTES:
@@ -191,10 +186,12 @@ def hero_handle(self, surface, key_event=-1):
 
         # Switch weapon
         if fire_key & 2:
-            self.player_data['model'] = '_'.join((self.player_data['torso'], 
-                                                  self.inv_changeWeapon(key_event)))
-            self.hero_load_animation(torso_name=self.player_data['model'])
-            self.playSoundEffect(184)   # Switch weapon sound    
+            new_weapon = self.inv_changeWeapon(key_event) 
+
+            if new_weapon is not None:
+                self.player_data['model'] = '_'.join((self.player_data['torso'], new_weapon))
+                self.hero_load_animation(torso_name=self.player_data['model'])
+                self.playSoundEffect(184)   # Switch weapon sound    
 
         else:
             ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
@@ -528,8 +525,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             # 
             cls.setup_casings()
 
-            # inv_reset does setup too 
-            cls.inv_reset()
+            # 
+            cls.setup_inventory()
 
             # 
             cls.shadow_map = Shadows()
@@ -557,7 +554,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 error += "\nMake sure the names match between configs and files!\n"
             else:
                 error = e.message + '\n' 
-                error += "\nMost likely programming error, contact me\n"
+                error += "\nMost likely programming error, See log.\n"
 
             W_errorHandler(error, INIT_ERROR)
             cls.tk_quitgame()
@@ -645,7 +642,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                   surface.subsurface(x, y, chunk_size, chunk_size)) \
                  for ex, x in enumerate(xrange(0, cls.w_map_size[0] * 32, chunk_size))] \
                  for ey, y in enumerate(xrange(0, cls.w_map_size[1] * 32, chunk_size))]
-
 
 
     @classmethod
@@ -786,6 +782,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Time to fill the world with stuff to kill.
         cls.w_enemies.clear() 
         
+        cls.getSetRecord('kill', len(enemy_positions))
+
         for p in enemy_positions:
             # Move the enemy to the correct living_entities cell via index (Spatial position)
             ent_x, ent_y = ((32 * p.x + 16) / (32 * cls.tk_entity_sector_s),
@@ -1642,15 +1640,20 @@ class Main(World, DeltaTimer):
         # Center the windowed mode on screen
         self.tk_environ['SDL_VIDEO_CENTERED'] = '1'
         
-        #
+        # Set the mixer values before init
         self.tk_mixer.init(self.tk_audio_frequency, -16, self.tk_audio_channel, self.tk_audio_buffersize)
         self.tk_mixer.set_num_channels(self.tk_audio_max_channels)
 
         self.tk_init()  
         self.set_basic_window_elements(mouse_visibility=False)    
-        
-        self.screen = self.tk_display.set_mode(self.tk_resolution, 0, 32)
-        
+
+        self.screen = self.tk_display.set_mode(self.tk_resolution) 
+
+        # Investigate further:
+        # Keyboards mods are set at random values(Not talking about numlock or caps)
+        # this fixes it for now
+        self.tk_set_mods(0) 
+
         # Initialize everything 
         World.initVisualsAndExtModules()
 

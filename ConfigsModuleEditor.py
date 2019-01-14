@@ -521,7 +521,8 @@ class GlobalGameDataEditor(object):
     ed_frags_per_col = ed_resolution[1] / 32 / 2
 
     # Pygame
-    ed_init_everything = pygame.init 
+    ed_init_everything = pygame.init
+    ed_display = pygame.display
     ed_mouse = pygame.mouse
     ed_image = pygame.image
     ed_surface = pygame.Surface
@@ -574,7 +575,7 @@ class GlobalGameDataEditor(object):
 
     # User
     ed_keys = {'up': pygame.K_w, 'down':pygame.K_s, 'left':pygame.K_a, 'right':pygame.K_d, 
-               'shift_l':pygame.KMOD_LSHIFT, 'action_1': pygame.K_1, 'action_2': pygame.K_2, 
+               'shift_l': pygame.KMOD_LSHIFT, 'action_1': pygame.K_1, 'action_2': pygame.K_2, 
                'action_3': pygame.K_3, 'action_rot': pygame.K_r, 'ctrl_l': pygame.KMOD_LCTRL}
     
     ed_scroll_speed = 768

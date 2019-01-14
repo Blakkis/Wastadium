@@ -226,7 +226,10 @@ class Pickups(Inventory, BookKeeping):
         # Pickups ready to be deleted
         if _del:
             for _id in _del:
+                cls.pickupKilled(cls.pu_all_world_pickups[_id][2].id)
+
                 cls.pu_all_pickup_msg.discard(_id)
-                del cls.pu_all_world_pickups[_id]  
+                del cls.pu_all_world_pickups[_id]
+
             
         

@@ -16,15 +16,12 @@ from Tokenizers import Ed_CellPoint
 
 
 # Note:
-#   Getting Tkinter and Pygame to work together includes some small hacks
+#   Getting Tkinter and Pygame to work together includes some small hacks 
+#   (Investigate a better, more permanent solution)
 #   Such as controlling the execution of events
 #   I've marked someone of hacks with comment '# -- Hack --'
-#   Tokenizing the data is shit. Switch to something more understandable (namedtuple)
-#   Make the code more understandable
-
-# Note:
-#   
-
+#   Tokenizing the data is shit (Too much indexing). Switch to something more understandable (namedtuple)
+#   Make the code more understandable (uhh...)
 
 
 class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatistics, 
@@ -1054,7 +1051,7 @@ class ToolFrame(ed_LabelFrame, TkinterResources):
         tk.Label(self, text='Misc Settings')\
         .grid(row=9, column=0, padx=5, sticky=self.ed_sticky_w)
         
-        ed_Checkbutton(self, 'AutoWalling', self.bf_autowalls, 10, 0)
+        ed_Checkbutton(self, 'Auto Wall', self.bf_autowalls, 10, 0)
         ed_Checkbutton(self, 'Show Sectors', self.bf_disp_chunk, 11, 0)
 
         self.ed_separator(self, orient='horizontal')\
@@ -1153,7 +1150,7 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         # Convert user keys to string representation
         str_key = {name : cls.ed_key.name(rep).upper() for name, rep in cls.ed_keys.iteritems()}
 
-        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place ('LMB' - Spawnpoint, 'RMB' - Optional Endpoint)".format('L_CTRL'),))
+        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place ('LMB' - Spawnpoint, 'RMB' - Optional Endpoint)".format('LCTRL'),))
 
         # Ground
         cls.h_helpstrings[0] = h_createStrings(("'LMB' - Apply",
@@ -1241,7 +1238,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         self.ed_environ['SDL_VIDEODRIVER'] = self.ed_sdl_driver
 
         self.ed_init_everything()
-        self.screen = pygame.display.set_mode(self.ed_resolution, pygame.NOFRAME)
+        self.screen = self.ed_display.set_mode(self.ed_resolution, pygame.NOFRAME)
 
         self.initVisualsAndExtModules()     
 
@@ -1356,7 +1353,6 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                             elif event.key == self.ed_keys['action_3']:
                                 self.tso_updateDataTexture(2, self.tso_setMode, d='r')
 
-                
                 # Mousewheel capturing
                 if event.type == pygame.MOUSEBUTTONUP:
                     # Texture window scrolling
@@ -1367,7 +1363,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                         elif event.button == self.ed_scroll_wheelup: 
                             self.tso_updateScrollLevel(-1)
 
-                    # Light size
+                    # Light radius
                     #elif self.toolbar_action == 5:
                     #    if event.button == 5:   self.l_changeSize(-32)
                     #    elif event.button == 4: self.l_changeSize(32) 
@@ -1383,6 +1379,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
     
         keys = self.ed_key.get_pressed()
+
         mods = self.ed_key.get_mods()    # For special operations (Bitwise)
         
         speed = (self.ed_scroll_speed * (2 if mods & self.ed_keys['shift_l'] else 1)) * self.dt_getDelta()

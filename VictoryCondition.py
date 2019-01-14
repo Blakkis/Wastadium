@@ -16,14 +16,11 @@ class BookKeeping(object):
                    'condition_waypoint': False,
                    'complete':           False,}
 
-    # Keep task_record of all killed enemies 
-    level_casualty_report = {}
-
     # Level report
-    level_report = {'time': None,   # Completion time
-                    'name': None,   # Name of the level
-                    'kill': None,   # Kills
-                    'pcup': None}   # Pickups 
+    level_report = {'time': None,     # Completion time
+                    'name': None,     # Name of the level
+                    'kill': [0, 0],   # Kills   (Value, Max)
+                    'pcup': [0, 0]}   # Pickups (Value, Max)
 
     @classmethod
     def getSetRecord(cls, name, value=None):
@@ -40,28 +37,45 @@ class BookKeeping(object):
         if value is None:
             return name, '-' if cls.level_report[name] is None else cls.level_report[name]
         else:
-            cls.level_report[name] = value
+            if isinstance(cls.level_report[name], list):
+                cls.level_report[name] = [0, value]
+            else:
+                cls.level_report[name] = value
 
     
     @classmethod
     def enemyKilled(cls, enemy_name=None):
         """
-            Call me, when enemy gets killed
+            Call me, when enemy is killed
 
-            enemy_name -> Name(id) of the enemy_killed
+            enemy_name -> Name(id) of the enemy killed
 
             return -> None
 
         """
         cls.task_record['condition_kill_all'] -= 1
+        cls.level_report['kill'][0] += 1
         
         if enemy_name is not None:
-            if enemy_name in cls.level_casualty_report:
-                cls.level_casualty_report[enemy_name] += 1
-            else:
-                cls.level_casualty_report[enemy_name] = 0
+            pass
 
+    
+    @classmethod
+    def pickupKilled(cls, pickup_name=None):
+        """
+            Call me, when pickup is killed
 
+            pickup_name -> Name(id) of the pickup killed
+
+            return -> None
+
+        """
+        cls.level_report['pcup'][0] += 1
+
+        if pickup_name is not None:
+            print pickup_name
+
+    
     @classmethod
     def resetRecord(cls, enemy_count, endpoint):
         """
@@ -76,9 +90,6 @@ class BookKeeping(object):
         cls.task_record['condition_kill_all'] = enemy_count
         cls.task_record['condition_waypoint'] = endpoint
 
-        cls.level_casualty_report.clear()
-
-        cls.level_report['kill'] = enemy_count 
 
 
 class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeeping):

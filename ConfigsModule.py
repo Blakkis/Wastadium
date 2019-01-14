@@ -292,6 +292,8 @@ class GlobalGameData(DefaultConfigParser):
     tk_smoothscale = pygame.transform.smoothscale
     tk_key_pressed = pygame.key.get_pressed
     tk_key_name = pygame.key.name
+    tk_get_mods = pygame.key.get_mods 
+    tk_set_mods = pygame.key.set_mods
     tk_draw_line = pygame.draw.line
     tk_draw_lines = pygame.draw.lines
     tk_draw_aaline = pygame.draw.aaline
@@ -315,14 +317,19 @@ class GlobalGameData(DefaultConfigParser):
     tk_font = pygame.font.Font
 
 
-    # Expand more slots for 1 - 9 keys (Don't go overbound)
+    # Expand more slots for 1 - 9 keys (Don't go over bound)
     tk_slots_available = ('slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6')
     
     # Player (Allow for customization) 
     tk_user = {'up': K_w, 'left': K_a, 'down': K_s, 'right': K_d, 'esc': K_ESCAPE}
+    # Add the slot keys to tk_user as pygame constants
     tk_user.update({key: globals()['K_{}'.format(enum)] for enum, key in enumerate(tk_slots_available, start=1)}) 
 
+    # Fixed keys (Maybe put these for edit too?)
+    tk_user_special = {'shift_l': KMOD_LSHIFT, 'ctrl_l': KMOD_LCTRL}
+
     # Event
+    tk_event_pump = pygame.event.pump
     tk_event = pygame.event
     tk_event_quit = QUIT
     tk_event_keydown = KEYDOWN
@@ -460,6 +467,7 @@ class GlobalGameData(DefaultConfigParser):
             return -> Generator over events
 
         """
+        cls.tk_event_pump()
         for event in cls.tk_event.get():
             if event.type == cls.tk_event_quit:
                 cls.tk_quitgame()
