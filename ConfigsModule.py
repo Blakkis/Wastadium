@@ -360,10 +360,6 @@ class GlobalGameData(DefaultConfigParser):
     tk_gib_force_max = 16
     tk_gib_force_min = 8
 
-    # Shop
-    tk_refill_health_price = 2
-    tk_refill_armor_price = 2
-
 
     @classmethod
     def tk_scaleSurface(cls, surface, scale):

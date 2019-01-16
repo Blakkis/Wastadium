@@ -551,6 +551,16 @@ class MenuShop(PagesHelp, Inventory):
     __E_AMMO   = 1
     __E_GADGET = 2
 
+    # Bulk buying/selling amount
+    __BULK_AMOUNT = 16
+
+    # Health and armor refill costs (Per point)
+    __ARMOR_REFILL  = 4
+    __HEALTH_REFILL = 1
+
+    # Gadget stat incrementor (Base * __GADGET_EFFECT_INC * level)
+    __GADGET_EFFECT_INC = 0.3
+
 
     def __init__(self, function=None):
         self.function = function
@@ -585,14 +595,15 @@ class MenuShop(PagesHelp, Inventory):
                             'w_price':    self.font_0.render('| Price: ',    1, (0xff, 0x0, 0x0)),
                             'w_damage':   self.font_0.render('| Damage: ',   1, (0xff, 0x0, 0x0)),
                             'w_range':    self.font_0.render('| Range: ',    1, (0xff, 0x0, 0x0)),
-                            'w_firerate': self.font_0.render('| Firerate: ', 1, (0xff, 0x0, 0x0)),
+                            'w_firerate': self.font_0.render('| RPM: ',      1, (0xff, 0x0, 0x0)),
                             'dual_n':     self.font_0.render('Dual',         1, (0x80, 0x0, 0x0)),
                             'dual_y':     self.font_0.render('Dual',         1, (0xff, 0x0, 0x0)),
                             'owned_n':    self.font_0.render('Owned',        1, (0x80, 0x0, 0x0)),
-                            'owned_y':    self.font_0.render('Owned',        1, (0xff, 0x0, 0x0)),
-                            'help_3':     self.two_color_text(self.font_0, 'LMB/RMB: Buy/Sell', invert_color=True),
-                            'help_2':     self.two_color_text(self.font_0, '+ LSHIFT: Buy/Sell In Bulk', invert_color=True),
-                            'help_1':     self.two_color_text(self.font_0, '+ LCTRL: Sell All', invert_color=True)}
+                            'owned_y':    self.font_0.render('Owned',        1, (0xff, 0x0, 0x80)),
+                            'help_3':     self.two_color_text(self.font_0, "LMB/RMB: Buy/Sell", invert_color=True),
+                            'help_2':     self.two_color_text(self.font_0, 
+                                          "+ LSHIFT: Buy/Sell In Bulk of '{}'".format(self.__BULK_AMOUNT), invert_color=True),
+                            'help_1':     self.two_color_text(self.font_0, "+ LCTRL: Sell All", invert_color=True)}
 
 
         # Provide much nicer background for the icons (32x32, 64x64)
@@ -654,12 +665,12 @@ class MenuShop(PagesHelp, Inventory):
                                  self.ms_armorHealthIcon.rs_getSize()[1] / 2 - (40 * self.menu_scale)), self.tk_srcalpha)
         bar_bg.fill((0xff, 0x0, 0x0, 0x80))
         
-        self.ms_healthBar = RectSurface(bar_bg, snd_hover_over=181, snd_click=183)
+        self.ms_healthBar = RectSurface(bar_bg, snd_hover_over=181, snd_click=183, func=self.ms_validate_hparm_buy)
         self.ms_healthBar.rs_updateRect(self.ms_armorHealthIcon.rs_getPos('right'),
                                         self.ms_armorHealthIcon.rs_getPos('top') + \
                                         self.ms_armorHealthIcon.rs_getSize()[1] / 4 - bar_bg.get_height() / 2)
 
-        self.ms_armorBar = RectSurface(bar_bg, snd_hover_over=181, snd_click=182) 
+        self.ms_armorBar = RectSurface(bar_bg, snd_hover_over=181, snd_click=182, func=self.ms_validate_hparm_buy) 
         self.ms_armorBar.rs_updateRect(self.ms_armorHealthIcon.rs_getPos('right'),
                                        self.ms_armorHealthIcon.rs_getPos('centery') + \
                                        self.ms_armorHealthIcon.rs_getSize()[1] / 4 - bar_bg.get_height() / 2)
@@ -707,14 +718,13 @@ class MenuShop(PagesHelp, Inventory):
             elif mods & self.tk_user_special['ctrl_l']:
                 mod_event = 2
 
-            print mods, mod_event
             weapon = self.ms_render_weapons(surface, hover=(mx, my), click=buy_sell)
             
             self.ms_render_ammo(surface, hover=(mx, my), hl_wpn=weapon, click=buy_sell, click_mod=mod_event)
 
             self.ms_render_gadgets(surface, hover=(mx, my), click=buy_sell)
 
-            self.ms_renderHealthArmorCreditsMenu(surface, hover=(mx, my), click=buy_sell)
+            self.ms_renderHealthArmorCreditsMenu(surface, hover=(mx, my), click=buy_sell if buy_sell == 1 else 0)
             
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
@@ -724,35 +734,127 @@ class MenuShop(PagesHelp, Inventory):
             if quit_shop: return surface
 
 
-    def ms_validate_buy(self, _set, mod=0, *args, **kw):
+    def ms_validate_ammo_buy(self, mod, *args, **kw):
         """
-            Validated the buy/sell of the item(s)
-            (Enough money?, already own it?)
+            Validate buy ammo
 
-            _set -> 1: Weapons
-                    2: Ammo
-                    3: Gadgets
-
-            mod -> Apply special case via keyboard mods(shift, ctrl, etc...)
+            mod -> Keyboard mods:
+                   0: Normal buy/sell
+                   1: Bulk buy/sell (lshift)
+                   2: Sell all      (lctrl)
 
             return -> None
 
         """
-        if _set == self.__E_WEAPON:
-            pass
+        ammo_key = kw['ammo_id']
+        ammo_price = self.all_ammo_data[ammo_key][1]
 
-        elif _set == self.__E_AMMO:
-            print mod
-            #self.i_playerStats['credits']
-            pass
+        # Normal buy/sell (Single)
+        if mod == 0:
+            # Buy
+            if kw['key'] == 1 and ammo_price < self.i_playerStats['credits']: 
+                self.i_playerAmmo[ammo_key] += 1
+                self.i_playerStats['credits'] -= ammo_price
+            
+            # Sell (Gives half the price of the ammo)
+            elif kw['key'] == 2 and self.i_playerAmmo[ammo_key] > 0:
+                self.i_playerAmmo[ammo_key] -= 1
+                self.i_playerStats['credits'] += int(ammo_price / 2)
+        
+        # Bulk buy/sell
+        elif mod == 1:
+            # Buy
+            if kw['key'] == 1:
+                # Use the remainder for negotiating few extra ammo when low on cash?
+                q, r = divmod(self.i_playerStats['credits'], ammo_price)
+                amount = self.__BULK_AMOUNT if q >= self.__BULK_AMOUNT else q
+                
+                self.i_playerAmmo[ammo_key] += amount
+                self.i_playerStats['credits'] -= ammo_price * amount        
 
-        elif _set == self.__E_GADGET:
-            pass
+            # Sell (Maybe give more if selling in bulk?)
+            elif kw['key'] == 2:
+                q, r = divmod(self.i_playerAmmo[ammo_key], self.__BULK_AMOUNT)
+                amount = self.__BULK_AMOUNT if q > 0 else r 
+
+                self.i_playerAmmo[ammo_key] -= amount
+                self.i_playerStats['credits'] += (ammo_price / 2) * amount
+        
+        # Sell all
+        elif mod == 2 and kw['key'] == 2:
+            self.i_playerStats['credits'] += (ammo_price / 2) * self.i_playerAmmo[ammo_key]
+            self.i_playerAmmo[ammo_key] = 0
+
+
+    def ms_validate_weapon_buy(self, *args, **kw):
+        """
+            TBD
+
+            return -> None
+
+        """ 
+        print "Weapons!"
+
 
     
+    def ms_validate_gadget_buy(self, gadget, *args, **kw):
+        """
+            TBD
+
+            return -> None
+
+        """
+        g_type = self.gl_gadgets[gadget]['g_type']
+        g_price_base = self.gl_gadgets[gadget]['g_price']
+
+        # Calculate the the price for next level upgrade
+        g_price_next = g_price_base + (g_price_base * self.__GADGET_EFFECT_INC * self.i_playerStats[gadget]) 
+        
+        if g_type == 'single' and self.i_playerStats['credits'] >= g_price_base and \
+        self.i_playerStats[gadget] != 1:
+            self.i_playerStats[gadget] = 1
+            self.i_playerStats['credits'] -= g_price_base
+
+        elif g_type == 'level' and self.i_playerStats['credits'] >= g_price_next:
+            self.i_playerStats[gadget] += 1
+            self.i_playerStats['credits'] -= g_price_next
+
+            # Next step is to increase health and armor!
+
+            
+
+
+
+    def ms_validate_hparm_buy(self, hp_or_armor, *args, **kw):
+        """
+            Validate refilling armor and health
+
+            hp_or_armor -> 'health' or 'armor'
+
+            return -> None
+
+        """
+        multiplier = self.__HEALTH_REFILL if hp_or_armor == 'health' else self.__ARMOR_REFILL 
+        
+        # Get the total cost
+        v_left = self.i_playerStats[hp_or_armor][1] - self.i_playerStats[hp_or_armor][0]
+        v_left = v_left * multiplier
+
+        # Credits available
+        q, r = divmod(self.i_playerStats['credits'], v_left)
+        if q > 0:
+            self.i_playerStats[hp_or_armor][0] = self.i_playerStats[hp_or_armor][1]
+            self.i_playerStats['credits'] -= v_left 
+        else:
+            self.i_playerStats[hp_or_armor][0] += r / multiplier
+            self.i_playerStats['credits'] -= r 
+    
+
     def ms_render_weapons(self, surface, **kw):
         """
             Render weapons
+
+            surface -> Active screen surface
 
             return -> Name of the weapon being highlighted
 
@@ -776,7 +878,7 @@ class MenuShop(PagesHelp, Inventory):
                 self.ms_render_item_stats(surface, self.__E_WEAPON, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
                 hl_weapon = key
 
-                if kw['click']: value.rs_click(_set=self.__E_WEAPON)
+                if kw['click']: value.rs_click()
 
         return hl_weapon
 
@@ -791,6 +893,7 @@ class MenuShop(PagesHelp, Inventory):
             return -> None
 
         """
+        # Note: Move these to their own functions
         px, py = 16, kw['py']
 
         # Render and carry x the length of the surface width
@@ -798,6 +901,7 @@ class MenuShop(PagesHelp, Inventory):
 
         # Weapons
         if _set == self.__E_WEAPON:
+            # Note: Convert all this to 'two_color_text' function
             surface.blit(self.ms_pre_text['w_id'], (px, py))
             px += self.ms_pre_text['w_id'].get_width()
             
@@ -806,6 +910,9 @@ class MenuShop(PagesHelp, Inventory):
 
             for w in ('w_price', 'w_damage', 'w_range', 'w_firerate'):
                 value = self.all_weapons[kw['key']][w]
+                # Calculate the Rounds-per-minute
+                if w == 'w_firerate': value = 1.0 / value * 60.0
+
                 child = self.font_0.render('{} {} '.format(value, 'cr.' if w == 'w_price' else ''), 1, (0xff, 0x0, 0x80))
 
                 px += render_carry(self.ms_pre_text[w], surface, px, py)
@@ -815,9 +922,11 @@ class MenuShop(PagesHelp, Inventory):
         elif _set == self.__E_AMMO:
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
             
+            # Id
             w_ammo = self.font_0.render('{} '.format(self.all_ammo_data[kw['key']][0]), 1, (0xff, 0x0, 0x80)) 
             px += render_carry(w_ammo, surface, px, py)
 
+            # Price
             px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
             a_price = self.font_0.render('{} cr.'.format(self.all_ammo_data[kw['key']][1]), 1, (0xff, 0x0, 0x80))
             px += render_carry(a_price, surface, px, py)
@@ -827,13 +936,22 @@ class MenuShop(PagesHelp, Inventory):
         elif _set == self.__E_GADGET:
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
 
+            # Id
             w_name = self.font_0.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
             px += render_carry(w_name, surface, px, py)
 
-            px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
-            g_price = self.font_0.render('{} cr.'.format(self.gl_gadgets[kw['key']]['g_price']), 1, (0xff, 0x0, 0x80))
-            px += render_carry(g_price, surface, px, py)
+            # Price
+            # Remove price removes the price tag, if player owns the gadget
+            remove_price = self.gl_gadgets[kw['key']]['g_type'] == 'single' and self.i_playerStats[kw['key']]
+            if not remove_price:
+                px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
+                g_price_base = self.gl_gadgets[kw['key']]['g_price'] 
+                g_price_next = g_price_base + (g_price_base * self.__GADGET_EFFECT_INC * self.i_playerStats[kw['key']])
 
+                g_price = self.font_0.render('{} cr.'.format(g_price_next), 1, (0xff, 0x0, 0x80))
+                px += render_carry(g_price, surface, px, py)
+
+            # Description
             g_desc = self.font_0.render(self.gl_gadgets[kw['key']]['g_desc'], 1, (0xff, 0x0, 0x80))
             px += render_carry(g_desc, surface, 16, py + self.ms_font_height) 
 
@@ -860,7 +978,8 @@ class MenuShop(PagesHelp, Inventory):
             surface.blit(*value.rs_renderSurface(position=1))
 
             ammo_count = self.i_playerAmmo[key]
-            ammo_count = self.font_0.render('x{}'.format(ammo_count), 1, (0xff if ammo_count else 0x80, 0x0, 0x80 if ammo_count else 0x0))
+            color_indication = (0xff if ammo_count else 0x80, 0x0, 0x80 if ammo_count else 0x0) 
+            ammo_count = self.font_0.render('x{}'.format(ammo_count), 1, color_indication)
             surface.blit(ammo_count, (value.rs_getPos('left'), value.rs_getPos('bottom')))
 
             if hl_ammo is not None and key == hl_ammo:
@@ -870,7 +989,7 @@ class MenuShop(PagesHelp, Inventory):
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
                 self.ms_render_item_stats(surface, self.__E_AMMO, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
 
-                if kw['click']: value.rs_click(_set=self.__E_AMMO, mod=kw['click_mod'])
+                if kw['click']: value.rs_click(mod=kw['click_mod'], key=kw['click'], ammo_id=key)
 
     
     def ms_render_gadgets(self, surface, **kw):
@@ -887,14 +1006,21 @@ class MenuShop(PagesHelp, Inventory):
             value.rs_updateRect(16 + (80 * self.menu_scale) * enum, 304 * self.menu_scale)
             surface.blit(*value.rs_renderSurface(position=1)) 
 
-            owned_i = self.ms_pre_text['owned_n']
-            surface.blit(owned_i, (value.rs_getPos('right') - owned_i.get_width(), value.rs_getPos('bottom'))) 
+            g_type = self.gl_gadgets[key]['g_type']
+            if g_type == 'single':
+                owned_i = self.ms_pre_text['owned_y' if self.i_playerStats[key] else 'owned_n']
+                surface.blit(owned_i, (value.rs_getPos('right') - owned_i.get_width(), value.rs_getPos('bottom')))
+            else:
+                level = self.i_playerStats[key]
+                color_indication = (0xff if level else 0x80, 0x0, 0x80 if level else 0x0) 
+                g_level = self.font_0.render('lvl.{}'.format(self.i_playerStats[key]), 1, color_indication) 
+                surface.blit(g_level, (value.rs_getPos('left'), value.rs_getPos('bottom')))
 
             if value.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*value.rs_getPos('topleft'), icon_d=value.rs_getSize(), surface=surface)
                 self.ms_render_item_stats(surface, self.__E_GADGET, py=value.rs_getPos('bottom') + self.ms_font_height, key=key)
 
-                if kw['click']: value.rs_click(_set=self.__E_GADGET)
+                if kw['click']: value.rs_click(gadget=key)
 
 
     def ms_renderHealthArmorCreditsMenu(self, surface, **kw):
@@ -927,15 +1053,25 @@ class MenuShop(PagesHelp, Inventory):
                                 bar.rs_getPos('bottom') - text.get_height() / 2))
 
             if self.i_playerStats[stat][0] < self.i_playerStats[stat][1]:
-                re_text = self.tk_renderText(self.font_0, 'Replenish!', 1, 
-                                            (0xff, 0x0, 0x40 + 0x80 * abs(self.tk_sin(self.menu_timer.get_ticks()))), shadow=1)
-
+                flash = 0x80 * abs(self.tk_sin(self.menu_timer.get_ticks())) 
+                
+                re_text = self.tk_renderText(self.font_0, 'Replenish!', 1, (0xff, 0x0, 0x40 + flash), shadow=1)
                 surface.blit(re_text, (bar.rs_getPos('left') + 2, bar.rs_getPos('top') - re_text.get_height() / 2))
 
-                # Refill if needed
-                if bar.rs_hover_over(kw['hover']):
-                    if kw['click']: bar.rs_click()
+                x, y = bar.rs_getPos('midright')
+                
+                # Get the total cost to replish all health or armor
+                v_left = self.i_playerStats[stat][1] - self.i_playerStats[stat][0] 
+                v_left = v_left * (self.__HEALTH_REFILL if stat == 'health' else self.__ARMOR_REFILL) 
 
+                re_text_cost = self.two_color_text(self.font_0, "To Max: {} cr.".format(v_left), color_v=(0xff, 0x0, 0x40 + flash))
+                surface.blit(re_text_cost, (x, y - re_text_cost.get_height() / 2)) 
+
+                if bar.rs_hover_over(kw['hover']):
+                    if kw['click']: bar.rs_click(hp_or_armor=stat)
+
+
+        # Note: Separate these in to their own functions
         # Credits
         surface.blit(*self.ms_creditsIcon.rs_renderSurface(position=1))
         credits = self.font_0.render('{:,} cr.'.format(self.i_playerStats['credits']), 1, (0xff, 0x0, 0x80)) 
@@ -995,7 +1131,7 @@ class MenuShop(PagesHelp, Inventory):
             _s.blit(surf, (csurf_64_d[0] / 2 - surf.get_width()  / 2, 
                            csurf_64_d[1] / 2 - surf.get_height() / 2)) 
 
-            self.ms_sIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184, func=self.ms_validate_buy)  
+            self.ms_sIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184, func=self.ms_validate_gadget_buy)  
 
         self.ms_sIcons['mod_keys'] = sorted(self.ms_sIcons.keys())
 
@@ -1024,7 +1160,7 @@ class MenuShop(PagesHelp, Inventory):
 
             ofsx, ofsy = (csurf_64_d[0] - surf.get_width()) / 2, (csurf_64_d[1] - surf.get_height()) / 2 
             _s.blit(surf, (ofsx, ofsy))
-            self.ms_wIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184, func=self.ms_validate_buy)
+            self.ms_wIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=184, func=self.ms_validate_weapon_buy)
 
         # Ammo
         for key, value in self.all_ammo_data.iteritems():
@@ -1033,7 +1169,7 @@ class MenuShop(PagesHelp, Inventory):
 
             ofsx, ofsy = (csurf_64_d[0] - surf.get_width()) / 2, (csurf_64_d[1] - surf.get_height()) / 2
             _s.blit(surf, (ofsx, ofsy))
-            self.ms_aIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=185, func=self.ms_validate_buy)
+            self.ms_aIcons[key] = RectSurface(_s, snd_hover_over=181, snd_click=185, func=self.ms_validate_ammo_buy)
 
         self.ms_wIcons['weapon_keys'] = sorted([key for key in self.ms_wIcons.keys() if len(key.split('-')) != 2])
         self.ms_aIcons['ammo_keys'] = sorted(self.ms_aIcons.keys())
@@ -1667,4 +1803,4 @@ class MenuManager(EpisodeParser):
 
 
 if __name__ == '__main__':
-    pass 
+    pass

@@ -56,12 +56,12 @@ class Inventory(Weapons, GadgetLoader):
         """
         cls.i_playerStats['weapon'] = cls.__default_weapon 
         cls.i_playerStats['health'] = [10, 100]
-        cls.i_playerStats['armor']  = [10, 100]
-        cls.i_playerStats['credits'] = 0
+        cls.i_playerStats['armor']  = [10, 100]    
+        cls.i_playerStats['credits'] = 40000
         
         # Setup gadgets booleans
         for key in cls.gl_gadgets: 
-            cls.i_playerStats[key] = 1
+            cls.i_playerStats[key] = 0
 
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count

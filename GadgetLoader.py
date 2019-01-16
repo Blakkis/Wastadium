@@ -32,17 +32,23 @@ class GadgetLoader(GlobalGameData):
 
         for cfg in cls.tk_iglob(cls.tk_path.join(src_path_cfg, '*.cfg')):
             name = cls.tk_path.split(cfg)[-1].split('.')[0]
-            tex_data = {'g_tex': None,
-                        'g_price': 100,
-                        'g_desc': '-'}
+            tex_data = {'g_tex':   None,    
+                        'g_price': 500,
+                        'g_desc':  '-',
+                        'g_type':  'single'}    # level: Can be upgraded. single: Can be bought once 
             
             for line in cls.tk_readFile(cfg, 'r'):
-                if line[0] == 'g_tex': tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, 
-                                                                             line[1])).convert_alpha()
+                if line[0] not in tex_data: continue
+                
+                if line[0] == 'g_tex': 
+                    tex_data[line[0]] = cls.tk_image.load(cls.tk_path.join(ui_elem_path_tex, line[1])).convert_alpha()
                 
                 elif line[0] == 'g_price': tex_data[line[0]] = int(line[1]) 
-                
                 elif line[0] == 'g_desc': tex_data[line[0]] = line[1].replace('_', ' ') 
+                
+                elif line[0] == 'g_type':
+                    if line[1] in ('single', 'level'):
+                        tex_data[line[0]] = line[1]
 
             cls.gl_gadgets[name] = tex_data
 

@@ -116,6 +116,9 @@ class Weapons(GlobalGameData):
         if editor_only:
             # Add values needed by the editor here
             token = {'w_buyable': token['w_buyable']}
+        
+        else:
+            pass
 
         return token
 
