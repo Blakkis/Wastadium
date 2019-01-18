@@ -15,9 +15,6 @@ class Inventory(Weapons, GadgetLoader):
     # Player Ammunition type/count (MAX: 99999)
     i_playerAmmo  = {}
 
-    # Max amout of ammo player can hold for each ammo type
-    __max_ammo = 99999
-
     # Default weapon for the player (Using anything else than 'fist' might break the game)
     __default_weapon = 'fist'
 

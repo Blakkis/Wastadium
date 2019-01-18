@@ -15,6 +15,8 @@ class Weapons(GlobalGameData):
         subclass this to any other class if it needs weapon data
 
     """
+    # Note: Dual weapons should end with '-dual' suffix
+
     # Contains all weapons for the game and their stats
     all_weapons = {}
 
@@ -24,6 +26,8 @@ class Weapons(GlobalGameData):
     # Contains all ammo data
     all_ammo_data = {}
 
+    # Suffix to indicate dual weapon
+    weapon_dual_tag = '-dual'
     
     def __init__(self):
         pass

@@ -387,9 +387,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     
     # Dynamic map entities (eg. Enemies)
     w_entities_dynamic = []
-
-    # Static entities (eg. Map effects, pickups)
-    w_entities_static = []
     
     # World position
     cell_x, cell_y = 0, 0
