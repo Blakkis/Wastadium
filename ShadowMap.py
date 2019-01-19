@@ -24,12 +24,8 @@ class Shadows(GlobalGameData, TkWorldDataShared):
 
     def __init__(self):
         self.s_shadow_surf = self.tk_surface(self.tk_resolution)
-        if self.tk_shadow_quality: self.s_shadow_surf.set_colorkey(self.tk_shadow_mask_color)
-
-        self.s_fade_surf = None
-        self.s_fade_color = self.tk_surface((32 * self.tk_macro_cell_size,
-                                             32 * self.tk_macro_cell_size), self.tk_srcalpha)
-        self.s_fade_color.fill(self.tk_shadow_color)
+        if self.tk_shadow_quality: 
+            self.s_shadow_surf.set_colorkey(self.tk_shadow_mask_color)
 
         self.s_buildShadowDirMap()
     
@@ -105,7 +101,7 @@ class Shadows(GlobalGameData, TkWorldDataShared):
         self.s_shadow_dir_map = tuple(self.s_shadow_dir_map)
         
      
-    def s_loadSurfaceMap(self, surfaces):
+    def s_loadSurfaceMap(self, surface):
         """
             Load the ground layer as shadow mask
 
@@ -114,19 +110,14 @@ class Shadows(GlobalGameData, TkWorldDataShared):
             return -> None
 
         """
-        surf_size = 32 * self.tk_macro_cell_size 
-        self.s_fade_surf = self.tk_surface((surf_size * len(surfaces[0]),
-                                            surf_size * len(surfaces))) 
-        
-        for ey, y in enumerate(surfaces):
-            for ex, x in enumerate(y):
-                surf = x[1].copy()
-                surf.blit(self.s_fade_color, (0, 0))
-                self.s_fade_surf.blit(surf, (surf_size * ex, surf_size * ey))
+        fade_surface = self.tk_surface(surface.get_size(), self.tk_srcalpha)
+        fade_surface.fill(self.tk_shadow_color)
+
+        self.s_fade_surf = surface.copy()
+        self.s_fade_surf.blit(fade_surface, (0, 0)) 
 
 
-    @classmethod
-    def s_load_lightmap(cls, lightmap):
+    def s_loadCellWalls(self, lightmap):
         """
             Load world map and convert all cells to 2d binary map (Walls=1 else 0) 
 
@@ -136,21 +127,20 @@ class Shadows(GlobalGameData, TkWorldDataShared):
             
         """
         final = []
-
         # Per-cell size
-        cls.shadow_map_size = len(lightmap[0]), len(lightmap)
+        self.shadow_map_size = len(lightmap[0]), len(lightmap)
         
         # Per-sector size 
-        cls.shadow_world_size = cls.shadow_map_size[0] * 32, cls.shadow_map_size[1] * 32  
+        self.shadow_world_size = self.shadow_map_size[0] * 32, self.shadow_map_size[1] * 32  
         
         # Cells with collisions are marked with 1 else 0
-        for y in xrange(cls.shadow_map_size[1]):
+        for y in xrange(self.shadow_map_size[1]):
             row = []
-            for x in xrange(cls.shadow_map_size[0]):
+            for x in xrange(self.shadow_map_size[0]):
                 row.append(1 if lightmap[y][x].w_collision else 0)
             final.append(tuple(row))
 
-        cls.shadow_map[:] = final
+        self.shadow_map[:] = final
 
     
     exec(PreProcessor.parseCode("""

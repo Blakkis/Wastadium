@@ -16,7 +16,7 @@ class Inventory(Weapons, GadgetLoader):
     i_playerAmmo  = {}
 
     # Default weapon for the player (Using anything else than 'fist' might break the game)
-    __default_weapon = 'fist'
+    __default_weapon = 'uuz62'
 
     
     @classmethod
@@ -62,7 +62,7 @@ class Inventory(Weapons, GadgetLoader):
 
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count
-            cls.i_playerAmmo[key] = 0
+            cls.i_playerAmmo[key] = 60
 
         # Setup weapon wheels
         for key, value in cls.all_weapons.iteritems():

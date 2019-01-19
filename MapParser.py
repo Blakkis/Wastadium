@@ -695,7 +695,6 @@ class Packer(object):
                     parent = xmlParse.SubElement(segment, name, name='c_{}.{}'.format(x, y))
 
                     obj = cell.get_set_CellToken()['obj'][0] 
-                    if obj is not None: print obj
 
                     parent.text = "{low}.{mid}.{obj}.{link}".format(**cell.get_set_CellToken())
 

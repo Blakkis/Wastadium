@@ -12,10 +12,6 @@ inspiration comes from "Hotline Miami" and old finnish game called "TapanKaikki"
 
 TODO:
   - Add more textures
-  - Build report menu
-  - Build intro/outro fader
   - Create the JaaBabe background images
-  - Add buy/sell functionality to shop
   - Work on the Wastadium launcher
   - Enable enemies to shoot the player
-  - Extend the death texture of the enemies to allow wider footstep catching

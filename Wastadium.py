@@ -412,7 +412,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         self.w_sound_hit  = self.mid_textures[mid_id]['tex_hit_sound_id'] if mid_id else \
                             self.low_textures[low_id]['tex_hit_sound_id']
         
-        self.w_collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if collision else False  
+        # Wall collision(Cast shadows and blocks projectiles)
+        self.w_collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if collision else False
+
+        # *Optional object collision (Doesn't take a part in shadow casting nor blocking projectiles)
+        self.w_collision_obj = False 
         
         # Sound id when walking over this cell
         self.w_sound_walk = self.low_textures[low_id]['tex_walk_sound_id']
@@ -420,7 +424,15 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Corpses can stain this cell with guts, thus allowing footsteps to be left behind
         # when walking over this cell
         self.w_footstep_stain_id = 0
-    
+
+    def enable_object_collision(self):
+        """
+            Set optional object collision
+
+            return -> None
+        """
+        self.w_collision_obj = self.tk_rect(self.pos[0], self.pos[1], 32, 32) 
+
 
     def __repr__(self):
         """
@@ -650,9 +662,14 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             map_name -> Name of the mapfile 
                         (Suffix will be added based on the parser rules, by the parser)
 
+            surface -> Active screen surface (Send down the decorator chain)
+
             return -> None
 
         """
+        # Note: Some layers are passed down edited to next processing
+        #       That's why the order is, what it is
+
         disk_data = cls.mp_load(map_name)
         cls.getSetRecord('name', map_name)
 
@@ -701,16 +718,19 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 cell = row
                 collision = 1 if (x, y) in disk_data[data_tag][cls.MAP_COLLISION_XML] else 0 
                 segment.append(cls(x, y, cell.low, ('' if cell.mid is None else cell.mid), collision))
-            
             cls.w_micro_cells.append(segment)
 
+        # Apply object collisions
+        for object_collision in cls.w_fetchObjCollision(disk_data[data_tag][cls.MAP_CELL_XML]):
+            base_index, c_indexes = object_collision
+            for y in xrange(c_indexes[1]):
+                for x in xrange(c_indexes[0]):
+                    cls.w_micro_cells[base_index[1] + y][base_index[0] + x].enable_object_collision()
+
+        # Remove all gibs and send level collisions to gib processing
         cls.gib_reset(cls.w_micro_cells)
 
-        # Cut the layers in to chunks
-        chunk_size = cls.tk_macro_cell_size * 32
-
-        # Blit the objects layer to ground layer
-        disk_data[MAP_GROUND][MAP_GROUND].blit(disk_data[MAP_GROUND][MAP_OBJECTS], (0, 0))   
+        # Blit the objects layer to ground layer   
         cls.w_map_layers[0] = cls.world_parse_to_chunks(cls.w_ambientColor( \
                                                         disk_data[MAP_GROUND][MAP_GROUND]))
 
@@ -725,8 +745,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.w_map_size_macro = (cls.w_map_size[0] / cls.tk_macro_cell_size,
                                 cls.w_map_size[1] / cls.tk_macro_cell_size)
 
-        # Setup shadow map
-        cls.shadow_map.s_loadSurfaceMap(cls.w_map_layers[0]) 
+        # Setup shadow fademap
+        if not cls.tk_no_shadow_layer: 
+            cls.shadow_map.s_loadSurfaceMap(disk_data[MAP_GROUND][MAP_GROUND]) 
 
         # Apply static map shadows
         cls.w_applyStaticShadows(disk_data[data_tag][cls.MAP_WIRE_XML])
@@ -739,6 +760,16 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Apply lights to the world
         cls.w_applyLights(format_lights)
 
+        # Apply objects last on the stack
+        object_chunks = cls.world_parse_to_chunks(cls.w_ambientColor( \
+                                                  disk_data[MAP_GROUND][MAP_OBJECTS]))
+
+        for ey, y in enumerate(object_chunks):
+            for ex, x in enumerate(y):
+                # Blit the object chunks to ground layers
+                cls.w_map_layers[0][ey][ex][-1].blit(object_chunks[ey][ex][-1], (0, 0))    
+
+        
         # Load light positions for character shadows
         cls.cs_load_lights(format_lights, cls.w_map_size_macro)
             
@@ -758,13 +789,25 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                            for pickup in disk_data[data_tag][cls.MAP_PICKUP_XML]])
         
         # Create lightmap for shadowing
-        if not cls.tk_no_shadow_layer: Shadows.s_load_lightmap(cls.w_micro_cells)
+        if not cls.tk_no_shadow_layer: cls.shadow_map.s_loadCellWalls(cls.w_micro_cells)
 
         # Create the mess solver map
         cls.convertToRectMap(cls.w_map_layers[0])
 
         return surface
     
+    @classmethod
+    def w_fetchObjCollision(cls, world_data):
+        """
+            TBD
+
+            return -> None
+        """
+        for column in world_data:
+            for row in column:
+                if row.obj is not None:
+                    yield row.obj
+
     
     @classmethod
     def w_spawnEnemies(cls, enemy_positions):
@@ -902,7 +945,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         
         walls = cls.get_env_col(pos[0] >> 5, pos[1] >> 5, 
                                 min_x=spatial_len, max_x=spatial_len + 1, 
-                                min_y=spatial_len, max_y=spatial_len + 1)
+                                min_y=spatial_len, max_y=spatial_len + 1,
+                                ignore_objects=True)
 
         # Topleft spatial pos
         topleftPos = (pos[0] >> 5) - spatial_len, (pos[1] >> 5) - spatial_len
@@ -1208,8 +1252,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         angle -= cls.tk_uniform(-w_spread, w_spread)
 
         baseAx, baseAy = cls.tk_sin(angle), cls.tk_cos(angle)
-        
-        # NOTE: All the ray intersection task are done using raycasting (Change to DDA for faster and more precise)
 
         # Convert the set to dict with the rects being keys
         collisions = dict.fromkeys(cls.get_ray_env_collisions(x, y, baseAx, baseAy, w_range), -1)
@@ -1223,7 +1265,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Cast a rect towards the aim direction step-by-step
         # To find collision with environment or enemy/player
         test_rect = cls.tk_rect(x, y, w_blast_size, w_blast_size)  
-        
+         
         for cast in xrange(16, w_range, w_blast_size >> 2):
             dx, dy = (int(x - baseAx * cast),
                       int(y - baseAy * cast))
@@ -1240,8 +1282,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                     # Hitscan
                     if cls.all_weapons[weapon]['w_type'] == 1:
                         if cls.all_weapons[weapon]['w_hitwall']:
-                            #if cls.all_weapons[weapon]['w_hitwall']:
-                                # Collision found, find the closest surface normal we struck
+                            # Collision found, find the closest surface normal we struck
                             orx, ory = test_rect.center
 
                             normals = [pair[0].midleft,  pair[0].midtop,
@@ -1381,7 +1422,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             
             ray_x = -int((cls.cell_x - 16)) + (dx - cls.tk_res_half[0]) >> 5 
             ray_y = -int((cls.cell_y - 16)) + (dy - cls.tk_res_half[1]) >> 5
-            env_collisions.update(cls.get_env_col(ray_x, ray_y))
+            env_collisions.update(cls.get_env_col(ray_x, ray_y, ignore_objects=1))
 
         if ret_first_dist:
             if not env_collisions: return dist
@@ -1570,15 +1611,16 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
     
     @classmethod
-    def get_env_col(cls, x, y, min_x=1, max_x=2, min_y=1, max_y=2, surface=None):
+    def get_env_col(cls, x, y, min_x=1, max_x=2, min_y=1, max_y=2, surface=None, ignore_objects=0):
         """
             Get all the collisions around the x, y position from the cells
             
             x, y -> Spatial index
 
             min, max -> Boundaries around the source (x, y)
+            ignore_objects -> Ignore object collisions?
             
-            return -> A list of all near cells collisions near the origin
+            return -> A list of all near cells collisions near the origin cell
             
         """
         near_collisions = []
@@ -1588,10 +1630,18 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
             for cx in xrange(x - min_x, x + max_x):
                 if not -1 < cx < cls.w_map_size[0]:
-                    continue 
+                    continue
 
+                # Walls
                 if cls.w_micro_cells[cy][cx].w_collision:
-                    rect = cls.w_micro_cells[cy][cx].w_collision 
+                    rect = cls.w_micro_cells[cy][cx].w_collision
+                    near_collisions.append(cls.tk_rect(rect.x + cls.cell_x,
+                                                       rect.y + cls.cell_y,
+                                                       32, 32))
+
+                # Objects
+                elif not ignore_objects and cls.w_micro_cells[cy][cx].w_collision_obj:
+                    rect = cls.w_micro_cells[cy][cx].w_collision_obj    
                     near_collisions.append(cls.tk_rect(rect.x + cls.cell_x,
                                                        rect.y + cls.cell_y,
                                                        32, 32))
@@ -1648,7 +1698,7 @@ class Main(World, DeltaTimer):
 
         # Investigate further:
         # Keyboards mods are set at random values(Not talking about numlock or caps)
-        # this fixes it for now
+        # this fixes it for now (Tho editor doesn't suffer from this)
         self.tk_set_mods(0) 
 
         # Initialize everything 
