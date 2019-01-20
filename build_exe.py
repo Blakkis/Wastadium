@@ -1,4 +1,4 @@
-PROJECT_NAME = 'JaaGame2.py'
+PROJECT_NAME = 'Wastadium.py'
  
 try:
     from distutils.core import setup
@@ -48,7 +48,7 @@ class BuildExe:
  
         #Auhor of program
         self.author_name = "Toni Vuoristo"
-        self.author_email = 'None'
+        self.author_email = 'greatshader@hotmail.com'
         self.copyright = 'None'
  
         #Description
