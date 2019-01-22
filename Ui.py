@@ -103,6 +103,9 @@ class uiGameTimer(GlobalGameData, BookKeeping):
 
     
 class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryCondition):
+
+    # Flash the healthbar when health is equal or lower
+    __healthCriticalThreshhold = 30
     
     def __init__(self):            
         # NOTE: Most of these hardcoded stuff is for the textures which do not scale with resolution (in-game)
@@ -131,15 +134,15 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
                                                       ipad=8, anchor_pos=(88, self.tk_resolution[1] - 84))
         
         # Decoration for the health and armor slot (Endcaps)
-        self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (44,  11), (44,  38))       # Health endcaps
+        self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (44,  11), (44,  38))   # Health endcaps
         self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (146, 11), (146, 38))
 
-        self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (44,  43), (44,  70))       # Armor endcaps
+        self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (44,  43), (44,  70))   # Armor endcaps
         self.tk_draw_aaline(self.olHpArmsElem[0], (0xff, 0x0, 0x0), (146, 43), (146, 70))
 
         # Health 
         self.healthBar = self.tk_surface((96, 28), self.tk_srcalpha)
-        self.heartBeatCycle = self.tk_cycle(self.__heartBeatGenerator(self.i_playerStats['health'][0]))
+        self.heartBeatCycle = self.tk_cycle(self.__heartBeatGenerator())
         # Generate the sin table for the heartbeat effect generator
         self.heartBeatTable = [self.tk_sin(self.tk_radians(x)) for x in xrange(0, 360, 10)]
 
@@ -157,25 +160,22 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         self.Event_newEvent(2, self.__flashGenerator)
 
 
-    def __heartBeatGenerator(self, delay=8):
+    def __heartBeatGenerator(self):
         """
             Create an 'Heartbeat' between delays
-
-            delay -> Rest time between beats. 
-                     Note: Minimum of delay should be 8!
 
             return -> Generator
 
         """
         # Full 360 heartbeat
         for beat in self.heartBeatTable:
-            yield beat
-
-        yield None  # Do an action between the beat and at start of rest    
+            yield beat    
         
-        # Rest time between heartbeats
-        for rest in xrange(min(72, max(8, delay))):
+        # Rest time between heartbeats (Read player's health)
+        for rest in xrange(min(72, max(8, self.i_playerStats['health'][0]))):
             yield 0
+
+        yield None  # Do an action between the beat and at start of rest
     
 
     def __flashGenerator(self):
@@ -186,13 +186,16 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
 
         """
         beat = self.heartBeatCycle.next()
-        if beat is None: return beat
+        if beat is None:
+            # Restart the cycle 
+            self.heartBeatCycle = self.tk_cycle(self.__heartBeatGenerator())
+            return beat
         
         # Convert the sine wave to triangle wave
         beat = int(self.tk_asin(beat) * 6)
         
         # Health is critical, flash the healthbar : Redo this
-        if self.i_playerStats['health'][0] < self.i_playerStats['health'][1] / 4:
+        if self.i_playerStats['health'][0] <= self.__healthCriticalThreshhold:
             critical = self.healthBarCriticalCycle.next()
             self.healthBarCritical.fill((0xaa, 0x0, critical, critical))
 

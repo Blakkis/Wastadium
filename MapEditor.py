@@ -1150,7 +1150,8 @@ class PygameFrameToolBar(ed_LabelFrame, TkinterResources):
         # Convert user keys to string representation
         str_key = {name : cls.ed_key.name(rep).upper() for name, rep in cls.ed_keys.iteritems()}
 
-        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place ('LMB' - Spawnpoint, 'RMB' - Optional Endpoint)".format('LCTRL'),))
+        cls.h_helpstrings[-1] = h_createStrings(("Hold '{}' to place ('LMB' - Spawnpoint, 'RMB' - Optional Endpoint)".format('LCTRL'),
+                                                ("Hold '{}' to speed-up camera".format('LSHIFT'))))
 
         # Ground
         cls.h_helpstrings[0] = h_createStrings(("'LMB' - Apply",

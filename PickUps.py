@@ -116,7 +116,7 @@ class Pickups(Inventory, BookKeeping):
             if token['p_pickup_type'] == 't_weapon':
                 # Get all the weapons id's from the weapon class
                 token['p_pickup_weapons'] = tuple([wpn for wpn in cls.all_weapons.keys() if cls.all_weapons[wpn]['w_buyable'] and \
-                                                                                            not wpn.endswith('-dual')])
+                                                                                            not wpn.endswith(cls.weapon_dual_tag)])
 
             elif token['p_pickup_type'] == 't_ammo':
                 # Get all the ammo id's from the ammo class

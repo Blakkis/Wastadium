@@ -1,5 +1,9 @@
 import tkFileDialog as mp_file
 import tkMessageBox as mp_error
+from Tkinter import Toplevel
+
+import xml.etree.ElementTree    # See: http://www.py2exe.org/index.cgi/WorkingWithVariousPackagesAndModules 
+                                #      "cElementTree" section
 import xml.etree.cElementTree as xmlParse
 import zipfile
 
@@ -28,7 +32,7 @@ IDE_TRACEBACK = True
 
 # Game might show errors via MessageBox which creates un-needed Tkinter window
 def ROOT_ENABLE_HIDE():
-    # Since messagebox requires Tk window, we are going to create
+    # Since messagebox requires Tk window and we have no need for one, we are going to create
     # one, but hide it
     from Tkinter import Tk
 
@@ -780,7 +784,7 @@ class MapParser(Packer):
 
             return -> None
 
-        """
+        """ 
         # Check that the player spawn point has been set
         w_spawn_end = data_fetcher('w_SpawnEnd', layers=False)
         if w_spawn_end[0] is None:

@@ -117,18 +117,18 @@ class Shadows(GlobalGameData, TkWorldDataShared):
         self.s_fade_surf.blit(fade_surface, (0, 0)) 
 
 
-    def s_loadCellWalls(self, lightmap):
+    def s_loadCellWalls(self, cellwalls):
         """
             Load world map and convert all cells to 2d binary map (Walls=1 else 0) 
 
-            lightmap -> 2d world map
+            cellwalls -> 2d world map
 
             return -> None
             
         """
         final = []
         # Per-cell size
-        self.shadow_map_size = len(lightmap[0]), len(lightmap)
+        self.shadow_map_size = len(cellwalls[0]), len(cellwalls)
         
         # Per-sector size 
         self.shadow_world_size = self.shadow_map_size[0] * 32, self.shadow_map_size[1] * 32  
@@ -137,12 +137,12 @@ class Shadows(GlobalGameData, TkWorldDataShared):
         for y in xrange(self.shadow_map_size[1]):
             row = []
             for x in xrange(self.shadow_map_size[0]):
-                row.append(1 if lightmap[y][x].w_collision else 0)
+                row.append(1 if cellwalls[y][x].w_collision else 0)
             final.append(tuple(row))
 
         self.shadow_map[:] = final
 
-    
+    # Note: Remove this   
     exec(PreProcessor.parseCode("""
 def s_applyShadows(self, surface):
 

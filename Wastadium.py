@@ -46,7 +46,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                             'legs':   'legs_black',   # Legs str id
                             'torso':  'hero',         # Torso str id 
                             'model':  ''}             # Torso + weapon
-        
+                            
         self.player_data['model'] = '_'.join((self.player_data['torso'], self.i_playerStats['weapon'])) 
         
         # Model animation 
@@ -151,7 +151,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         self.fire_anim_len = self.tk_deque(l)
         self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
-
+    # Note: Remove this
     exec(PreProcessor.parseCode("""
 def hero_handle(self, surface, key_event=-1):
     \"""
@@ -175,11 +175,12 @@ def hero_handle(self, surface, key_event=-1):
     # Used to control how firing and animation playback is handled (Bitwise)
     play_fire_frame = 0
     
+    # 1: Weapon firing, 2: Weapon switching
     fire_key = self.tk_mouse_pressed()[0]
     
     # Player requesting to change weapon
     if key_event != -1: 
-        fire_key = 2 if any([key_event == self.tk_user[s] for s in self.tk_slots_available]) else 0
+        fire_key = 2 if any([key_event == self.tk_user[s] for s in self.tk_slots_available]) else 0 
 
     # Handle weapon firing (Also weapon switching when action is free)
     if self.weaponfire_delay.isReady(release=fire_key):
@@ -191,7 +192,9 @@ def hero_handle(self, surface, key_event=-1):
             if new_weapon is not None:
                 self.player_data['model'] = '_'.join((self.player_data['torso'], new_weapon))
                 self.hero_load_animation(torso_name=self.player_data['model'])
-                self.playSoundEffect(184)   # Switch weapon sound    
+                self.playSoundEffect(184)   # Switch weapon sound
+            else:
+                self.weaponfire_delay.reset()        
 
         else:
             ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
@@ -796,6 +799,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         return surface
     
+
     @classmethod
     def w_fetchObjCollision(cls, world_data):
         """
@@ -1199,6 +1203,78 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 surface.blit(cls.w_map_layers[layer][y][x][1], (cell_x, cell_y))
 
 
+    @classmethod
+    def check_hit(cls, x, y, pair, weapon, test_rect):
+        """
+            Check who got hit
+
+
+
+            return -> None
+        """
+        if pair[1] == -1:
+            # Hitscan
+            if cls.all_weapons[weapon]['w_type'] == 1:
+                if cls.all_weapons[weapon]['w_hitwall']:
+                    # Collision found, find the closest surface normal we struck
+                    orx, ory = test_rect.center
+
+                    normals = [pair[0].midleft,  pair[0].midtop,
+                               pair[0].midright, pair[0].midbottom]
+
+                    # Calculate distance to each surface normal midpoint (Find the normal we most likely hit)
+                    dists = [round(cls.tk_hypot(orx - x, ory - y), 1) for x, y in normals]
+                    
+                    # Get the index of the closest surface normal
+                    index = dists.index(min(dists))
+                
+                    # Get the hit effect of the Wall/Object we got, if it has one
+                    # Pinpoint the location of the wall so we can examine its data
+                    ex = (int(pair[0].x - cls.tk_res_half[0] - cls.cell_x) >> 5) + 1
+                    ey = (int(pair[0].y - cls.tk_res_half[1] - cls.cell_y) >> 5) + 1
+                    
+                    hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
+                    if cls.w_micro_cells[ey][ex].w_sound_hit is not None:
+                        cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 
+                                            distance=(orx, ory), env_damp=.5)
+                    
+                    if hit_effect is not None:
+                        # Choose random effect from the list of effect from the wall/object
+                        hit_effect = cls.tk_choice(hit_effect)
+                        
+                        # Get the origin of the effect
+                        offset = cls.all_effects[hit_effect][0][1]
+                        
+                        # Trying to spawn an effect with no all_side variable creates an KeyError since its not rotated
+                        # to face each side, so default the side/face to key 0
+                        dface = 0 if len(cls.all_effects[hit_effect].keys()) == 1 else index 
+                        pos = normals[index]
+                        
+                        if index == 0:
+                            # Left side of the wall
+                            l = normals[index][1] - ory 
+                            cls.spawn_effect(hit_effect, (pos[0] - offset[0], pos[1] - l), dface)
+                        elif index == 1:
+                            # Top
+                            l = normals[index][0] - orx
+                            cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] - offset[1]), dface)
+                        elif index == 2:
+                            # Right
+                            l = normals[index][1] - ory
+                            cls.spawn_effect(hit_effect, (pos[0] + offset[0] - 2, pos[1] - l), dface)
+                        else:
+                            # Down
+                            l = normals[index][0] - orx 
+                            cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] + offset[1] - 2), dface)
+
+            else:
+                # Run damage check to see if projectile weapon Area-of-effect hit anything
+                cls.calc_aoe_taken(*test_rect.center, weapon=weapon) 
+
+        else:
+            # Hit the target! spawn (blood or whatever you want) indicating it 
+            cls.calc_dmg_taken(*pair[0].center, tx=x, ty=y, weapon=weapon, enemy_id=pair[1])
+
 
     @classmethod
     def fire_weapon(cls, x, y, angle, f_angle, weapon, dual_index=0, surface=None, player=0, ignore_id=-1):
@@ -1222,7 +1298,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             
         """
         # Note: Break this down to smaller functions
-
         cls.playSoundEffect(cls.tk_choice(cls.all_weapons[weapon]['w_fire_sound']), distance=(x, y))
 
         # Handle effects spawned by the weapon
@@ -1256,11 +1331,18 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Convert the set to dict with the rects being keys
         collisions = dict.fromkeys(cls.get_ray_env_collisions(x, y, baseAx, baseAy, w_range), -1)
 
-        # Gather all enemies for testing if the ray struck any of them
-        # Walls values are -1 and enemies values start from 0 and up (enemy ids)
+        # Negative numbers hold special meaning
+        # -1: Hit wall
+        # -2: Hit player (Important for enemies to hit player)
+        # Anything above (Enemy id)
         
         # Add the enemy collisions with the env_collisions and move to test the bullet rect against them
         collisions.update({k:v for k, v in cls.get_ray_ent_collisions(x, y, baseAx, baseAy, w_range, ignore_id)})
+        
+        # Add player collision for enemies
+        if not player:
+            px, py = cls.tk_res_half
+            collisions[cls.tk_rect(px - 16, py - 16, 32, 32)] = -2
 
         # Cast a rect towards the aim direction step-by-step
         # To find collision with environment or enemy/player
@@ -1278,68 +1360,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             # key being the rect what we are looking for
             pair = test_rect.collidedict(collisions)
             if pair is not None:
-                if pair[1] == -1:
-                    # Hitscan
-                    if cls.all_weapons[weapon]['w_type'] == 1:
-                        if cls.all_weapons[weapon]['w_hitwall']:
-                            # Collision found, find the closest surface normal we struck
-                            orx, ory = test_rect.center
-
-                            normals = [pair[0].midleft,  pair[0].midtop,
-                                       pair[0].midright, pair[0].midbottom]
-
-                            # Calculate distance to each surface normal midpoint (Find the normal we most likely hit)
-                            dists = [round(cls.tk_hypot(orx - x, ory - y), 1) for x, y in normals]
-                            
-                            # Get the index of the closest surface normal
-                            index = dists.index(min(dists))
-                        
-                            # Get the hit effect of the Wall/Object we got, if it has one
-                            # Pinpoint the location of the wall so we can examine its data
-                            ex = (int(pair[0].x - cls.tk_res_half[0] - cls.cell_x) >> 5) + 1
-                            ey = (int(pair[0].y - cls.tk_res_half[1] - cls.cell_y) >> 5) + 1
-                            
-                            hit_effect = cls.w_micro_cells[ey][ex].w_tex_effect
-                            if cls.w_micro_cells[ey][ex].w_sound_hit is not None:
-                                cls.playSoundEffect(cls.tk_choice(cls.w_micro_cells[ey][ex].w_sound_hit), 
-                                                    distance=(orx, ory), env_damp=.5)
-                            
-                            if hit_effect is not None:
-                                # Choose random effect from the list of effect from the wall/object
-                                hit_effect = cls.tk_choice(hit_effect)
-                                
-                                # Get the origin of the effect
-                                offset = cls.all_effects[hit_effect][0][1]
-                                
-                                # Trying to spawn an effect with no all_side variable creates an KeyError since its not rotated
-                                # to face each side, so default the side/face to key 0
-                                dface = 0 if len(cls.all_effects[hit_effect].keys()) == 1 else index 
-                                pos = normals[index]
-                                
-                                if index == 0:
-                                    # Left side of the wall
-                                    l = normals[index][1] - ory 
-                                    cls.spawn_effect(hit_effect, (pos[0] - offset[0], pos[1] - l), dface)
-                                elif index == 1:
-                                    # Top
-                                    l = normals[index][0] - orx
-                                    cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] - offset[1]), dface)
-                                elif index == 2:
-                                    # Right
-                                    l = normals[index][1] - ory
-                                    cls.spawn_effect(hit_effect, (pos[0] + offset[0] - 2, pos[1] - l), dface)
-                                else:
-                                    # Down
-                                    l = normals[index][0] - orx 
-                                    cls.spawn_effect(hit_effect, (pos[0] - l, pos[1] + offset[1] - 2), dface)
-
-                    else:
-                        # Run damage check to see if projectile weapon Area-of-effect hit anything
-                        cls.calc_aoe_taken(*test_rect.center, weapon=weapon)
-                
-                else:
-                    # Hit the target! spawn (blood or whatever you want) indicating it 
-                    cls.calc_dmg_taken(*pair[0].center, tx=x, ty=y, weapon=weapon, enemy_id=pair[1])
+                cls.check_hit(x, y, pair, weapon, test_rect)
                 
                 # This makes somewhat interesting effect. If you remove the break
                 # it allows bullets to pass through multiple objects (Walls/Enemies) 
@@ -1496,8 +1517,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         return ent_collisions 
 
-    
-    
+     
     @classmethod
     def get_spatial_pos(cls, wx, wy, shift=5):
         """
@@ -1512,7 +1532,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 int(-(cls.cell_y - (wy - cls.tk_res_half[1] + 16))) >> shift)
 
 
-    
     @classmethod
     def calc_dmg_taken(cls, sx, sy, tx, ty, weapon=None, enemy_id=None, ignore_after=False):
         """
@@ -1521,7 +1540,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             sx, sy -> Source (x, y) 
             tx, ty -> Target (x, y) 
             weapon -> Weapon id 
-            enemy_id -> Id of the enemy who took the hit
+            enemy_id -> Id of the enemy who took the hit (Or -2 if player took the hit)
             ignore_after -> If this function is called by aoe damage checker, 
                             ignore the aoe damage check to stop recursion
 
@@ -1529,45 +1548,63 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
              
         """
-        health, token = cls.w_enemies[enemy_id].enemy_getHit(cls.all_weapons[weapon]['w_damage'], (sx, sy), (tx, ty))
-        cls.spawn_effect(token[0], token[1], angle=token[2])  
+        wpn_damage = cls.all_weapons[weapon]['w_damage'] 
+
+        if enemy_id == -2:
+            effect_angle = cls.tk_atan2(tx - sx, ty - sy)
+            x = cls.tk_res_half[0] - cls.tk_sin(effect_angle) * 16
+            y = cls.tk_res_half[1] - cls.tk_cos(effect_angle) * 16
+            effect_id = cls.tk_choice(('blood_squirt_01', 'blood_squirt_02', 
+                                       'blood_squirt_03', 'blood_squirt_04'))
+            cls.spawn_effect(effect_id, (x, y), angle=cls.tk_degrees(effect_angle))
+
+            cls.i_playerStats['health'][0] = max(0, cls.i_playerStats['health'][0] - wpn_damage)
+            if cls.i_playerStats['health'][0] == 0: cls.i_playerStats['alive'] = False 
         
-        if health <= 0:
-            # Begin enemy death sequency
-            token = cls.w_enemies[enemy_id].enemy_killed((sx, sy))
+        else:
+            health, token = cls.w_enemies[enemy_id].enemy_getHit(wpn_damage, (sx, sy), (tx, ty))
+            
+            # token contains blood decal id and positions/angles for them
+            effect_id, effect_pos, effect_angle = token
+            cls.spawn_effect(effect_id, effect_pos, angle=effect_angle)  
+            
+            if health <= 0:
+                # Begin enemy death sequency
+                token = cls.w_enemies[enemy_id].enemy_killed((sx, sy))
 
-            cx, cy = cls.get_spatial_pos(sx, sy)
-            inside_world = cls.tk_boundaryCheck(cx, cy, cls.w_map_size) 
+                cx, cy = cls.get_spatial_pos(sx, sy)
+                inside_world = cls.tk_boundaryCheck(cx, cy, cls.w_map_size) 
 
-            # Spawn body or gib the corpse based on weapons chance
-            if cls.tk_randrange(0, 100) < cls.all_weapons[weapon]['w_gibchance']:
-                stain = cls.gs_gib_now(sx, sy, cls.cell_x, cls.cell_y, token.angle_deg, 
-                                       token.g_profile)
+                # Spawn body or gib the corpse based on weapons chance
+                if cls.tk_randrange(0, 100) < cls.all_weapons[weapon]['w_gibchance']:
+                    stain = cls.gs_gib_now(sx, sy, cls.cell_x, cls.cell_y, token.angle_deg, 
+                                           token.g_profile)
 
-                if stain is not None and inside_world and not cls.tk_no_footsteps:
-                    cls.w_micro_cells[cy][cx].w_footstep_stain_id = stain    
-                
-            else:
-                # Spawn animated corpse
-                cls.spawn_effect(token.d_frame, (sx, sy), angle=token.angle_deg)
-
-                # Make the ground stain player's boots
-                if cls.all_effects[token.d_frame] > 0 and inside_world and not cls.tk_no_footsteps: 
-                    cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[token.d_frame][0][3]  # Get the stain index
- 
-            # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped) 
-            if cls.all_weapons[token.e_weapon]['w_buyable']:
-                w = token.e_weapon.split('-')    # Use the '-dual' suffix to spawn 2 guns 
-
-                for _ in xrange(len(w)):
-                    # Give some randomness for the weapon drops (Angle and distance)
-                    drop_vector = cls.tk_radians(token.angle_deg) + cls.tk_uniform(-cls.tk_pi, cls.tk_pi) 
-                    drop_dist = cls.tk_randrange(24, 32) 
+                    # Have the groud mess player footsteps with blood (So bloody footsteps can be painted all over)
+                    if stain is not None and inside_world and not cls.tk_no_footsteps:
+                        cls.w_micro_cells[cy][cx].w_footstep_stain_id = stain    
                     
-                    cls.spawn_effect('{}_drop'.format(w[0]), 
-                                    (sx - cls.tk_sin(drop_vector) * drop_dist, 
-                                     sy - cls.tk_cos(drop_vector) * drop_dist), 
-                                     angle=token.angle_deg)
+                else:
+                    # Spawn animated corpse
+                    cls.spawn_effect(token.d_frame, (sx, sy), angle=token.angle_deg)
+
+                    # Make the ground stain player's boots
+                    if cls.all_effects[token.d_frame] > 0 and inside_world and not cls.tk_no_footsteps: 
+                        cls.w_micro_cells[cy][cx].w_footstep_stain_id = cls.all_effects[token.d_frame][0][3]  # Get the stain index
+     
+                # See if there is dash in the name for indication of dual weapons (2 guns need to be dropped) 
+                if cls.all_weapons[token.e_weapon]['w_buyable']:
+                    w = token.e_weapon.split('-')    # Use the '-dual' suffix to spawn 2 guns 
+
+                    for _ in xrange(len(w)):
+                        # Give some randomness for the weapon drops (Angle and distance)
+                        drop_vector = cls.tk_radians(token.angle_deg) + cls.tk_uniform(-cls.tk_pi, cls.tk_pi) 
+                        drop_dist = cls.tk_randrange(24, 32) 
+                        
+                        cls.spawn_effect('{}_drop'.format(w[0]), 
+                                        (sx - cls.tk_sin(drop_vector) * drop_dist, 
+                                         sy - cls.tk_cos(drop_vector) * drop_dist), 
+                                         angle=token.angle_deg)
 
         if not ignore_after:
             # Add Aoe damage top of the normal hit damage if projectile weapon
@@ -1602,12 +1639,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             
             if dist < max_dist:
                 if not cls.get_ray_env_collisions_poor(wx, wy, angle, int(dist)):
-                    cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)   
-
-            #if dist < max_dist:
-                #cls.get_ray_env_collisions(ex, ey, x, y, max_dist, ret_first_dist=1) 
-                #cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)    
-
+                    cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)      
 
     
     @classmethod

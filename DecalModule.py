@@ -86,7 +86,7 @@ class MessSolver(GlobalGameData):
     def convertToRectMap(cls, _map):
         """
             Load the world map and convert the cells to rects
-            and store pointer to the ground layer array
+            and store reference to the ground layer array
 
             return -> None
 
@@ -94,13 +94,16 @@ class MessSolver(GlobalGameData):
         cls.mess_world_data['ms_wref'] = _map
         
         # Create the world map array with (position and surface image) converted to rect
+        # for calculating decal positions
         mess_map = [[]] * len(_map)
 
         for enum, line in enumerate(_map):
-            mess_map[enum] = [cls.tk_rect(32 * cls.tk_macro_cell_size * h,
-                                          32 * cls.tk_macro_cell_size * enum,
-                                          32 * cls.tk_macro_cell_size,
-                                          32 * cls.tk_macro_cell_size) for h, _ in enumerate(line)]
+            sector_size = 32 * cls.tk_macro_cell_size
+
+            mess_map[enum] = [cls.tk_rect(sector_size * h,
+                                          sector_size * enum,
+                                          sector_size,
+                                          sector_size) for h, _ in enumerate(line)]
 
         cls.mess_world_data['ms_rects'] = mess_map
         cls.mess_world_data['ms_wsize'] = len(mess_map[0]), len(mess_map) 
@@ -183,7 +186,7 @@ class GoreSystem(GlobalGameData):
             if cls.gs_profiles[g_profile][0]['foot_blood_id'] is not None:
                 stain_ground = cls.gs_profiles[g_profile][0]['foot_blood_id']  
         
-        cls.playSoundEffect(cls.tk_choice(cls.gs_profiles[g_profile][0]['snd_blood_splash']))
+        cls.playSoundEffect(cls.tk_choice(cls.gs_profiles[g_profile][0]['snd_blood_splash']), distance=(sx, sy))
 
         for v in cls.gs_profiles[g_profile][1].itervalues():
             gib, angle, dist = v 
@@ -317,7 +320,7 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem, TkWorldDataShared):
 
         # Play a sound of kicking the gibs
         if kick_snd and self.gib_sound is not None: 
-            self.playSoundEffect(self.tk_choice(self.gib_sound))
+            self.playSoundEffect(self.tk_choice(self.gib_sound), env_damp=.5)
 
     
     def gib_create_smear(self, length):
@@ -385,7 +388,7 @@ class DecalGibsHandler(MessSolver, SoundMusic, GoreSystem, TkWorldDataShared):
         for y in xrange(h):
             row = []
             for x in xrange(w):
-                row.append(1 if _map[y][x].w_collision else 0)
+                row.append(1 if _map[y][x].w_collision or _map[y][x].w_collision_obj else 0)
             final.append(tuple(row))
 
         cls.dh_decal_data['dh_world'] = final   

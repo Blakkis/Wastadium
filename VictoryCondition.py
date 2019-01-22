@@ -121,7 +121,7 @@ class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeepin
         cls.victory_data['msg_objective'] = cls.tk_renderText(cls.victory_data['font'],
                                                               "Kill All Or Find Exit", True,
                                                               (0xff, 0x0, 0x0), shadow=True)
-
+    
 
     @classmethod
     def reset_victory_condition(cls, enemy_count, endpoint=None):

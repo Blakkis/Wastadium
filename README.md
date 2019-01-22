@@ -15,3 +15,5 @@ TODO:
   - Create the JaaBabe background images
   - Work on the Wastadium launcher
   - Enable enemies to shoot the player
+  - Enable pickups to be picked
+  - 

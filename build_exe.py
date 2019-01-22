@@ -1,4 +1,5 @@
-PROJECT_NAME = 'Wastadium.py'
+#PROJECT_NAME = 'Wastadium.py'
+PROJECT_NAME = 'MapEditor.py'
  
 try:
     from distutils.core import setup
@@ -66,6 +67,7 @@ class BuildExe:
         
         #DLL Excludes
         self.exclude_dll = ['']
+
         #python scripts (strings) to be included, seperated by a comma
         self.extra_scripts = []
  

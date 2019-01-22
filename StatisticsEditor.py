@@ -87,8 +87,11 @@ class EditorStatistics(tk.Frame, GlobalGameDataEditor):
             return -> None
 
         """
-        if op == 0: cls.__es_stats[_id][1].set(value)
-        elif op == 1: cls.__es_stats[_id][1].set(cls.__es_stats[_id][1].get() + value) 
+        assert _id in cls.__es_stats, "{} doesn't exist!".format(_id)
+        if op == 0: 
+            cls.__es_stats[_id][1].set(value)
+        elif op == 1: 
+            cls.__es_stats[_id][1].set(cls.__es_stats[_id][1].get() + value) 
 
     
     @classmethod

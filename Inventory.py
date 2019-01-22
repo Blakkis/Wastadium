@@ -16,7 +16,7 @@ class Inventory(Weapons, GadgetLoader):
     i_playerAmmo  = {}
 
     # Default weapon for the player (Using anything else than 'fist' might break the game)
-    __default_weapon = 'uuz62'
+    __default_weapon = 'fist'
 
     
     @classmethod
@@ -51,10 +51,11 @@ class Inventory(Weapons, GadgetLoader):
             return -> None
 
         """
-        cls.i_playerStats['weapon'] = cls.__default_weapon 
-        cls.i_playerStats['health'] = [10, 100]
-        cls.i_playerStats['armor']  = [10, 100]    
+        cls.i_playerStats['weapon']  = cls.__default_weapon 
+        cls.i_playerStats['health']  = [100, 100]
+        cls.i_playerStats['armor']   = [100, 100]    
         cls.i_playerStats['credits'] = 40000
+        cls.i_playerStats['alive']   = True
         
         # Setup gadgets booleans
         for key in cls.gl_gadgets: 
@@ -62,7 +63,7 @@ class Inventory(Weapons, GadgetLoader):
 
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count
-            cls.i_playerAmmo[key] = 60
+            cls.i_playerAmmo[key] = 7000
 
         # Setup weapon wheels
         for key, value in cls.all_weapons.iteritems():

@@ -78,8 +78,8 @@ class PreProcessor(object):
             return -> None
 
         """
-        for s in string:
-            print s
+        for line in string:
+            print line
     
     
     @staticmethod
