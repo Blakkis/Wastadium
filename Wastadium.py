@@ -163,6 +163,10 @@ def hero_handle(self, surface, key_event=-1):
         return -> None
      
     \"""
+    # Player died.
+    if not self.i_playerStats['alive']:
+        return None
+
     m_pos = self.tk_mouse_pos()
     
     angle = self.tk_atan2(self.tk_res_half[0] - m_pos[0],
@@ -527,8 +531,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             error_section.append(cls.load_pickups(font=cls.ElementFonts[1]))
             
             # Put all functions loading external data above this check
-            if any([check is not None for check in error_section]):
-                raise WastadiumEditorException
+            #if any([check is not None for check in error_section]):
+            #    raise WastadiumEditorException
 
             # No need to load/setup the rest if error has occured as they will fail to init too
             #
@@ -558,7 +562,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             #
             cls.setup_victory_module(font=cls.ElementFonts[0])
 
-            
         except (WastadiumEditorException, Exception) as e:
             clean_error = [x + '\n' for x in error_section if x is not None]
             if clean_error:
@@ -1206,9 +1209,12 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     @classmethod
     def check_hit(cls, x, y, pair, weapon, test_rect):
         """
-            Check who got hit
+            Check where the bullet hit
 
-
+            x, y ->
+            pair ->
+            weapon ->
+            test_rect ->
 
             return -> None
         """
@@ -1535,6 +1541,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     @classmethod
     def calc_dmg_taken(cls, sx, sy, tx, ty, weapon=None, enemy_id=None, ignore_after=False):
         """
+            Both enemies and player call this function to handle their weapon usage
+            
             Calculate weapon damage against enemies or player
 
             sx, sy -> Source (x, y) 
@@ -1550,17 +1558,26 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
         wpn_damage = cls.all_weapons[weapon]['w_damage'] 
 
+        # Player got hit
         if enemy_id == -2:
-            effect_angle = cls.tk_atan2(tx - sx, ty - sy)
-            x = cls.tk_res_half[0] - cls.tk_sin(effect_angle) * 16
-            y = cls.tk_res_half[1] - cls.tk_cos(effect_angle) * 16
-            effect_id = cls.tk_choice(('blood_squirt_01', 'blood_squirt_02', 
-                                       'blood_squirt_03', 'blood_squirt_04'))
-            cls.spawn_effect(effect_id, (x, y), angle=cls.tk_degrees(effect_angle))
+            # Note: Player is such a badass, that * wont make any sounds when getting hit/killed
+            if cls.i_playerStats['alive']:
+                effect_angle = cls.tk_atan2(tx - sx, ty - sy)
+                x = cls.tk_res_half[0] - cls.tk_sin(effect_angle) * 16
+                y = cls.tk_res_half[1] - cls.tk_cos(effect_angle) * 16
 
-            cls.i_playerStats['health'][0] = max(0, cls.i_playerStats['health'][0] - wpn_damage)
-            if cls.i_playerStats['health'][0] == 0: cls.i_playerStats['alive'] = False 
+                effect_id = cls.tk_choice(Enemies.get_default_enemy().enemy_blood_frames)
+                cls.spawn_effect(effect_id, (x, y), angle=cls.tk_degrees(effect_angle))
+
+                cls.i_playerStats['health'][0] = max(0, cls.i_playerStats['health'][0] - wpn_damage)
+                if cls.i_playerStats['health'][0] == 0:
+
+                    # Spawn corpse where player died
+                    effect_id = cls.tk_choice(Enemies.get_default_enemy().enemy_dead_frames)
+                    cls.spawn_effect(effect_id, cls.tk_res_half, angle=cls.tk_degrees(effect_angle))
+                    cls.i_playerStats['alive'] = False 
         
+        # Enemy got hit
         else:
             health, token = cls.w_enemies[enemy_id].enemy_getHit(wpn_damage, (sx, sy), (tx, ty))
             

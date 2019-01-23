@@ -7,12 +7,13 @@ from SoundModule import SoundMusic
 from Tokenizers import EnemyDeathSeq 
 from MapParser import W_errorToken
 from VictoryCondition import BookKeeping
+from Inventory import Inventory
 
 import PathFinder
 
 # NOTE: This shit needs total rework
 
-class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared, BookKeeping):
+class Enemies(TextureLoader, Inventory, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared, BookKeeping):
     """
         TBD
     """
@@ -62,15 +63,22 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared,
         self.enemy_delete = 0   # Is the enemy dead? Remove it then from the map
 
         # Targeting related
-        self.enemy_targetAngleAbs = 0     # Last angle
-        self.enemy_targetAngleDif = 0     # Different between the new angle and old angle (Shortest rotation) 
+        self.enemy_targetAngleAbs = 0   # Last angle
+
+        # Different between the new angle and old angle (Shortest rotation) 
+        self.enemy_targetAngleDif = 0 
         
-        self.enemy_targetAngleDeg = 0     # Up to date angle (Degrees)  (Used to relay the rotation for others)
+        # Up to date angle (Degrees)  (Used to relay the rotation for others)
+        self.enemy_targetAngleDeg = 0     
         
-        self.enemy_targetPos = 0, 0       # Latest waypoint (x, y) world pos
+        # Latest waypoint (x, y) world pos
+        self.enemy_targetPos = 0, 0   
         
-        self.enemy_targetInterval = self.tk_trigger_hold(self.tk_enemy_waypoint_get, state=0)         # Fetch new waypoint delay
-        self.enemy_targetInterval_alarm = self.tk_trigger_hold(self.tk_enemy_alarm_state, state=0)    # Alarm state time   
+        # Delay between getting new waypoint
+        self.enemy_targetInterval = self.tk_trigger_hold(self.tk_enemy_waypoint_get, state=0, random_time=True) 
+
+        # How long should the enemy remain in alarmed state
+        self.enemy_targetInterval_alarm = self.tk_trigger_hold(self.tk_enemy_alarm_state, state=0)      
 
         # Collision is building small rects on top/down, right/left and centering them on
         # the direction of the moving
@@ -78,18 +86,27 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared,
         self.tb_rect = self.tk_rect(0, 0, 28, 4)
 
 
-    def __repr__(self):
-        """
-            Easier for debugging
-            
-            return -> repr(pos, id)
-
-        """
-        return repr('(pos:{}, id:{})'.format(self.enemy_pos, self.enemy_id))
+    #def __repr__(self):
+    #    """
+    #        Easier for debugging
+    #        
+    #        return -> repr(pos, id)
+    #
+    #    """
+    #    return repr('(pos:{}, id:{})'.format(self.enemy_pos, self.enemy_id))
 
     
-    def __del__(self):
-        self.enemyKilled(self.enemy_name)    
+    def __del__(self): self.enemyKilled(self.enemy_name)  
+
+
+    @classmethod
+    def get_default_enemy(cls, default='punk'):
+        """
+            Default enemy shares data with the player
+
+            return -> Default enemy object
+        """
+        return cls.all_enemies[default]  
 
     
     def enemy_getHit(self, dmg_taken, scr_enemy, scr_player):
@@ -485,15 +502,14 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared,
 
         # Idling and guarding (Hunting waypoints)
         else:
-            if self.enemy_targetInterval.isReady(release=1): self.fetch_target_vector(sx=cenx, sy=ceny, surface=surface)  
+            if self.enemy_targetInterval.isReady(release=1): 
+                self.fetch_target_vector(sx=cenx, sy=ceny, surface=surface)  
 
+            # Waypoint position
             tri_x, tri_y = ((x + self.enemy_rel_target_pos[0] - self.enemy_targetPos[0] + (-self.w_share['WorldPosition'][0])), 
-                            (y + self.enemy_rel_target_pos[1] - self.enemy_targetPos[1] + (-self.w_share['WorldPosition'][1])))
-            
-            # Debug target waypoint
-            #self.tk_draw_circle(surface, (0xff, 0xff, 0x0), (int(cenx - tri_x), 
-            #                                                 int(ceny - tri_y)), 16, 1)   
+                            (y + self.enemy_rel_target_pos[1] - self.enemy_targetPos[1] + (-self.w_share['WorldPosition'][1]))) 
         
+
         # Distance to player or waypoint
         dist_to_target = self.tk_hypot(tri_x, tri_y)
 
@@ -537,7 +553,8 @@ class Enemies(TextureLoader, Weapons, DeltaTimer, SoundMusic, TkWorldDataShared,
         angleToPlayer = self.tk_atan2(rcenx - self.tk_res_half[0], rceny - self.tk_res_half[1]) 
 
         # Check if player is within field-of-view
-        self.check_fov((rcenx, rceny), angle, angleToPlayer, surface)
+        if self.i_playerStats['alive']:
+            self.check_fov((rcenx, rceny), angle, angleToPlayer, surface)
 
         # Attack target?
         enemy_attack = 0

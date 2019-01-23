@@ -1,5 +1,6 @@
 from itertools import cycle
 from pygame.time import Clock, get_ticks
+from random import uniform
 
 
 __all__ = ('EventTriggerConstant', 'EventTriggerCountDown', 'EventTrigger',
@@ -72,11 +73,22 @@ class MsDelayTrigger(DeltaTimer):
 
 
 class MsHoldTrigger(DeltaTimer):
-    def __init__(self, delay_ms, state=1):
-        self.dms = delay_ms     # Default timer value
-        self.ms = delay_ms      # Active timer 
-        self.ready = state      # Boolean state of the timer
-        self.dstate = state     # Default state of the timer
+
+    __dt_uniform = uniform
+
+    def __init__(self, delay_ms, state=1, random_time=False):
+        # Default timer value
+        self.dms = delay_ms    
+        
+        # Active timer
+        self.ms = self.__dt_uniform(0, delay_ms) if random_time else delay_ms
+               
+        # Bool state for the timer
+        self.ready = state      
+
+        # Default state for the timer
+        self.dstate = state     
+
 
     def isReady(self, release=0):
         if release and self.ready:

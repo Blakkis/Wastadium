@@ -168,8 +168,9 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
 
         """
         # Full 360 heartbeat
-        for beat in self.heartBeatTable:
-            yield beat    
+        if self.i_playerStats['alive']:
+            for beat in self.heartBeatTable:
+                yield beat    
         
         # Rest time between heartbeats (Read player's health)
         for rest in xrange(min(72, max(8, self.i_playerStats['health'][0]))):

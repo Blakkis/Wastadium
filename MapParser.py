@@ -786,7 +786,8 @@ class MapParser(Packer):
         """
             Return display box show saving progress
 
-            msg -> message telling user what is going on
+            msg -> 
+            num_of_operation -> Number of operations expected
 
             return -> window, progress indicator, label
         
@@ -814,7 +815,7 @@ class MapParser(Packer):
 
         return Ed_Processing(window=window, update=lambda: (progress.step(), window.update()), 
                              finish=lambda: (button.config(state='normal'), 
-                                             label.config(text='Done!', fg='#70AA70')))
+                                             label.config(text='Done!', fg='#70a170')))
     
 
 

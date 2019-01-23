@@ -875,7 +875,7 @@ class TkinterResources(VisualResources):
         nm_frame.grab_set()
         nm_frame.transient(root)
 
-        # Hijack the X quit protocol
+        # Hijack the x quit protocol
         nm_frame.protocol('WM_DELETE_WINDOW', lambda: (self.bf_disablePygameEvents.set(False), 
                                                        nm_frame.destroy(), self.bf_mapname.set('None')))
         
