@@ -13,7 +13,7 @@ class SoundMusic(GlobalGameData):
     all_music = {}
 
     # Default volumes for sound and music
-    sm_volumes = {0: 1.0,   # Music
+    sm_volumes = {0: 0.0,   # Music
                   1: 1.0}   # Effects
 
     # Volume range for falloff of the sound

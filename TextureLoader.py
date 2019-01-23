@@ -204,7 +204,7 @@ class EffectsLoader(SoundMusic, GlobalGameData, TkWorldDataShared):
     # All map effects that are currently being display on the map
     map_effects = {}
 
-
+    # Common data for effects
     effect_data = {'id': 0}    # Provide unique id to each effect
                    
     

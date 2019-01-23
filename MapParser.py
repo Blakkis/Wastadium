@@ -1,6 +1,7 @@
 import tkFileDialog as mp_file
 import tkMessageBox as mp_error
-from Tkinter import Toplevel
+from ttk import Progressbar
+from Tkinter import Toplevel, Button, Label
 
 import xml.etree.ElementTree    # See: http://www.py2exe.org/index.cgi/WorkingWithVariousPackagesAndModules 
                                 #      "cElementTree" section
@@ -15,8 +16,8 @@ from io import BytesIO
 import pygame.image as pyimage
 
 from Tokenizers import *
-from Tokenizers import Ed_CellPoint, PackerParserToken, PackerParserCell
-from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE, GlobalGameDataEditor
+from Tokenizers import Ed_CellPoint, PackerParserToken, PackerParserCell, Ed_Processing
+from ConfigsModuleEditor import MAX_VALID_CUBE_RANGE, GlobalGameDataEditor, ed_centerWidget
 
 from ast import literal_eval
 from collections import OrderedDict
@@ -104,7 +105,11 @@ def W_errorHandler(e, error_id=''):
 def W_errorToken(section_tag):
     """
         Use this decorator to mark setup/init functions
-        to pinpoint which function is failing and why
+        to pinpoint which function is failing
+
+        Note: This only provides general direction which stage is failing
+              (This should help by giving the user information about the last edit they did)
+              
     """
     def wrapper(func):
         def wrapped(*args, **kw):
@@ -774,7 +779,45 @@ class Packer(object):
 class MapParser(Packer):
 
     Packer.bindParsers()
+
     
+    @classmethod
+    def hold_while_processing(cls, msg, num_of_operation):
+        """
+            Return display box show saving progress
+
+            msg -> message telling user what is going on
+
+            return -> window, progress indicator, label
+        
+        """
+        window = Toplevel()
+        window.title("Processing...")
+        window.attributes('-topmost', 'true')
+        window.grab_set()
+        window.resizable(0, 0)
+
+        label = Label(window, text=msg, fg='#ff0000')
+        label.config(font=('courier', 16))
+        label.pack(padx=8, pady=8, expand=1, fill='both')
+
+        # Note: The maximum should match the number of operations done during saving. 
+        progress = Progressbar(window, orient='horizontal', mode='determinate', maximum=num_of_operation)
+        progress.pack(padx=8, pady=8, expand=1, fill='both')
+
+        button = Button(window, text="OK", command=lambda: window.destroy())
+        button.config(state='disabled')
+        button.pack(padx=8, pady=8, expand=1, fill='both')
+
+        window.withdraw()
+        ed_centerWidget(window)
+
+        return Ed_Processing(window=window, update=lambda: (progress.step(), window.update()), 
+                             finish=lambda: (button.config(state='normal'), 
+                                             label.config(text='Done!', fg='#70AA70')))
+    
+
+
     @classmethod
     def mp_save(cls, data_fetcher):
         """
@@ -784,7 +827,9 @@ class MapParser(Packer):
 
             return -> None
 
-        """ 
+        """
+        hold = cls.hold_while_processing("Hold While Saving...", num_of_operation=7)
+
         # Check that the player spawn point has been set
         w_spawn_end = data_fetcher('w_SpawnEnd', layers=False)
         if w_spawn_end[0] is None:
@@ -797,36 +842,52 @@ class MapParser(Packer):
         filename = mp_file.asksaveasfilename(initialdir=MAP_PATH_BASE,
                                              initialfile=w_mapname,
                                              filetypes=(MAP_FORMAT_EXT_FULL, ))
-        if not filename: 
-            return None
+        # Empty name. Dont save
+        if not filename: return None
+        
+        hold.window.deiconify()
+        
+        # User is trying to overwrite existing file, delete the old one and remove the suffix
+        if path.exists(filename):
+            remove(filename)
+            filename = filename.split('.')[0]
+
         try:
             # Create directory for the map in the target base path
             map_path = path.join(getcwd(), MAP_PATH_BASE, filename)
             makedirs(map_path)
-
+            hold.update()
+            
             root = xmlParse.Element('root')
+            hold.update()
 
             for key, parser in cls.p_parserFunctions.iteritems():
                 if key == MAP_GENERAL_XML:
                     parser.parse(root, name=key, data_fetcher=data_fetcher)
                 else:
                     parser.parse(root, data=data_fetcher(parser.id), name=key, operation='w')
+            hold.update()
 
             cls.parseWorldData(root, data=data_fetcher('w_Cells_Single', layers=False), name=MAP_CELL_XML)
+            hold.update()
 
             # Build all the layers and save them
             width_height = data_fetcher('w_Size', layers=False)[2:4]
             for l_id, name_id in ((cls.E_ID_GROUND, MAP_GROUND), (cls.E_ID_OBJECT, MAP_OBJECTS), (cls.E_ID_WALL, MAP_WALLS)):
                 cls.parseWorldSurfaces(data_fetcher(l_id), name_id, map_path, width_height, l_id) 
+            hold.update()
 
             # Build the final xml output
             final_tree = xmlParse.ElementTree(root)
             final_tree.write(path.join(map_path, MAP_DATA_EXT))
-            
+            hold.update()
+
             # Pack everything
             cls.compress(filename, map_path)
+            hold.update()
         
         except (WastadiumEditorException, Exception) as e:
+            hold.window.destroy()
             W_errorHandler(e)
             
             # Error occured during saving. Delete the Folder/File
@@ -834,7 +895,10 @@ class MapParser(Packer):
                 if path.exists(map_path): rmtree(map_path)  
             except Exception:
                 bad_file = '{}.{}'.format(map_path, MAP_PACK_PREFERRED_EXT) 
-                if path.exists(bad_file): remove(bad_file) 
+                if path.exists(bad_file): remove(bad_file)
+        else:
+            # Everything went smoothly
+            hold.finish()
 
     
     @classmethod

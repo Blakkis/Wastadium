@@ -41,6 +41,8 @@ class Id_Entity_Values(namedtuple('id_entity', ['id', 'content', 'value'])):
 
 # ---- (These should be moved on their' own modules)
 
+class Ed_Processing(namedtuple('ed_processing', ['window', 'update', 'finish'])):
+	pass
 
 class Ed_CellPoint(namedtuple('ed_cellpoint', ['x', 'y', 'id'])):
 	pass
