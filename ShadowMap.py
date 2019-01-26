@@ -1,6 +1,7 @@
 from ConfigsModule import GlobalGameData, TkWorldDataShared
 from PreProcessor import PreProcessor
 
+from pygame import RLEACCEL
 
 # Note: Rather than casting shadow from each wall
 # one could pre-calculate all the horizontal and vertical wall slices
@@ -205,7 +206,7 @@ def s_applyShadows(self, surface):
     #-ifdef/tk_shadow_quality 
     self.s_shadow_surf.unlock()
 
-    mapPos = -x, -y     # Convert the worldpos (which by default is negative) to positive
+    mapPos = -x, -y 
 
     # The shadow map is the chosen layer 'shadowed' and stored in memory.
     # This section cuts a correct size of that map and displays it

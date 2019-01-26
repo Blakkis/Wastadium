@@ -73,7 +73,7 @@ class BookKeeping(object):
         cls.level_report['pcup'][0] += 1
 
         if pickup_name is not None:
-            print pickup_name
+            pass
 
     
     @classmethod

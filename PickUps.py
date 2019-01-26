@@ -43,7 +43,8 @@ class Pickups(Inventory, BookKeeping):
 
     # Common data for the pickups
     pu_data = {'id': 0,
-               'font': None}
+               'font': None,
+               'pickup_range': 48}
 
     def __init__(self):
         pass
@@ -147,7 +148,9 @@ class Pickups(Inventory, BookKeeping):
             y = ((cls.tk_res_half[1] - 16) + y)
 
             msg = cls.pu_pickups[pick.id]['p_pickup_msg']
-            msg = cls.tk_renderText(cls.pu_data['font'], msg.format(pick.value), 1, (0xff, 0x0, 0x0), shadow=1)
+
+            d_msg = pick.value if pick.id == 'cash_suitcase' else pick.content
+            msg = cls.tk_renderText(cls.pu_data['font'], msg.format(d_msg), 1, (0xff, 0x0, 0x0), shadow=1)
 
             w = cls.tk_res_half[0] - msg.get_width() / 2 
             h = cls.tk_res_half[1] - msg.get_height() / 2 - 32 
@@ -169,6 +172,61 @@ class Pickups(Inventory, BookKeeping):
         cls.pu_all_pickup_msg.clear()
         cls.pu_all_world_pickups.clear()
         cls.pu_data['id'] = 0
+
+    
+    @classmethod
+    def parse_pickup(cls, pickup_id=None):
+        """
+            TBD
+
+            return -> None
+
+        """
+        cls.pickupKilled()
+        
+        token = cls.pu_all_world_pickups[pickup_id][2]
+        
+        if token.id in ('body_armor', 'health_pack', 'hot_meal'):
+            # Both health_pack and hot_meal gives health
+            stat = 'armor' if token.id == 'body_armor' else 'health'
+            if cls.i_playerStats[stat][0] == cls.i_playerStats[stat][1]:
+                # Health or armor is full, no need to pickup the item
+                return False
+            else: 
+                v = min(cls.i_playerStats[stat][1], cls.i_playerStats[stat][0] + token.value) 
+                cls.i_playerStats[stat][0] = v
+                return True
+
+        elif token.id == 'cash_suitcase':
+            cls.i_playerStats['credits'] += token.value
+            return True
+
+        elif token.id == 'ammo_cache':
+            ammo_id = [k for k, v in cls.all_ammo_data.items() if v[0] == token.content][0]
+            cls.i_playerAmmo[ammo_id] += token.value 
+            return True
+
+        elif token.id == 'weapon_cache':
+            # Copy-pasted from Menu shop
+            weapon = token.content
+            w_cat = 'w_{}'.format(cls.all_weapons[weapon]['w_class'])
+            dual_weapon = '{}{}'.format(weapon, cls.weapon_dual_tag) 
+            check_for_dual = dual_weapon in cls.all_weapons
+
+            weapon_choice = None
+            if check_for_dual and weapon in cls.i_playerStats[w_cat] and dual_weapon not in cls.i_playerStats[w_cat]:
+                weapon_choice = dual_weapon
+            else:
+                if weapon not in cls.i_playerStats[w_cat]: 
+                    weapon_choice = weapon
+
+            if weapon_choice is not None:
+                cls.i_playerStats[w_cat].append(weapon_choice)
+                return True    
+
+        # Unknown item. Dont pick it up
+        return False
+
     
 
     @classmethod
@@ -176,7 +234,7 @@ class Pickups(Inventory, BookKeeping):
         """
             Render and handle pickups
 
-            surface -> Surface which to render the gibs to
+            surface -> Active screen surface
 
             return -> None
 
@@ -194,10 +252,9 @@ class Pickups(Inventory, BookKeeping):
             px_1, py_1 = x - cls.tk_res_half[0] + 32, y - cls.tk_res_half[1] + 32
             px_2, py_2 = -(px - 16), -(py - 16)
 
-            if cls.tk_hypot(px_1 - px_2, py_1 - py_2) < 48:
+            if cls.tk_hypot(px_1 - px_2, py_1 - py_2) <= cls.pu_data['pickup_range'] and cls.parse_pickup(_id):
                 if cls.pu_pickups[pick.id]['p_pickup_snd'] is not None:
                     cls.playSoundEffect(cls.pu_pickups[pick.id]['p_pickup_snd'])
-
                 cls.pu_all_pickup_msg.add(_id)    
 
             surface.blit(tex, (x + px, y + py))
@@ -226,8 +283,6 @@ class Pickups(Inventory, BookKeeping):
         # Pickups ready to be deleted
         if _del:
             for _id in _del:
-                cls.pickupKilled(cls.pu_all_world_pickups[_id][2].id)
-
                 cls.pu_all_pickup_msg.discard(_id)
                 del cls.pu_all_world_pickups[_id]
 

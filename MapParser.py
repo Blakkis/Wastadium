@@ -26,8 +26,10 @@ from glob import iglob
 
 from traceback import print_exc as mp_getLastException
 
+# Note: Data is not serialized in anyway to keep editing the files easy 
+#       (You can use photoshop of the map files)
 
-# Enable print based exceptions 
+# Enable print based Exceptions 
 IDE_TRACEBACK = True
 
 
@@ -42,7 +44,6 @@ def ROOT_ENABLE_HIDE():
     __GAME_TK_ROOT.withdraw()
 
     return __GAME_TK_ROOT
-
 
 
 __all__ = 'MapParser',
@@ -128,7 +129,7 @@ def W_errorToken(section_tag):
     return wrapper    
 
 
-# Error names(+ codes if needed for parsing?)
+# Error names
 
 MAP_PLAYER_MISSING   = "Player Missing!"
 MAP_ASSERT_ERROR     = "Assert Error!"
@@ -138,8 +139,8 @@ INIT_ERROR           = "Init Error!"
 XML_PARSING_ERROR     = "Error Parsing The XML File!"
 XML_PARSING_SUB_ERROR = "Error Parsing The Following XML Section: {}!"
 
-# ----
 
+# ----
 
 def dataParseCheck(func): 
     def wrapped(*args, **kw):
@@ -395,7 +396,7 @@ class Packer(object):
             name ->
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -448,7 +449,7 @@ class Packer(object):
             name -> Field name on the xml
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
         
         """
         # Collision data is single array of x, y pairs 
@@ -483,7 +484,7 @@ class Packer(object):
             name -> Field name on the xml
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -518,7 +519,7 @@ class Packer(object):
             name -> Field name on the xml
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -559,7 +560,7 @@ class Packer(object):
             name -> Field name on the xml
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -603,7 +604,7 @@ class Packer(object):
             name -> Field name on the xml
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -654,7 +655,7 @@ class Packer(object):
             name -> Field name on the xml
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -666,14 +667,14 @@ class Packer(object):
                 pup = pup[1]
                 parent = xmlParse.SubElement(segment, name, name=pup.id)
                 # x, y, content, value
-                parent.text = '{}.{}.{}.{}'.format(pup.x, pup.y, pup.content, pup.value)
+                parent.text = '{}/{}/{}/{}'.format(pup.x, pup.y, pup.content, pup.value)
 
         else:
             r_data = []
 
             for p in data.getchildren():
                 name = p.attrib['name']
-                x, y, content, value = [int(x) if x.isdigit() else str(x) for x in p.text.split('.')]
+                x, y, content, value = [int(x) if x.isdigit() else str(x) for x in p.text.split('/')]
                 r_data.append(Id_Pickup(x=x, y=y, id=name,
                                         content=content, value=value))
 
@@ -690,7 +691,7 @@ class Packer(object):
             name -> 
             operation -> 'r', 'w'
 
-            return -> None
+            return -> return parsed data if 'r' else None
 
         """
         assert operation in ('w', 'r')
@@ -786,10 +787,12 @@ class MapParser(Packer):
         """
             Return display box show saving progress
 
-            msg -> 
+            msg -> string message telling user what to do (wait i guess)
+                   This will be replaces by 'Done!' once all the operations are done
+
             num_of_operation -> Number of operations expected
 
-            return -> window, progress indicator, label
+            return -> window, update, finish
         
         """
         window = Toplevel()
@@ -818,13 +821,12 @@ class MapParser(Packer):
                                              label.config(text='Done!', fg='#70a170')))
     
 
-
     @classmethod
     def mp_save(cls, data_fetcher):
         """
             Save map
 
-            data_fetched -> Data fetch function from the world class
+            data_fetcher -> Data fetch function from the world class
 
             return -> None
 
@@ -835,6 +837,7 @@ class MapParser(Packer):
         w_spawn_end = data_fetcher('w_SpawnEnd', layers=False)
         if w_spawn_end[0] is None:
             mp_error.showerror(MAP_PLAYER_MISSING, "Player Spawn-point missing!")
+            hold.window.destroy()
             return None
 
         w_mapname = cls.bf_mapname.get()    # If we decide to change mapname during saving
@@ -843,9 +846,11 @@ class MapParser(Packer):
         filename = mp_file.asksaveasfilename(initialdir=MAP_PATH_BASE,
                                              initialfile=w_mapname,
                                              filetypes=(MAP_FORMAT_EXT_FULL, ))
-        # Empty name. Dont save
-        if not filename: return None
+        if not filename:
+            hold.window.destroy() 
+            return None
         
+        # Show the status window
         hold.window.deiconify()
         
         # User is trying to overwrite existing file, delete the old one and remove the suffix
@@ -908,7 +913,7 @@ class MapParser(Packer):
             Clue all the subsurfaces together to form a full surface image
             for storing
 
-            data -> Data used to form the layer
+            data -> subsurfaces used to form the final surface
             name_id -> Name of layer on disk
             final_path -> Save path
             final_size -> Final size of the surface images

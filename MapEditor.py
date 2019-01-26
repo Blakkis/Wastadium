@@ -101,7 +101,7 @@ class World(VisualResources, MapParser, Packer):
     # Order in which the layers are rendered
     w_Blit_Order = None
   
-    # World size (x, y: Chunk)(x, y: Raw)(x, y: Single Cells)
+    # World size (x, y: Chunk)(x, y: Pixels)(x, y: Single Cells (32 x 32))
     w_Size = 0, 0, 0, 0, 0, 0
 
     # Spawn place for the player (And optional goal)
@@ -217,6 +217,8 @@ class World(VisualResources, MapParser, Packer):
         """
             Toggle visibility of the layer
 
+            layer_id -> int id of the layer
+
             return -> None
             
         """
@@ -224,7 +226,8 @@ class World(VisualResources, MapParser, Packer):
 
 
     @classmethod
-    def w_createMap(cls, width=0, height=0, floor_id='debug_floor', wall_set_id='concrete_wall_01', load_from_disk=False):
+    def w_createMap(cls, width=0, height=0, floor_id='debug_floor', 
+                    wall_set_id='concrete_wall_01', load_from_disk=False):
         """
             Worldbuild
 
@@ -260,7 +263,6 @@ class World(VisualResources, MapParser, Packer):
                                            cls.E_ID_ENEMY,     cls.E_ID_PICKUP) else list
             cls.w_Cells_Layers[reset_enum] = [[_type() for x in xrange(0, width,  cls.ed_chunk_size)] 
                                                        for y in xrange(0, height, cls.ed_chunk_size)]
-
         # ----
         if disk_data: 
             cls.__w_diskPopulate(disk_data)
@@ -270,13 +272,10 @@ class World(VisualResources, MapParser, Packer):
                       width * 32, height * 32,  
                       width, height)    
         
-        chunk = 32 * cls.ed_chunk_size 
-
-        if disk_data:
-            disk_data[cls.MAP_CELL_XML]
+        #if disk_data: disk_data[cls.MAP_CELL_XML]
 
         cls.w_Cells_Single[:] = []
-
+        chunk = 32 * cls.ed_chunk_size 
         for buildstep in (cls.E_ID_GROUND, cls.E_ID_OBJECT, cls.E_ID_WALL):
             full_world = cls.ed_surface((32 * width, 32 * height), pygame.SRCALPHA)
             
@@ -311,7 +310,6 @@ class World(VisualResources, MapParser, Packer):
                             obj_cnt += 1
 
                 cls.es_update('id_object_cnt', obj_cnt)
-            
             
             elif buildstep == cls.E_ID_WALL: 
                 if disk_data:
@@ -403,8 +401,6 @@ class World(VisualResources, MapParser, Packer):
         cls.es_update('id_pickup_cnt', len(data[cls.MAP_PICKUP_XML]))
 
 
-
-
     @classmethod
     def __w_wallBuilder(cls, w, h):
         """
@@ -453,6 +449,7 @@ class World(VisualResources, MapParser, Packer):
         """
         dx, dy = -int(cls.w_Pos[0]) >> 8, -int(cls.w_Pos[1]) >> 8    # Spatial pos
 
+        # Any extra info about to be renderer entity?
         disp_extra = {-1: set(),     # Chunk sectors
                        cls.E_ID_DECAL:     set(),
                        cls.E_ID_COLLISION: set(),
@@ -461,8 +458,6 @@ class World(VisualResources, MapParser, Packer):
                        cls.E_ID_PICKUP:    set(),
                        cls.E_ID_WIRE:      set()}
         
-        #cls.w_render_decals(surface, active_tool, 3)
-
         for layer in cls.w_Blit_Order:
             
             if not cls.w_Display_Layer[layer][0]:
@@ -505,8 +500,6 @@ class World(VisualResources, MapParser, Packer):
             pos = cls.w_homePosition(flag.x * 32, flag.y * 32) 
 
             surface.blit(cls.ElementTextures[43 if flag.id == 'id_spawn' else 44], pos)
-
-    
 
     @classmethod
     def w_render_decals(cls, x=0, y=0, surface=None, tool_id=-1, list_of_strs=None):
@@ -722,8 +715,7 @@ class World(VisualResources, MapParser, Packer):
             x = text[1][0] - w / 2
             y = text[1][1] - (h + 16)
             if enum == last:
-                # Last one gets a black background to make it more visible 
-                # (Which is the pickup nearest mouse index)
+                # Entity closest to mouse gets black background for clarity
                 cls.ed_draw_rect(surface, (0x0, 0x0, 0x0), (x - 2, y + 4, w + 4, h - 6)) 
             
             yield text[0], (x, y)
@@ -771,7 +763,7 @@ class World(VisualResources, MapParser, Packer):
             Draw small origin indicator for entities
 
             surface -> ActiveScreen
-            x, y -> Pos
+            points -> List of points(x, y)
 
             return -> None
 
@@ -856,7 +848,7 @@ class TkinterResources(VisualResources):
         cls.bf_disablePygameEvents = cls.ed_bool()      # -- Hack -- Disable pygame event handling when creating
                                                         #            new Tkinter windows
 
-    
+    # Note: Remove the killMe decorator as grab_set() makes sure that only one toplevel instance can be active
     @ed_killMe
     def bf_newMap(self, root=None):
         """
@@ -1276,7 +1268,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         # Control painting/deleting by applying the actions once per cell
         self.pf_old_index = [0, 0]
 
-        # Functions for texture/object applying 
+        # Functions for texture/object applying (Tool id: Functionality) 
         self.build_functions = {self.E_ID_GROUND:    self.__pf_applyGround,
                                 self.E_ID_OBJECT:    self.__pf_applyObject,
                                 self.E_ID_WALL:      self.__pf_applyWallset,

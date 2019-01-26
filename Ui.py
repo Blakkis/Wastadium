@@ -86,7 +86,7 @@ class uiGameTimer(GlobalGameData, BookKeeping):
         ew, eh = font.size('99:99:99')
 
         # Background
-        bg = cls.tk_gradient_rect(ew + 32, eh, (0xff, 0x0, 0x0), 0xaa)
+        bg = cls.tk_gradient_rect(ew + 32, eh, (0xff, 0x0, 0x0), 0xaa, length=16)
         bg_pos = cls.tk_res_half[0] - bg.get_width() / 2, 0 
         cls.hud_data['g_timer_bg'] = bg, bg_pos
 

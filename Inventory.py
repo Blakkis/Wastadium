@@ -52,9 +52,9 @@ class Inventory(Weapons, GadgetLoader):
 
         """
         cls.i_playerStats['weapon']  = cls.__default_weapon 
-        cls.i_playerStats['health']  = [100, 100]
-        cls.i_playerStats['armor']   = [100, 100]    
-        cls.i_playerStats['credits'] = 40000
+        cls.i_playerStats['health']  = [10, 100]
+        cls.i_playerStats['armor']   = [10, 100]    
+        cls.i_playerStats['credits'] = 10000
         cls.i_playerStats['alive']   = True
         
         # Setup gadgets booleans

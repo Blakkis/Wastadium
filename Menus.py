@@ -18,7 +18,45 @@ from functools import partial
 __all__ = ('MenuManager', )
 
 
-class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
+class JaaBabeBackgrounds(GlobalGameData):
+
+    __backgrounds = {} 
+    
+    @classmethod
+    def load_backgrounds(cls, base_background):
+        """
+            TBD
+
+            return -> None
+
+        """
+        cls.__backgrounds['default'] = base_background
+        
+        src_path_png = cls.tk_path.join('textures', 'background', 'jaababe')
+
+        for image_path in cls.tk_iglob(cls.tk_path.join(src_path_png, '*.png')):
+            name = cls.tk_path.split(image_path)[-1].split('.')[0]
+            
+            # Load and scale to resolution
+            base_image = cls.tk_smoothscale(cls.tk_image.load(image_path).convert(), cls.tk_resolution)
+            
+            # We need fresh copy of the background for each image
+            background_copy = base_background.copy()
+
+            # Blit and store
+            background_copy.blit(base_image, (0, 0), special_flags=cls.tk_blend_rgba_mult)
+            cls.__backgrounds[name] = background_copy
+
+
+    @classmethod
+    def render_background(cls, background_id):
+        try:
+            return cls.__backgrounds[background_id]
+        except KeyError: 
+            return cls.__backgrounds['default']
+
+
+class PagesHelp(uiElements, SoundMusic, DeltaTimer, JaaBabeBackgrounds):
 
     
     @classmethod
@@ -32,8 +70,8 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
         # Provide global scale for all UI elements (Except in-game)
         cls.menu_scale = cls.tk_resolution_scale    # Possible add some correction here for the menu items?
 
-        # Provide a same background for all the menus
-        cls.menu_background = cls.__ph_createBackground(1)
+        # Provide a same background for all the menus (Default one)
+        cls.menu_background = cls.__ph_createBackground(flags=1)
 
         # Note: What the fuck was i thinging here? - Replace this menu_timer bullshit with get_ticks()
         # Provide common timer for every menu class
@@ -41,12 +79,14 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
         cls.menu_timer = MenuEventDispatch(get_event=lambda t=None: cls.menu_base_event if t is None \
                                                      else cls.menu_timer.get_ticks.m_add(.05) if t == cls.menu_base_event else 0,  
                                            get_ticks=cls.tk_counter(0)) 
-        
+        # Start the common event timer
+        cls.tk_time.set_timer(cls.menu_timer.get_event(), 10)
+
+        # Provide common background effects for the menus
         cls.interactive_background = ActiveBackGround()
         cls.scanline_effect = ScanLineGenerator(8, 4)   # Currently Mainmenu uses this effect
 
-        # Start the common event timer
-        cls.tk_time.set_timer(cls.menu_timer.get_event(), 10)
+        cls.load_backgrounds(cls.__ph_createBackground(flags=1, color=(0xff, 0x0, 0x0)))
 
 
     # This could be changed to config module function
@@ -78,14 +118,19 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
 
     
     @classmethod
-    def ph_go_back_soundeffect(cls, snd_id=188, return_type=None):
+    def ph_common_soundeffect(cls, return_type=None, not_enough=False):
         """
-            Provide common exit sound effect for menues
+            Provide common sound effects for menus and return carriage 
 
             return -> None
         """
-        cls.playSoundEffect(snd_id)
-        return return_type
+        if not not_enough:
+            # return from menu
+            cls.playSoundEffect(188)
+            return return_type
+        else:
+            # Not enough cash
+            cls.playSoundEffect(189)
 
     
     @classmethod
@@ -114,28 +159,28 @@ class PagesHelp(uiElements, SoundMusic, GlobalGameData, DeltaTimer):
 
 
     @classmethod
-    def __ph_createBackground(cls, op=1):
+    def __ph_createBackground(cls, flags=1, color=(0x40, 0x0, 0x0)):
         """
             Create a common background for all the menus
             Change this function to create you're own or 
             add support for loading custom image as background
 
-            op -> 1: Stripe background
+            flags -> 1: Stripe background
                   2: Faded background
 
             return -> Surface
 
         """
-        if op & 1: 
+        if flags & 1: 
             background = cls.tk_surface(cls.tk_resolution)
 
             # Access the pixel arrays of the surface for effects
             background_array = cls.tk_surfarray.pixels3d(background)
 
             # Added every second horizontal line as dark red for fitting the theme of the game 
-            background_array[::3, ::2] = 0x40, 0x0, 0x0
+            background_array[::2, ::2] = color
 
-        if op & 2:
+        if flags & 2:
             background = cls.tk_surface(cls.tk_resolution, cls.tk_srcalpha)
             background.fill((0x40, 0x0, 0x0, 0x80))
 
@@ -349,7 +394,8 @@ class MenuMain(PagesHelp, EventManager):
         
         while 1:
             surface.fill(self.tk_bg_color)
-            surface.blit(self.menu_background, (0, 0))
+            
+            surface.blit(self.render_background('JaaBabe_Main'), (0, 0))
 
             click = 0; tick = 0
 
@@ -465,13 +511,16 @@ class MenuCampaign(PagesHelp, EpisodeParser):
     def run(self, surface):
         while 1:
             surface.fill(self.tk_bg_color)
-            surface.blit(self.menu_background, (0, 0))
+            
+            #surface.blit(self.menu_background, (0, 0))
+
+            surface.blit(self.render_background('JaaBabe_Main'), (0, 0))
 
             tick = click = 0
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
-                        return self.ph_go_back_soundeffect()
+                        return self.ph_common_soundeffect()
 
                 elif event.type == self.tk_event_mouseup:
                     if event.button == 1:
@@ -606,13 +655,16 @@ class MenuShop(PagesHelp, Inventory):
                             'help_3':     self.two_color_text(self.font_0, "LMB/RMB: Buy/Sell", invert_color=True),
                             'help_2':     self.two_color_text(self.font_0, 
                                           "+ LSHIFT: Buy/Sell In Bulk of '{}'".format(self.__BULK_AMOUNT), invert_color=True),
-                            'help_1':     self.two_color_text(self.font_0, "+ LCTRL: Sell All", invert_color=True)}
-
+                            'help_1':     self.two_color_text(self.font_0, "+ LCTRL: Sell All", invert_color=True)}  
 
         # Provide much nicer background for the icons (32x32, 64x64)
         # Since my antialising method is slow, its betters to build one and pass that to everyone
         _64 = int(64 * self.menu_scale) 
         csurf_64 = self.tk_draw_rounded_rect(_64, _64, 8, (0xff, 0x0, 0x0), 0x60, True)
+
+        # Does the player own the item? (Visual backgroun for it)
+        self.ms_have_item = self.tk_gradient_rect(_64, _64, (0xff, 0x0, 0x80), 0xaa, 
+                                                  invert=1, both_sides=1, length=12, cut_corners=True) 
         
         _32 = int(32 * self.menu_scale) 
         csurf_32 = self.tk_draw_rounded_rect(_32, _32, 8, (0xff, 0x0, 0x0), 0x60, True) 
@@ -691,7 +743,9 @@ class MenuShop(PagesHelp, Inventory):
         quit_shop = False
         while 1:
             surface.fill(self.tk_bg_color)
-            surface.blit(self.menu_background, (0, 0))
+            #surface.blit(self.menu_background, (0, 0))
+
+            surface.blit(self.render_background('JaaBabe_Shop'), (0, 0))
 
             buy_sell = 0
 
@@ -730,6 +784,8 @@ class MenuShop(PagesHelp, Inventory):
             self.ms_render_gadgets(surface, hover=(mx, my), click=buy_only)
 
             self.ms_renderHealthArmorCreditsMenu(surface, hover=(mx, my), click=buy_only)
+
+            self.ms_renderExtra(surface)
             
             surface.blit(*self.tk_drawCursor(self.ElementCursors[1]))
 
@@ -757,7 +813,7 @@ class MenuShop(PagesHelp, Inventory):
         # Normal buy/sell (Single)
         if mod == 0:
             # Buy
-            if kw['key'] == 1 and ammo_price < self.i_playerStats['credits']: 
+            if kw['key'] == 1 and ammo_price <= self.i_playerStats['credits']: 
                 self.i_playerAmmo[ammo_key] += 1
                 self.i_playerStats['credits'] -= ammo_price
             
@@ -791,7 +847,6 @@ class MenuShop(PagesHelp, Inventory):
             self.i_playerAmmo[ammo_key] = 0
 
 
-    
     def ms_validate_weapon_buy(self, weapon, dual_version, *args, **kw):
         """
             Validate weapon buying/selling
@@ -886,10 +941,9 @@ class MenuShop(PagesHelp, Inventory):
             self.i_playerStats[hp_or_armor][0] = self.i_playerStats[hp_or_armor][1]
             self.i_playerStats['credits'] -= v_left 
         else:
-            self.i_playerStats[hp_or_armor][0] += r / multiplier
+            self.i_playerStats[hp_or_armor][0] += int(r / multiplier)
             self.i_playerStats['credits'] -= r 
 
-    
     
     def ms_render_item_stats(self, surface, _set, **kw):
         """
@@ -909,6 +963,12 @@ class MenuShop(PagesHelp, Inventory):
 
         # Weapons
         if _set == self.__E_WEAPON:
+            # Dual version borrows data from single version (Strip the dual tag)
+            if kw['key'].endswith(self.weapon_dual_tag):
+                kw['key'] = kw['key'].split(self.weapon_dual_tag)[0]
+
+            weapon_price = self.all_weapons[kw['key']]['w_price'] 
+
             # Note: Convert all this to 'two_color_text' function
             surface.blit(self.ms_pre_text['w_id'], (px, py))
             px += self.ms_pre_text['w_id'].get_width()
@@ -917,10 +977,6 @@ class MenuShop(PagesHelp, Inventory):
             surface.blit(w_name, (px, py)); px += w_name.get_width() 
 
             for w in ('w_price', 'w_damage', 'w_range', 'w_firerate'):
-                # Dual version borrows data from single version (Strip the dual tag)
-                if kw['key'].endswith(self.weapon_dual_tag):
-                    kw['key'] = kw['key'].split(self.weapon_dual_tag)[0]
-                
                 value = self.all_weapons[kw['key']][w]
                 # Calculate the Rounds-per-minute
                 if w == 'w_firerate': value = 1.0 / value * 60.0
@@ -928,10 +984,14 @@ class MenuShop(PagesHelp, Inventory):
                 child = self.font_0.render('{} {} '.format(value, 'cr.' if w == 'w_price' else ''), 1, (0xff, 0x0, 0x80))
 
                 px += render_carry(self.ms_pre_text[w], surface, px, py)
-                px += render_carry(child, surface, px, py)         
+                px += render_carry(child, surface, px, py) 
+
+            return weapon_price        
 
         # Ammo
         elif _set == self.__E_AMMO:
+            ammo_price = self.all_ammo_data[kw['key']][1] 
+
             px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
             
             # Id
@@ -940,32 +1000,35 @@ class MenuShop(PagesHelp, Inventory):
 
             # Price
             px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
-            a_price = self.font_0.render('{} cr.'.format(self.all_ammo_data[kw['key']][1]), 1, (0xff, 0x0, 0x80))
-            px += render_carry(a_price, surface, px, py)
+            ammo_price_str = self.font_0.render('{} cr.'.format(ammo_price), 1, (0xff, 0x0, 0x80))
+            px += render_carry(ammo_price_str, surface, px, py)
 
-        
+            return ammo_price
+
         # Gadgets
         elif _set == self.__E_GADGET:
-            px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
+            gadget_price = self.gl_gadgets[kw['key']]['g_price']  
 
-            # Id
+            px += render_carry(self.ms_pre_text['w_id'], surface, px, py)
+            
             w_name = self.font_0.render('{} '.format(kw['key']), 1, (0xff, 0x0, 0x80)) 
             px += render_carry(w_name, surface, px, py)
-
-            # Price
+            
             # Remove price removes the price tag, if player owns the gadget
             remove_price = self.gl_gadgets[kw['key']]['g_type'] == 'single' and self.i_playerStats[kw['key']]
             if not remove_price:
-                px += render_carry(self.ms_pre_text['w_price'], surface, px, py)
-                g_price_base = self.gl_gadgets[kw['key']]['g_price'] 
-                g_price_next = g_price_base + (g_price_base * self.__GADGET_PRICE_INC * self.i_playerStats[kw['key']])
+                px += render_carry(self.ms_pre_text['w_price'], surface, px, py) 
+                # Upgrade the price based on level
+                gadget_price = int(gadget_price + (gadget_price * self.__GADGET_PRICE_INC * self.i_playerStats[kw['key']]))
 
-                g_price = self.font_0.render('{} cr.'.format(int(g_price_next)), 1, (0xff, 0x0, 0x80))
+                g_price = self.font_0.render('{} cr.'.format(gadget_price), 1, (0xff, 0x0, 0x80))
                 px += render_carry(g_price, surface, px, py)
 
             # Description
             g_desc = self.font_0.render(self.gl_gadgets[kw['key']]['g_desc'], 1, (0xff, 0x0, 0x80))
-            px += render_carry(g_desc, surface, 16, py + self.ms_font_height) 
+            px += render_carry(g_desc, surface, 16, py + self.ms_font_height)
+
+            return gadget_price 
 
 
     def ms_render_weapons(self, surface, **kw):
@@ -993,18 +1056,21 @@ class MenuShop(PagesHelp, Inventory):
                     own_dual_weapon = self.ms_pre_text['dual_y']
                     key = dual_weapon 
 
-                own_weapon = self.ms_pre_text['owned_y']
+                own_weapon = True
             
             else:
-                own_weapon = self.ms_pre_text['owned_n']
+                own_weapon = False
 
             rsurf = self.ms_wIcons[key]
-
             rsurf.rs_updateRect(16 + (80 * self.menu_scale) * enum, 16 * self.menu_scale)
-            surface.blit(*rsurf.rs_renderSurface(position=1))
-            
+
             # Own the weapon?
-            surface.blit(own_weapon, (rsurf.rs_getPos('left'), rsurf.rs_getPos('bottom')))
+            #surface.blit(own_weapon, (rsurf.rs_getPos('left'), rsurf.rs_getPos('bottom')))
+            if own_weapon:
+                pos = rsurf.rs_getPos('center')
+                surface.blit(self.ms_have_item, (pos[0] - self.ms_have_item.get_width() / 2, pos[1] - self.ms_have_item.get_height() / 2))
+
+            surface.blit(*rsurf.rs_renderSurface(position=1))
             
             # Own the dual version too?
             if check_for_dual:
@@ -1012,10 +1078,15 @@ class MenuShop(PagesHelp, Inventory):
             
             if rsurf.rs_hover_over(kw['hover']):
                 self.ms_highlight_option(*rsurf.rs_getPos('topleft'), icon_d=rsurf.rs_getSize(), surface=surface)
-                self.ms_render_item_stats(surface, self.__E_WEAPON, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
+                weapon_price = self.ms_render_item_stats(surface, self.__E_WEAPON, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
+                
                 highlight_ammo = key
 
-                if kw['click']: rsurf.rs_click(weapon=key.split(self.weapon_dual_tag)[0], dual_version=check_for_dual, key=kw['click'])
+                if kw['click']:
+                    if self.i_playerStats['credits'] < weapon_price:
+                        self.ph_common_soundeffect(not_enough=True)
+                    else: 
+                        rsurf.rs_click(weapon=key.split(self.weapon_dual_tag)[0], dual_version=check_for_dual, key=kw['click'])
 
         return highlight_ammo
 
@@ -1050,9 +1121,13 @@ class MenuShop(PagesHelp, Inventory):
 
             if rsurf.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*rsurf.rs_getPos('topleft'), icon_d=rsurf.rs_getSize(), surface=surface)
-                self.ms_render_item_stats(surface, self.__E_AMMO, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
+                ammo_price = self.ms_render_item_stats(surface, self.__E_AMMO, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
 
-                if kw['click']: rsurf.rs_click(mod=kw['click_mod'], key=kw['click'], ammo_id=key)
+                if kw['click']:
+                    if self.i_playerStats['credits'] < ammo_price:
+                        self.ph_common_soundeffect(not_enough=True)
+                    else: 
+                        rsurf.rs_click(mod=kw['click_mod'], key=kw['click'], ammo_id=key)
 
     
     def ms_render_gadgets(self, surface, **kw):
@@ -1067,23 +1142,31 @@ class MenuShop(PagesHelp, Inventory):
         for enum, key in enumerate(self.ms_sIcons['mod_keys']):
             rsurf = self.ms_sIcons[key]
             rsurf.rs_updateRect(16 + (80 * self.menu_scale) * enum, 304 * self.menu_scale)
-            surface.blit(*rsurf.rs_renderSurface(position=1)) 
+            #surface.blit(*rsurf.rs_renderSurface(position=1)) 
 
             g_type = self.gl_gadgets[key]['g_type']
             if g_type == 'single':
-                owned_i = self.ms_pre_text['owned_y' if self.i_playerStats[key] else 'owned_n']
-                surface.blit(owned_i, (rsurf.rs_getPos('right') - owned_i.get_width(), rsurf.rs_getPos('bottom')))
+                if self.i_playerStats[key]:
+                    pos = rsurf.rs_getPos('center')
+                    surface.blit(self.ms_have_item, (pos[0] - self.ms_have_item.get_width() / 2, pos[1] - self.ms_have_item.get_height() / 2))
+            
             else:
                 level = self.i_playerStats[key]
                 color_indication = (0xff if level else 0x80, 0x0, 0x80 if level else 0x0) 
                 g_level = self.font_0.render('lvl.{}'.format(self.i_playerStats[key]), 1, color_indication) 
                 surface.blit(g_level, (rsurf.rs_getPos('left'), rsurf.rs_getPos('bottom')))
 
+            surface.blit(*rsurf.rs_renderSurface(position=1))
+
             if rsurf.rs_hover_over(kw['hover']): 
                 self.ms_highlight_option(*rsurf.rs_getPos('topleft'), icon_d=rsurf.rs_getSize(), surface=surface)
-                self.ms_render_item_stats(surface, self.__E_GADGET, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
+                gadget_price = self.ms_render_item_stats(surface, self.__E_GADGET, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
 
-                if kw['click']: rsurf.rs_click(gadget=key)
+                if kw['click']:
+                    if self.i_playerStats['credits'] < gadget_price:
+                        self.ph_common_soundeffect(not_enough=True)
+                    else: 
+                        rsurf.rs_click(gadget=key)
 
 
     def ms_renderHealthArmorCreditsMenu(self, surface, **kw):
@@ -1130,12 +1213,26 @@ class MenuShop(PagesHelp, Inventory):
                 re_text_cost = self.two_color_text(self.font_0, "To Max: {} cr.".format(int(v_left)), color_v=(0xff, 0x0, 0x40 + flash))
                 surface.blit(re_text_cost, (x, y - re_text_cost.get_height() / 2)) 
 
-                if bar.rs_hover_over(kw['hover']):
-                    if kw['click']: bar.rs_click(hp_or_armor=stat)
+                if bar.rs_hover_over(kw['hover']) and kw['click']:
+                    if stat == 'armor' and self.i_playerStats['credits'] < self.__ARMOR_REFILL:
+                        self.ph_common_soundeffect(not_enough=True)
+                        return None    
 
+                    elif stat == 'health' and  self.i_playerStats['credits'] < self.__HEALTH_REFILL:
+                        self.ph_common_soundeffect(not_enough=True)
+                        return None
 
+                    bar.rs_click(hp_or_armor=stat)
+
+    
+    def ms_renderExtra(self, surface):
+        """
+            Render extra shop related stuff
+
+            return -> None
+
+        """
         # Note: Separate these in to their own functions
-        # Credits
         surface.blit(*self.ms_creditsIcon.rs_renderSurface(position=1))
         credits = self.font_0.render('{:,} cr.'.format(int(self.i_playerStats['credits'])), 1, (0xff, 0x0, 0x80)) 
 
@@ -1312,6 +1409,7 @@ class MenuIntroOutro(PagesHelp):
 
 
 class MenuOptions(PagesHelp):
+    
     def __init__(self):
         self.mo_font_1 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
         self.mo_font_2 = self.tk_font(self.ElementFonts[1], int(32 * self.menu_scale))
@@ -1450,7 +1548,15 @@ class MenuOptions(PagesHelp):
 
             mx, my = self.tk_mouse_pos()
 
-            surface.blit(self.menu_background if pause_bg is None else pause_bg, (0, 0))   
+            if pause_bg is None:
+                if not self.mo_display_func:
+                    bg = self.render_background('JaaBabe_Options')
+                else:
+                    bg = self.render_background('JaaBabe_Main')
+            else:
+                bg = pause_bg 
+
+            surface.blit(bg, (0, 0))   
             
             if self.mo_display_func == -1:
                 background_index = 1 if pause_bg is None else 0
@@ -1476,11 +1582,11 @@ class MenuOptions(PagesHelp):
                     if event.key == self.tk_user['esc'] and not self.mo_uk_editme:
                         # Quit the options menu entirely
                         if self.mo_display_func == -1:
-                            return self.ph_go_back_soundeffect(return_type=False)
+                            return self.ph_common_soundeffect(return_type=False)
 
                         # Go back to root
                         else:
-                            self.ph_go_back_soundeffect()
+                            self.ph_common_soundeffect()
                             # Reset userkey change if exiting the menu
                             if self.mo_display_func == 1: 
                                 self.mo_uk_editme = ''
@@ -1755,7 +1861,8 @@ class MenuReport(PagesHelp, BookKeeping):
         self.playMusic(0, -1)
         while 1:
             surface.fill(self.tk_bg_color)
-            surface.blit(self.menu_background, (0, 0))
+            #surface.blit(self.menu_background, (0, 0))
+            surface.blit(self.render_background('JaaBabe_Report'), (0, 0))
 
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:

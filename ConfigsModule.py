@@ -678,15 +678,40 @@ class GlobalGameData(DefaultConfigParser):
 
         return surface
 
+    # Helper function to make gradient rect look a bit nicer
+    @classmethod
+    def tk_tri_corners(cls, w, h, l, color):
+        """
+            Add triangle to the corners
+
+            w, h -> Size of the surface which gets the corners
+            l -> Length of the triangles (Not hypot)
+            color -> Color of the triangles (support alpha too)
+
+            return -> Alpha surface with the triangles
+
+        """
+        surf = cls.tk_surface((w, h), cls.tk_srcalpha)
+
+        cls.tk_draw_gfx_polygon(surf, ((0, 0), (l, 0), (0, l)), color)
+        cls.tk_draw_gfx_polygon(surf, ((w - 1, 0), (w - 1, l), ((w - 1) - l, 0)), color)
+        cls.tk_draw_gfx_polygon(surf, ((0, h - 1), (0, (h - 1) - l), (l, (h - 1))), color)
+        cls.tk_draw_gfx_polygon(surf, ((w - 1, h - 1), ((w - 1) - l, (h - 1)), ((w - 1), (h - 1) - l)), color)
+
+        return surf
+
     
     @classmethod
-    def tk_gradient_rect(cls, w, h, color, alpha):
+    def tk_gradient_rect(cls, w, h, color, alpha, invert=False, both_sides=False, length=8, cut_corners=False):
         """
             Draw gradient rect with left and right side faded out
 
             w,h -> Width, Height
             color -> Color of the surface
             alpha -> Max alpha of the surface
+            invert -> invert the grading
+            both_sides -> Do gradient on both x, y
+            length -> Length of the gradient
 
             return -> Surface
 
@@ -695,11 +720,25 @@ class GlobalGameData(DefaultConfigParser):
         surf.fill(color)
 
         alpha_surf = cls.tk_surfarray.pixels_alpha(surf)
-        alpha_surf[:] = alpha
+        alpha_surf[:] = 0 if invert else alpha
 
-        for enum, a in enumerate(xrange(0, alpha, 8)):
-            alpha_surf[-enum, :] = a
-            alpha_surf[enum, :] = a    
+        l = 255 / length
+        if invert:
+            rng = xrange(alpha, 0, -l)
+        else:
+            rng = xrange(0, alpha, l)
+    
+        for enum, a in enumerate(rng):
+            alpha = cls.tk_clamp(a, 0x0, 0xff) 
+            alpha_surf[-enum] = alpha
+            alpha_surf[enum]  = alpha
+
+        if both_sides:
+            del alpha_surf
+            surf.blit(cls.tk_rotate(surf.copy(), 90), (0, 0))   
+
+        if cut_corners:
+            surf.blit(cls.tk_tri_corners(w, h, 4, (0x0, 0x0, 0x0, 0xee)), (0, 0))
 
         return surf 
 

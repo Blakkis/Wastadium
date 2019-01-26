@@ -24,10 +24,23 @@ from MapParser import (MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, WastadiumEditorExc
 
 
 # NOTES:
-#   Refactor! (More getters and setters) (Things are communicating too deeply)
-#   All textures are facing up, so all trig calculations are done with x, y swapped (atan function rest angle is up)
+#   Refactor!
+#   I've ventured way off from the original architect choices... 
+#   All textures are facing up, so (*all (only with textures)) 
+#       trig calculations are done with x, y swapped (atan function rest angle is up)
 #   Replace the current framerate to consumer based framerate ( Need to separate login/render )
-   
+
+
+# Notes to MYSELF when reading this in the future:
+#   Stay consistent with the naming scheme you dumbfuck
+#   Re-read the doc 10 times before applying
+#   Don't accumulate too much stuff in to same function
+#   Stop with the indexing
+#   Too many dumb comments
+#   Apply Unittests seriously
+#   Use more Enums
+#   Don't use int's as asset names
+
 
 # Note: Move this in to separate module
 class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, 
@@ -49,7 +62,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                             
         self.player_data['model'] = '_'.join((self.player_data['torso'], self.i_playerStats['weapon'])) 
         
-        # Model animation 
+        # Model  
         self.figure = [[self.player_data['legs'],  self.tk_rect(0, 0, 32, 32)], 
                        [self.player_data['model'], self.tk_rect(0, 0, 64, 64)]]
 
@@ -72,7 +85,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
             Leave footsteps behind
             (Bloody footprints or anything up to 32 steps which fade)
 
-            angle -> Radians 
+            angle -> In which direction the footsteps are facing (in radians) 
 
             return -> None
         """
@@ -95,7 +108,8 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         # Leave footstep decals
         if not self.tk_no_footsteps and self.footstep_id:
             try:
-                cx, cy = self.all_footsteps[self.footstep_id][1]    # Center of the footstep decal
+                # Get the center of the decal
+                cx, cy = self.all_footsteps[self.footstep_id][1]    
                 img, sAngle = self.all_footsteps[self.footstep_id][self.footstep_cycle.next()] 
                 
                 # Move the footstep decals sideways to the character
@@ -151,6 +165,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
         self.fire_anim_len = self.tk_deque(l)
         self.fire_anim_timer = self.tk_trigger_const(60 / float(1000) / max(6, len(self.fire_anim_len))) 
 
+
     # Note: Remove this
     exec(PreProcessor.parseCode("""
 def hero_handle(self, surface, key_event=-1):
@@ -163,7 +178,7 @@ def hero_handle(self, surface, key_event=-1):
         return -> None
      
     \"""
-    # Player died.
+    # Player died. Dont allow input
     if not self.i_playerStats['alive']:
         return None
 
@@ -198,10 +213,12 @@ def hero_handle(self, surface, key_event=-1):
                 self.hero_load_animation(torso_name=self.player_data['model'])
                 self.playSoundEffect(184)   # Switch weapon sound
             else:
+                # Tried to select weapon from empty weapon wheel
                 self.weaponfire_delay.reset()        
 
         else:
-            ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]    # Get the ammo used by the weapon
+            # Get the ammo used by the weapon
+            ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]
             
             # Infinite ammo or ammo available?
             if ammo_id == -1 or self.i_playerAmmo[ammo_id] > 0:
@@ -389,7 +406,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     # Holds all the map layers (With keys 0-2: [])  1: Not in-use       
     w_map_layers = {}
     
-    # Holds each cell as single 32x32 cell
+    # Holds each cell as single 32x32 cells
     w_micro_cells = []        
     
     # Dynamic map entities (eg. Enemies)
@@ -398,7 +415,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     # World position
     cell_x, cell_y = 0, 0
     
-    # Current mapsize 
+    # World size in (pixels->width&height) / 32)
     w_map_size = 0, 0
     
     # Boundaries for the mapsize divided by tk_macro_cell_size
@@ -432,6 +449,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # when walking over this cell
         self.w_footstep_stain_id = 0
 
+
     def enable_object_collision(self):
         """
             Set optional object collision
@@ -443,7 +461,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
     def __repr__(self):
         """
-            Easier for print debugging
+            Easier for debugging
 
             return -> repr(cell.position)
             
@@ -454,11 +472,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
     @classmethod
     def world_to_screen_coords(cls, x, y):
         """
-            Convert World coordinates to screen coordinates
+            Convert from world space to to screen space
 
             x, y -> Cell index coordinates
 
-            return -> World coordinates
+            return -> world space (x, y)
         """
         return (x * 32 + cls.tk_res_half[0] - 16,
                 y * 32 + cls.tk_res_half[1] - 16)
@@ -497,6 +515,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Run all sections and report all failed modules.
         # However keep in mind, that some modules rely on other modules for extra data
         # so if their parent module fails, they will fail too
+        # Note: Requires more testing and more in-depth error reporting
 
         error_section = []
         try:
@@ -648,7 +667,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
             surface -> Target surface
 
-            return -> None
+            return -> 2d array of subsurfaces
 
         """
         chunk_size = cls.tk_macro_cell_size * 32
@@ -668,7 +687,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             map_name -> Name of the mapfile 
                         (Suffix will be added based on the parser rules, by the parser)
 
-            surface -> Active screen surface (Send down the decorator chain)
+            surface -> Active screen surface
 
             return -> None
 
@@ -727,7 +746,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             cls.w_micro_cells.append(segment)
 
         # Apply object collisions
-        for object_collision in cls.w_fetchObjCollision(disk_data[data_tag][cls.MAP_CELL_XML]):
+        for object_collision in cls.__w_fetchObjCollision(disk_data[data_tag][cls.MAP_CELL_XML]):
             base_index, c_indexes = object_collision
             for y in xrange(c_indexes[1]):
                 for x in xrange(c_indexes[0]):
@@ -735,8 +754,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         # Remove all gibs and send level collisions to gib processing
         cls.gib_reset(cls.w_micro_cells)
-
-        # Blit the objects layer to ground layer   
+        
+        # Build the ground layer  
         cls.w_map_layers[0] = cls.world_parse_to_chunks(cls.w_ambientColor( \
                                                         disk_data[MAP_GROUND][MAP_GROUND]))
 
@@ -755,41 +774,36 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         if not cls.tk_no_shadow_layer: 
             cls.shadow_map.s_loadSurfaceMap(disk_data[MAP_GROUND][MAP_GROUND]) 
 
-        # Apply static map shadows
+        # Apply static map shadows (Also wire shadows)
         cls.w_applyStaticShadows(disk_data[data_tag][cls.MAP_WIRE_XML])
 
-        # Note: The radius is fixed to 160. Might open it up in the future for edit
+        # Note: The radius is fixed to 160 (Editor supports this but calculations don't). 
+        # Might open it up in the future for edit
         format_lights = [light._replace(x=light.x * 32 + 16, y=light.y * 32 + 16, 
                                         radius=160, color=light.color + (0x0, )) \
                          for light in disk_data[data_tag][cls.MAP_LIGHT_XML]]
 
-        # Apply lights to the world
         cls.w_applyLights(format_lights)
 
         # Apply objects last on the stack
         object_chunks = cls.world_parse_to_chunks(cls.w_ambientColor( \
                                                   disk_data[MAP_GROUND][MAP_OBJECTS]))
-
         for ey, y in enumerate(object_chunks):
             for ex, x in enumerate(y):
                 # Blit the object chunks to ground layers
                 cls.w_map_layers[0][ey][ex][-1].blit(object_chunks[ey][ex][-1], (0, 0))    
 
-        
         # Load light positions for character shadows
         cls.cs_load_lights(format_lights, cls.w_map_size_macro)
             
         # Gradient the world boundaries to darkness
         cls.w_applyEdgeGradient(*cls.w_map_size_macro)
 
-        # Fill the world with stuff to kill
         cls.w_spawnEnemies(disk_data[data_tag][cls.MAP_ENEMY_XML])
 
-        # Reset and set victory conditions
         cls.reset_victory_condition(len(disk_data[data_tag][cls.MAP_ENEMY_XML]),
                                     general[cls.MAP_PLR_BEGIN_XML][spawn_index ^ 1])
 
-        # Position for pickups needs to be converted to map positions
         cls.spawn_pickups([pickup._replace(x=pickup.x * 32, y=pickup.y * 32, id=pickup.id, 
                                            content=pickup.content, value=pickup.value) \
                            for pickup in disk_data[data_tag][cls.MAP_PICKUP_XML]])
@@ -802,11 +816,11 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         return surface
     
-
+    # Helper function
     @classmethod
-    def w_fetchObjCollision(cls, world_data):
+    def __w_fetchObjCollision(cls, world_data):
         """
-            TBD
+            Read the object collision data from the xml
 
             return -> None
         """
@@ -927,7 +941,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 cls.w_map_layers[0][enum1][enum2][1].blit(light_surface, (0, 0), 
                                                           special_flags=cls.tk_blend_rgba_add)    
     
-    
+    # Helper function
     @classmethod
     def __lightspotBuild(cls, x, y, light_surf):
         """
@@ -1211,10 +1225,10 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
             Check where the bullet hit
 
-            x, y ->
-            pair ->
-            weapon ->
-            test_rect ->
+            x, y -> Origin from where the shot took place (Screen space)
+            pair -> (Rect and Id) (Id -1: wall, anything above -> enemy id) 
+            weapon -> Weapon used (string id)
+            test_rect -> rect used to simulate the bullet 
 
             return -> None
         """

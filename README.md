@@ -12,8 +12,6 @@ inspiration comes from "Hotline Miami" and old finnish game called "TapanKaikki"
 
 TODO:
   - Add more textures
-  - Create the JaaBabe background images
   - Work on the Wastadium launcher
-  - Enable enemies to shoot the player
-  - Enable pickups to be picked
+  - Enable enemies to shoot the player (Nearly Complete)
   - 
