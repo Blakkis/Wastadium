@@ -11,7 +11,6 @@ from Timer import DeltaTimer
 from MapParser import EpisodeParser
 from VictoryCondition import BookKeeping
 
-from sys import argv as read_argv
 from functools import partial
 
 
@@ -159,7 +158,7 @@ class PagesHelp(uiElements, SoundMusic, DeltaTimer, JaaBabeBackgrounds):
 
 
     @classmethod
-    def __ph_createBackground(cls, flags=1, color=(0x40, 0x0, 0x0)):
+    def __ph_createBackground(cls, flags=1, color=(0x40, 0x0, 0x0), shift_y=2, shift_x=2):
         """
             Create a common background for all the menus
             Change this function to create you're own or 
@@ -178,7 +177,7 @@ class PagesHelp(uiElements, SoundMusic, DeltaTimer, JaaBabeBackgrounds):
             background_array = cls.tk_surfarray.pixels3d(background)
 
             # Added every second horizontal line as dark red for fitting the theme of the game 
-            background_array[::2, ::2] = color
+            background_array[::shift_x, ::shift_y] = color
 
         if flags & 2:
             background = cls.tk_surface(cls.tk_resolution, cls.tk_srcalpha)
@@ -1947,7 +1946,7 @@ class MenuManager(EpisodeParser):
                           'm_episode': MenuCampaign(),
                           'm_options': MenuOptions()}
 
-        self.all_menus['m_main'].menu_set_references(intro=None if '-nosplash' in read_argv else MenuIntro(), 
+        self.all_menus['m_main'].menu_set_references(intro=MenuIntro(), 
                                                      options=self.all_menus['m_options'],
                                                      episode=self.all_menus['m_episode'])
 

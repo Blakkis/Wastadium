@@ -11,13 +11,29 @@ from subprocess import Popen
 
 VERSION = 1.0
 
-class LabelEntry(object):
-	pass
+class LabelOptionMenu(tk.Frame):
+
+    _grid = {'row':     0,
+             'column': -1}
+
+    def __init__(self, base, label_tag, entry_values):
+        self.label = tk.Label(base, text=label_tag)
+        self.label.grid(row=self._grid['row'], column=0)
+
+        self.option = tk.StringVar()
+        self.option_menu = tk.OptionMenu(base, self.option, (10, 20, 30))
+        self.option_menu.grid(row=self._grid['row'], column=1)
+
+        self._grid['row'] += 1
+
 
 
 class Launcher_Options(tk.Frame, object):
     def __init__(self, *args, **kw):
         super(Launcher_Options, self).__init__(*args, **kw)
+        self.config(padx=8, pady=8)
+
+        LabelOptionMenu(self, "Resolution", "test")
 
 
 
