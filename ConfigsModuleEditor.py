@@ -521,42 +521,42 @@ class GlobalGameDataEditor(object):
     ed_frags_per_col = ed_resolution[1] / 32 / 2
 
     # Pygame
-    ed_init_everything = pygame.init
-    ed_display = pygame.display
-    ed_mouse = pygame.mouse
-    ed_image = pygame.image
-    ed_surface = pygame.Surface
-    ed_transform = pygame.transform
-    ed_key = pygame.key
-    ed_draw_rect = pygame.draw.rect
-    ed_draw_line = pygame.draw.line
-    ed_draw_circle = pygame.draw.circle
-    ed_draw_aaline = pygame.draw.aaline
-    ed_draw_aacircle = pygame.gfxdraw.aacircle
-    ed_rect = pygame.Rect
-    ed_srcalpha = pygame.SRCALPHA
-    ed_font = pygame.font.Font
-    ed_surfarray = pygame.surfarray
+    ed_init_everything  = pygame.init
+    ed_display          = pygame.display
+    ed_mouse            = pygame.mouse
+    ed_image            = pygame.image
+    ed_surface          = pygame.Surface
+    ed_transform        = pygame.transform
+    ed_key              = pygame.key
+    ed_draw_rect        = pygame.draw.rect
+    ed_draw_line        = pygame.draw.line
+    ed_draw_circle      = pygame.draw.circle
+    ed_draw_aaline      = pygame.draw.aaline
+    ed_draw_aacircle    = pygame.gfxdraw.aacircle
+    ed_rect             = pygame.Rect
+    ed_srcalpha         = pygame.SRCALPHA
+    ed_font             = pygame.font.Font
+    ed_surfarray        = pygame.surfarray
 
     # General 
-    ed_pil_image = pil_image
-    ed_photo_image = PhotoImage
-    ed_msg_box = tkMessageBox
-    ed_environ = environ
-    ed_path = path
-    ed_cos = math.cos
-    ed_sin = math.sin
-    ed_hypot = math.hypot
-    ed_sqrt = math.sqrt
-    ed_radians = math.radians
-    ed_ceil = math.ceil
-    ed_floor = math.floor
-    ed_pi = math.pi
-    ed_deque = deque
-    ed_ordereddict = OrderedDict
-    ed_namedtuple = staticmethod(namedtuple) 
-    ed_flatten = staticmethod(flatten)
-    ed_copy = staticmethod(copy)
+    ed_pil_image    = pil_image
+    ed_photo_image  = PhotoImage
+    ed_msg_box      = tkMessageBox
+    ed_environ      = environ
+    ed_path         = path
+    ed_cos          = math.cos
+    ed_sin          = math.sin
+    ed_hypot        = math.hypot
+    ed_sqrt         = math.sqrt
+    ed_radians      = math.radians
+    ed_ceil         = math.ceil
+    ed_floor        = math.floor
+    ed_pi           = math.pi
+    ed_deque        = deque
+    ed_ordereddict  = OrderedDict
+    ed_namedtuple   = staticmethod(namedtuple) 
+    ed_flatten      = staticmethod(flatten)
+    ed_copy         = staticmethod(copy)
 
     # Tkinter
     ed_separator = ttk.Separator
