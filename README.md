@@ -12,6 +12,10 @@ inspiration comes from "Hotline Miami" and old finnish game called "TapanKaikki"
 
 TODO:
   - Add more textures
-  - Work on the Wastadium launcher
   - Enable enemies to shoot the player (Nearly Complete)
-  - 
+  - Make armor effect bar (Also add armor calculation to damage calculations)
+  - Finetune the enemies, weapons
+  - Add the final frame after the campaign is done
+  - Fix the rating system
+  - Fix the AoE
+  - Build a campaign

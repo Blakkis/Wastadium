@@ -1735,7 +1735,8 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                     continue
                 if len(cls.w_entities_dynamic[ry][rx]) > 0:
                     for get_id in cls.w_entities_dynamic[ry][rx]:
-                        if get_id not in cls.w_enemies or get_id == ignore_id: continue 
+                        if get_id not in cls.w_enemies or get_id == ignore_id: 
+                            continue 
                         
                         e_pos = cls.w_enemies[get_id].get_map_pos(0, 0)
                         rect = cls.tk_rect(e_pos[0] + cls.cell_x, e_pos[1] + cls.cell_y, 32, 32)

@@ -44,7 +44,7 @@ class Model3D(GlobalGameData):
         return max([cls.tk_sqrt((0 - x) ** 2 + (0 - y) ** 2 + (0 - z) ** 2) for x, y, z in vertices])   
     
     
-    def m_render(self, surface, color=(0x60, 0x0, 0x0)):
+    def m_render(self, surface, color=(0xaa, 0x0, 0x0)):
         """
             Render the model (Wireframe only)
 

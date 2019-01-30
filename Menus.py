@@ -1742,11 +1742,17 @@ class MenuOptions(PagesHelp):
                 # Key already in-use
                 return None
 
-            # Valid
+            # Valid key
             self.tk_user[self.mo_uk_editme] = key
             new = self.tk_renderText(self.mo_font_3, self.tk_key_name(key), True, (0xff, 0x0, 0x0), shadow=True)
             self.mo_uk_prerendered[self.mo_uk_editme][1].rs_updateSurface(new)
+
+            def_key = 'key_{}'.format(self.mo_uk_editme)
+            self.def_values[def_key] = key
+
             self.mo_uk_editme = ''
+
+            self.tk_ParseDefaultConfigs(force_rewrite=1)
 
 
 class MenuReport(PagesHelp, BookKeeping):

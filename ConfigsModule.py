@@ -88,10 +88,10 @@ class DefaultConfigParser(object):
 
     # Read/Write default values
     def_values = collections.OrderedDict([
-                    ('max_fps',             100),
+                    ('max_fps',             60),
                     ('resolution',  (1280, 720)),
                     ('fullscreen',            0),
-                    ('control_scheme',        0),
+                    ('control_scheme',        1),
                     ('world_shadows',         1),
                     ('world_char_shadows',    1),
                     ('world_shadows_quality', 1),
@@ -102,6 +102,12 @@ class DefaultConfigParser(object):
                     ('key_down',            K_s),
                     ('key_left',            K_a),
                     ('key_esc',        K_ESCAPE),
+                    ('key_slot1',           K_1),
+                    ('key_slot2',           K_2),
+                    ('key_slot3',           K_3),
+                    ('key_slot4',           K_4),
+                    ('key_slot5',           K_5),
+                    ('key_slot6',           K_6),
                     ('ai_rotation_speed',     4),
                     ('ai_hear_range',        64),
                     ('ai_alarm_state',      1.5),
@@ -182,6 +188,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_name     = 'Wastadium'
     tk_dev_name = 'JaaTeam'
     tk_version  = '1.0'
+    tk_fullscreen = 0
     tk_fps        = DefaultConfigParser.def_values['max_fps']
     tk_resolution = DefaultConfigParser.def_values['resolution']
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), 
@@ -208,11 +215,13 @@ class GlobalGameData(DefaultConfigParser):
     tk_no_footsteps     = not DefaultConfigParser.def_values['world_footsteps']
     tk_no_effects       = not DefaultConfigParser.def_values['world_effects']
     tk_no_char_shadows  = not DefaultConfigParser.def_values['world_char_shadows']
-    # 0: Tank, 1: Axis
-    tk_control_scheme   = DefaultConfigParser.def_values['control_scheme'] 
+    
+    # 0: Axis, 1: Tank
+    tk_control_scheme = DefaultConfigParser.def_values['control_scheme'] 
+    
     # 1: High quality (Experimental and Slow) 
     # Actually, the entire shadow casting is shit(Needs massive overhaul)
-    tk_shadow_quality   = DefaultConfigParser.def_values['world_shadows_quality']     
+    tk_shadow_quality = DefaultConfigParser.def_values['world_shadows_quality']     
     
     # Lightmap 
     tk_shadow_color      = 0x0, 0x0, 0x0, 0xaa
@@ -317,16 +326,18 @@ class GlobalGameData(DefaultConfigParser):
 
 
     # Expand more slots for 1 - 9 keys (Don't go over bound)
-    tk_slots_available = ('slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'slot6')
-    
+    tk_slots_available = [key_v for key_v in \
+    DefaultConfigParser.def_values.iterkeys() if key_v.startswith('key_slot')]
+
     # Player (Allow for customization) 
     tk_user = {'up':    DefaultConfigParser.def_values['key_up'], 
                'left':  DefaultConfigParser.def_values['key_left'], 
                'down':  DefaultConfigParser.def_values['key_down'], 
                'right': DefaultConfigParser.def_values['key_right'], 
                'esc':   DefaultConfigParser.def_values['key_esc']}
-    # Add the slot keys to tk_user as pygame constants
-    tk_user.update({key: globals()['K_{}'.format(enum)] for enum, key in enumerate(tk_slots_available, start=1)}) 
+
+    tk_user.update({key.split('_')[-1]: DefaultConfigParser.def_values[key] for key in tk_slots_available})
+    tk_slots_available = sorted([k for k in tk_user.iterkeys() if k.startswith('slot')])
 
     # Fixed keys (Maybe put these for edit too?)
     tk_user_special = {'shift_l': KMOD_LSHIFT, 'ctrl_l': KMOD_LCTRL}
