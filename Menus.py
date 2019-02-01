@@ -55,6 +55,7 @@ class JaaBabeBackgrounds(GlobalGameData):
             return cls.__backgrounds['default']
 
 
+
 class PagesHelp(uiElements, SoundMusic, DeltaTimer, JaaBabeBackgrounds):
 
     
@@ -186,6 +187,34 @@ class PagesHelp(uiElements, SoundMusic, DeltaTimer, JaaBabeBackgrounds):
         return background
 
 
+class MenuEnd(PagesHelp, BookKeeping):
+    def __init__(self):
+        self.font_0 = self.tk_font(self.ElementFonts[0], int(48 * self.menu_scale))
+        self.font_1 = self.tk_font(self.ElementFonts[1], int(32 * self.menu_scale))
+        self.pre_text = {'time_h': self.tk_renderText(self.font_0, "Total Completion Time", 
+                                                      True, (0xff, 0x0, 0x0), shadow=1)}
+
+    def run(self, surface):
+        time_b = self.tk_seconds_to_hms(self.getSetRecord('time', end=True), to_string=True)
+        time_b = self.tk_renderText(self.font_1, time_b, True, (0xff, 0x0, 0x80), shadow=1) 
+        while 1:
+            surface.fill(self.tk_bg_color)
+
+            surface.blit(self.render_background('end'), (0, 0))
+
+            time_h = self.pre_text['time_h']
+            surface.blit(time_h, (self.tk_res_half[0] - time_h.get_width() / 2, 0))
+
+            surface.blit(time_b, (self.tk_res_half[0] - time_b.get_width() / 2, time_h.get_height()))
+            
+            for event in self.tk_eventDispatch():
+                if event.type == self.tk_event_keyup:
+                    if event.key == self.tk_user['esc']:
+                        return None
+
+            self.tk_display.flip()
+
+
 
 class MenuIntro(PagesHelp, EventManager):
     """
@@ -200,7 +229,6 @@ class MenuIntro(PagesHelp, EventManager):
         # Second quits the full intro (Or timer kills the intro)
         self.intro_exit_proceed = 0     
 
-        # Font
         self.font_0 = self.tk_font(self.ElementFonts[0], int(128 * self.menu_scale))
  
         w, h = self.font_0.size(self.tk_dev_name)
@@ -587,7 +615,6 @@ class MenuCampaign(PagesHelp, EpisodeParser):
 
 
 
-
 class MenuShop(PagesHelp, Inventory):
     
     # Since the class works as decorator, the data needed has not been
@@ -626,6 +653,10 @@ class MenuShop(PagesHelp, Inventory):
             self.__shop_initialized = self.init_shop_data()    
 
         surface = self.function(*args, **kw)
+
+        if isinstance(surface, tuple):
+            return surface
+
         self.run(surface)
         return surface
 
@@ -678,6 +709,7 @@ class MenuShop(PagesHelp, Inventory):
 
         return True
     
+
     # Note: Currency
     def ms_setup_credits(self, bg):
         """
@@ -1353,13 +1385,17 @@ class MenuIntroOutro(PagesHelp):
         """
             Run the outro 
 
-            surface -> Active screen surface
+            surface -> Active screen surface, (Optional int to signal something)
 
             return -> Active screen surface
 
         """
         # Fades out the music nicely with the outro
         self.musicStopPlayback(ms=1400)    # Magic number based on how fast the outro moves
+
+        signal = 0
+        if isinstance(surface, tuple):
+            surface, signal = surface
 
         static = surface.copy()
 
@@ -1387,8 +1423,11 @@ class MenuIntroOutro(PagesHelp):
             self.tk_display.flip()
 
             if fadeout_factor >= 0xff:
-                self.musicStopPlayback()    # Force shutdown (Player skipped the outro) 
-                return surface
+                self.musicStopPlayback()    # Force shutdown (Player skipped the outro)
+                if signal:
+                    return surface, signal
+                else: 
+                    return surface
 
     
     def outro_effect(self, surface, factor):
@@ -1850,6 +1889,10 @@ class MenuReport(PagesHelp, BookKeeping):
             self.__report_initialized = self.init_report_data()
 
         surface = self.function(*args, **kw)
+
+        if isinstance(surface, tuple):
+            return surface
+
         self.run(surface)
         return surface
 
@@ -1950,7 +1993,8 @@ class MenuManager(EpisodeParser):
         # Note: Get rid of these ref hacks and replace with decorators
         self.all_menus = {'m_main':    MenuMain(),
                           'm_episode': MenuCampaign(),
-                          'm_options': MenuOptions()}
+                          'm_options': MenuOptions(),
+                          'm_end':     MenuEnd()}
 
         self.all_menus['m_main'].menu_set_references(intro=MenuIntro(), 
                                                      options=self.all_menus['m_options'],
@@ -1970,7 +2014,7 @@ class MenuManager(EpisodeParser):
             return -> None
 
         """
-        self.episode_set_references(build=world_build_function, run=game_loop_function)
+        self.episode_set_references(build=world_build_function, run=game_loop_function, end=self.all_menus['m_end'])
         self.all_menus['m_main'].run(surface)
 
 

@@ -67,7 +67,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                        [self.player_data['model'], self.tk_rect(0, 0, 64, 64)]]
 
         # Animation 
-        self.hero_load_animation(self.player_data['legs'], self.player_data['model'])
+        self.hero_load_animation(self.player_data['model'])
         self.animation_delay = self.tk_trigger_const(.04)    # Delay between each animation frames
 
         # Footsteps 
@@ -125,29 +125,22 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                 self.footstep_id = 0 
 
 
-    def hero_load_animation(self, legs_name=None, torso_name=None):
+    def hero_load_animation(self, torso_name=None):
         """
-            Handles and setups skin/animations for the character
+            Setup the player animation sequences
 
-            legs_name -> Name of the legs texture 
-            torso_name -> This one is a bit tricky 
-                          since torso textures are tied to specific weapon
-                          this function is perfect for handling and setting up
-                          weapon related stuff 
+            torso_name -> Torso name from the textures/anims/torsos
 
             return -> None
             
         """
         # Load frame lengths of the both animation sequences 
         # (Get the animation length from the first row of animations)
-        if legs_name is not None:
-            self.legs_frame_cycle = self.tk_cycle(xrange(len(self.legs_textures[legs_name][1])))
-            self.legs_frame_index = 0   # Frame index
-        
-        if torso_name is not None:
-            self.torso_frame_cycle = self.tk_cycle(xrange(len(self.torso_textures[torso_name][1])))
-            self.torso_frame_index = 0  # Frame index
-            self.figure[1][0] = torso_name 
+        self.legs_frame_cycle  = self.tk_cycle(xrange(len(self.legs_textures[self.player_data['legs']][1])))
+        self.torso_frame_cycle = self.tk_cycle(xrange(len(self.torso_textures[torso_name][1])))
+        self.legs_frame_index = self.torso_frame_index = 0 
+
+        self.figure[1][0] = torso_name  # Update the model stack 
 
         # Get/Set the weapons firerate from the configs
         firerate = self.all_weapons[self.i_playerStats['weapon']]['w_firerate'] 
@@ -712,6 +705,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.clear_casings()
 
         cls.clear_pickups()
+
+        # Revive player
+        cls.i_playerStats['alive'] = True
 
         cls.uioverlay.tick_timer(reset=True)
 
@@ -1574,7 +1570,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
         # Player got hit
         if enemy_id == -2:
-            # Note: Player is such a badass, that * wont make any sounds when getting hit/killed
             if cls.i_playerStats['alive']:
                 effect_angle = cls.tk_atan2(tx - sx, ty - sy)
                 x = cls.tk_res_half[0] - cls.tk_sin(effect_angle) * 16
@@ -1583,9 +1578,20 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 effect_id = cls.tk_choice(Enemies.get_default_enemy().enemy_blood_frames)
                 cls.spawn_effect(effect_id, (x, y), angle=cls.tk_degrees(effect_angle))
 
+                # Reduce the damage with armor
+                if cls.i_playerStats['armor'][0] > 0:
+                    reduction = int(wpn_damage / 6.0)
+                    cls.i_playerStats['armor'][0] = max(0, cls.i_playerStats['armor'][0] - (wpn_damage - reduction))
+                    wpn_damage = reduction
+                    if cls.i_playerStats['armor'][0] == 0:
+                        # Drop the used armor (Visual effect)
+                        cls.spawn_effect('drop_armor', cls.tk_res_half, angle=cls.tk_degrees(effect_angle))
+                
                 cls.i_playerStats['health'][0] = max(0, cls.i_playerStats['health'][0] - wpn_damage)
-                if cls.i_playerStats['health'][0] == 0:
 
+                sound_id = cls.tk_choice(Enemies.get_default_enemy().enemy_pain_snd) 
+                cls.playSoundEffect(sound_id, env_damp=.5)
+                if cls.i_playerStats['health'][0] == 0:
                     # Spawn corpse where player died
                     effect_id = cls.tk_choice(Enemies.get_default_enemy().enemy_dead_frames)
                     cls.spawn_effect(effect_id, cls.tk_res_half, angle=cls.tk_degrees(effect_angle))
@@ -1778,7 +1784,8 @@ class Main(World, DeltaTimer):
         """
             Mainloop
 
-            return -> None
+            return -> Surface or (surface, *optional signal code)
+                                            Currently '1' is only valid which signals player death
             
         """
         self.playMusic(tracklist_play=True)
@@ -1838,6 +1845,10 @@ class Main(World, DeltaTimer):
             if hud_token['victory'] == -1:
                 # Return the last frame fade-out 
                 return self.screen
+
+            elif not hud_token['death'] and escape:
+                return self.screen, 1
+
             else:
                 if escape and not hud_token['victory']: 
                     escape = self.menus.all_menus['m_options'].run(self.screen, snapshot=1)

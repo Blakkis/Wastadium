@@ -22,8 +22,11 @@ class BookKeeping(object):
                     'kill': [0, 0],   # Kills   (Value, Max)
                     'pcup': [0, 0]}   # Pickups (Value, Max)
 
+    end_report = {'time': 0}
+
+    
     @classmethod
-    def getSetRecord(cls, name, value=None):
+    def getSetRecord(cls, name, value=None, end=False):
         """
             Use this function to fetch data/record from other places for after report
 
@@ -35,12 +38,19 @@ class BookKeeping(object):
         """
         assert name in cls.level_report, "Name does not exists"
         if value is None:
-            return name, '-' if cls.level_report[name] is None else cls.level_report[name]
+            if not end:
+                return name, '-' if cls.level_report[name] is None else cls.level_report[name]
+            else:
+                return cls.end_report[name]
+        
         else:
             if isinstance(cls.level_report[name], list):
                 cls.level_report[name] = [0, value]
             else:
                 cls.level_report[name] = value
+
+                if name in cls.end_report:
+                    cls.end_report[name] += value
 
     
     @classmethod
@@ -90,6 +100,7 @@ class BookKeeping(object):
         cls.task_record['condition_kill_all'] = enemy_count
         cls.task_record['condition_waypoint'] = endpoint
 
+        cls.level_report['time'] = None
 
 
 class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeeping):

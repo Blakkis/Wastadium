@@ -29,6 +29,9 @@ class uiGameTimer(GlobalGameData, BookKeeping):
             return -> None
 
         """
+        if not cls.i_playerStats['alive']:
+            return None
+
         color = 0xff, 0x0, 0x0
         if reset: 
             cls.hud_data['g_timer'].reset()
@@ -112,6 +115,7 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         
         self.font_0 = self.tk_font(self.ElementFonts[0], 20)
         self.font_1 = self.tk_font(self.ElementFonts[0], 24)
+        self.font_2 = self.tk_font(self.ElementFonts[0], 40)
 
         self.setup_timer(self.font_0)
         
@@ -153,6 +157,9 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         # Armor 
         self.armorBar = self.tk_surface((96, 28), self.tk_srcalpha)
         self.armorBar.fill((0x80, 0x0, 0x0, 0xaa))
+
+        #self.playerDeath = self.font_2.render("You Are Dead", True, (0xff, 0x0, ))
+        self.playerDeath = self.tk_renderText(self.font_2, "You Are Dead", True, (0xff, 0x0, 0x0), shadow=1)
 
         # Ui Events
         EventManager.__init__(self)
@@ -201,7 +208,17 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
             self.healthBarCritical.fill((0xaa, 0x0, critical, critical))
 
         self.tk_draw_circle(self.healthBar, (0xff, 0x0, 0x0), (93, 14 + beat), 2)
-        self.healthBar.scroll(-1, 0) 
+        self.healthBar.scroll(-1, 0)
+
+
+    def player_death(self, surface):
+        """
+            TBD
+
+            return -> None
+
+        """ 
+        pass
 
 
     def drawOverlay(self, surface, **kw):
@@ -223,13 +240,21 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         surface.blit(*self.olWeaponElem[:2])
         surface.blit(self.all_weapons_data[self.i_playerStats['weapon']][1], self.olWeaponElem[2])
 
-        # Health/Armor
+        # Health/Armor bars
         surface.blit(*self.olHpArmsElem[:2])
         pos = self.olHpArmsElem[2]
-        surface.blit(self.ElementTextures[0], pos)                          # Health/Armor Icon
-        surface.blit(self.healthBarCritical, (pos[0] + 40, pos[1] + 3))     # HealthBar bg which flashes
-        surface.blit(self.healthBar,         (pos[0] + 40, pos[1] + 3))     # Healthbar bg which contains the ECG effect
-        surface.blit(self.armorBar,          (pos[0] + 40, pos[1] + 35))    # Armorbar bg
+        surface.blit(self.ElementTextures[0], pos)                          
+        surface.blit(self.healthBarCritical, (pos[0] + 40, pos[1] + 3))     
+        surface.blit(self.healthBar,         (pos[0] + 40, pos[1] + 3))    
+        
+        armor_pos = pos[0] + 40, pos[1] + 35
+        surface.blit(self.armorBar, armor_pos) 
+        armor_bar_length = self.armorBar.get_width() 
+        armor_left = self.i_playerStats['armor'][1] / armor_bar_length * self.i_playerStats['armor'][0]
+        armor_bar = (armor_pos[0], armor_pos[1],
+                     min(armor_bar_length, armor_left),
+                     self.armorBar.get_height()) 
+        self.tk_draw_gfx_rect(surface, armor_bar, (0x10, 0x10, 0xaa, 0x80))
         
         # Health text (Separated from the blit to get the size of the string, so it can be anchored by the right side)
         text_surf = self.tk_renderText(self.font_0, str(self.i_playerStats['health'][0]), 
@@ -247,7 +272,13 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
              
         surface.blit(*self.tk_drawCursor(self.ElementCursors[0]))
 
-        hud_token = {'victory': self.check_if_victory_achieved(surface, quick_exit_key=kw['escape'])}
+        if not self.i_playerStats['alive']:
+            surface.blit(self.playerDeath, (self.tk_res_half[0] - self.playerDeath.get_width()  / 2, 
+                                            self.tk_res_half[1] - self.playerDeath.get_height() / 2 - 32))
+
+        hud_token = {'victory': self.check_if_victory_achieved(surface, quick_exit_key=kw['escape']) \
+                                if self.i_playerStats['alive'] else None,
+                     'death':   self.i_playerStats['alive']}
 
         return hud_token
 

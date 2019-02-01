@@ -174,8 +174,10 @@ class EpisodeParser(object):
     # All campaigns with atleast one valid map file
     all_valid_campaigns = {}
 
+
     __ref_functions = {}
     
+
     @classmethod
     def parseEpisodeFiles(cls):
         """
@@ -226,8 +228,12 @@ class EpisodeParser(object):
         """     
         for level in cls.all_valid_campaigns[episode_name]:
             cls.__ref_functions['build'](level, surface)
-            cls.__ref_functions['run']()
+            surface = cls.__ref_functions['run']()
+            if isinstance(surface, tuple):
+                break
 
+        if not isinstance(surface, tuple):
+            cls.__ref_functions['end'].run(surface)
         return None
 
     
