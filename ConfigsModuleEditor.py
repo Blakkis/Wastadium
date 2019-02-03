@@ -165,7 +165,7 @@ class ed_AutoWallSolver(object):
         """
             TBD
 
-            grid -> 5x5 grid sample from the world around the mouse
+            grid -> 5x5 grid sample from the world around the cell
             center -> mouse cell position
             wsize -> Worldsize (per cell)
             delete -> Delete the middle cell (Inverse of this function) 

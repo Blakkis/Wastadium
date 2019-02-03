@@ -654,7 +654,7 @@ class MenuShop(PagesHelp, Inventory):
 
         surface = self.function(*args, **kw)
 
-        if isinstance(surface, tuple):
+        if isinstance(surface, tuple) and surface[1] == 1:
             return surface
 
         self.run(surface)
@@ -772,6 +772,13 @@ class MenuShop(PagesHelp, Inventory):
 
         """
         quit_shop = False
+
+        surface, level_count = surface
+
+        # Shop can be skipped since the episode has been played
+        if level_count[0] == level_count[1]:
+            return surface
+
         while 1:
             surface.fill(self.tk_bg_color)
             #surface.blit(self.menu_background, (0, 0))
@@ -1114,7 +1121,7 @@ class MenuShop(PagesHelp, Inventory):
                 highlight_ammo = key
 
                 if kw['click']:
-                    if self.i_playerStats['credits'] < weapon_price:
+                    if kw['click'] == 1 and self.i_playerStats['credits'] < weapon_price:
                         self.ph_common_soundeffect(not_enough=True)
                     else: 
                         rsurf.rs_click(weapon=key.split(self.weapon_dual_tag)[0], dual_version=check_for_dual, key=kw['click'])
@@ -1155,7 +1162,7 @@ class MenuShop(PagesHelp, Inventory):
                 ammo_price = self.ms_render_item_stats(surface, self.__E_AMMO, py=rsurf.rs_getPos('bottom') + self.ms_font_height, key=key)
 
                 if kw['click']:
-                    if self.i_playerStats['credits'] < ammo_price:
+                    if kw['click'] == 1 and self.i_playerStats['credits'] < ammo_price:
                         self.ph_common_soundeffect(not_enough=True)
                     else: 
                         rsurf.rs_click(mod=kw['click_mod'], key=kw['click'], ammo_id=key)
@@ -1890,7 +1897,7 @@ class MenuReport(PagesHelp, BookKeeping):
 
         surface = self.function(*args, **kw)
 
-        if isinstance(surface, tuple):
+        if isinstance(surface, tuple) and surface[1] == 1:
             return surface
 
         self.run(surface)
@@ -1905,17 +1912,18 @@ class MenuReport(PagesHelp, BookKeeping):
 
         """
         self.build_report()
+
+        surface, level_count = surface
         
         self.playMusic(0, -1)
         while 1:
             surface.fill(self.tk_bg_color)
-            #surface.blit(self.menu_background, (0, 0))
             surface.blit(self.render_background('JaaBabe_Report'), (0, 0))
 
             for event in self.tk_eventDispatch():
                 if event.type == self.tk_event_keyup:
                     if event.key == self.tk_user['esc']:
-                        return surface
+                        return surface, level_count
 
                 self.menu_timer.get_event(event.type)
 
@@ -2014,7 +2022,10 @@ class MenuManager(EpisodeParser):
             return -> None
 
         """
-        self.episode_set_references(build=world_build_function, run=game_loop_function, end=self.all_menus['m_end'])
+        self.episode_set_references(build=world_build_function,        # Build the level 
+                                    run=game_loop_function,            # Play the level
+                                    end=self.all_menus['m_end'],       # Credits
+                                    reset=Inventory.setup_inventory)   # Reset player stats before the campaign starts
         self.all_menus['m_main'].run(surface)
 
 

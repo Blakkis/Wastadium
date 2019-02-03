@@ -16,8 +16,10 @@ class Inventory(Weapons, GadgetLoader):
     i_playerAmmo  = {}
 
     # Default weapon for the player (Using anything else than 'fist' might break the game)
-    __default_weapon = 'uuz62'
+    __default_weapon = 'fist'
 
+    @classmethod
+    def set_def_active_wpn(cls): cls.i_playerStats['weapon'] = cls.__default_weapon
     
     @classmethod
     def inv_changeWeapon(cls, key):
@@ -41,7 +43,6 @@ class Inventory(Weapons, GadgetLoader):
         cls.i_playerStats[wheel].rotate(1)
 
         return weapon_tag
-
     
     @classmethod
     def setup_inventory(cls, **kw):
@@ -53,7 +54,7 @@ class Inventory(Weapons, GadgetLoader):
         """
         cls.i_playerStats['weapon']  = cls.__default_weapon 
         cls.i_playerStats['health']  = [100, 100]
-        cls.i_playerStats['armor']   = [10, 100]    
+        cls.i_playerStats['armor']   = [100, 100]    
         cls.i_playerStats['credits'] = 10000
         cls.i_playerStats['alive']   = True
         
@@ -63,7 +64,7 @@ class Inventory(Weapons, GadgetLoader):
 
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count
-            cls.i_playerAmmo[key] = 7000
+            cls.i_playerAmmo[key] = 0
 
         # Setup weapon wheels
         for key, value in cls.all_weapons.iteritems():

@@ -564,7 +564,7 @@ class Enemies(TextureLoader, Inventory, Weapons, DeltaTimer, SoundMusic, TkWorld
                         self.enemy_state else self.tk_enemy_safe_distance  
         
         # Check if waypoint/player is in range
-        if dist_to_target > hunt_distance:
+        if dist_to_target > hunt_distance - self.tk_randrange(0, 8):
             
             # Index 9 is the idling/guarding animation
             dir_frames = 9 if not self.enemy_state else 1

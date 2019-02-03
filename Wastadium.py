@@ -59,8 +59,9 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                             'legs':   'legs_black',   # Legs str id
                             'torso':  'hero',         # Torso str id 
                             'model':  ''}             # Torso + weapon
-                            
-        self.player_data['model'] = '_'.join((self.player_data['torso'], self.i_playerStats['weapon'])) 
+        
+        self.player_default_wpn = '_'.join((self.player_data['torso'], self.i_playerStats['weapon'])) 
+        self.player_data['model'] = self.player_default_wpn 
         
         # Model  
         self.figure = [[self.player_data['legs'],  self.tk_rect(0, 0, 32, 32)], 
@@ -125,7 +126,7 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
                 self.footstep_id = 0 
 
 
-    def hero_load_animation(self, torso_name=None):
+    def hero_load_animation(self, torso_name=None, default_weapon=False):
         """
             Setup the player animation sequences
 
@@ -134,13 +135,19 @@ class Hero(TextureLoader, FootSteps, SoundMusic, Inventory,
             return -> None
             
         """
+        if default_weapon:
+            self.player_data['model'] = self.player_default_wpn
+            self.set_def_active_wpn() 
+        else:
+            self.player_data['model'] = torso_name
+        
         # Load frame lengths of the both animation sequences 
         # (Get the animation length from the first row of animations)
         self.legs_frame_cycle  = self.tk_cycle(xrange(len(self.legs_textures[self.player_data['legs']][1])))
-        self.torso_frame_cycle = self.tk_cycle(xrange(len(self.torso_textures[torso_name][1])))
+        self.torso_frame_cycle = self.tk_cycle(xrange(len(self.torso_textures[self.player_data['model']][1])))
         self.legs_frame_index = self.torso_frame_index = 0 
 
-        self.figure[1][0] = torso_name  # Update the model stack 
+        self.figure[1][0] = self.player_data['model']  # Update the model stack 
 
         # Get/Set the weapons firerate from the configs
         firerate = self.all_weapons[self.i_playerStats['weapon']]['w_firerate'] 
@@ -202,8 +209,7 @@ def hero_handle(self, surface, key_event=-1):
             new_weapon = self.inv_changeWeapon(key_event) 
 
             if new_weapon is not None:
-                self.player_data['model'] = '_'.join((self.player_data['torso'], new_weapon))
-                self.hero_load_animation(torso_name=self.player_data['model'])
+                self.hero_load_animation(torso_name='_'.join((self.player_data['torso'], new_weapon)))
                 self.playSoundEffect(184)   # Switch weapon sound
             else:
                 # Tried to select weapon from empty weapon wheel
@@ -687,6 +693,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         """
         # Note: Some layers are passed down edited to next processing
         #       That's why the order is, what it is
+        cls.hero.hero_load_animation(default_weapon=True)
 
         disk_data = cls.mp_load(map_name)
         cls.getSetRecord('name', map_name)
@@ -705,9 +712,6 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         cls.clear_casings()
 
         cls.clear_pickups()
-
-        # Revive player
-        cls.i_playerStats['alive'] = True
 
         cls.uioverlay.tick_timer(reset=True)
 
@@ -1780,12 +1784,15 @@ class Main(World, DeltaTimer):
     @MenuShop
     @MenuReport
     @MenuIntroOutro   
-    def gameloop(self):
+    def gameloop(self, level_count):
         """
             Mainloop
 
+            level_cout -> (Current level, number of levels in the episode)
+
             return -> Surface or (surface, *optional signal code)
                                             Currently '1' is only valid which signals player death
+                                            default: enumeration over number of levels
             
         """
         self.playMusic(tracklist_play=True)
@@ -1844,7 +1851,7 @@ class Main(World, DeltaTimer):
 
             if hud_token['victory'] == -1:
                 # Return the last frame fade-out 
-                return self.screen
+                return self.screen, level_count
 
             elif not hud_token['death'] and escape:
                 return self.screen, 1

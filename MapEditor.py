@@ -1720,7 +1720,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             # Auto
             if self.extra_options['auto_wall']:
                 # Gathex 5x5 cell sample around the target cell
-                _5x5_cells = []
+                kernel = []
                 for ny in xrange(index[1] - 2, index[1] + 3):
                     row = []
                     if not -1 < ny < self.w_Size[5]: continue
@@ -1730,23 +1730,23 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
                         
                         row.append((nx, ny, self.w_Cells_Single[ny][nx].cell_midTex[1:]))
                     
-                    _5x5_cells.append(row)
+                    kernel.append(row)
 
-                for p in ed_AutoWallSolver.aw_autoWallSolve(_5x5_cells, index, self.w_Size[4:6]):
+                for p in ed_AutoWallSolver.aw_autoWallSolve(kernel, index, self.w_Size[4:6]):
                     cx, cy = p[0] >> 3, p[1] >> 3
 
                     seg_index = self.pf_chunkSpatialPos(p[0], p[1], cx, cy)
 
                     self.pf_chunkClearArea(2, (cx, cy), (seg_index[0], seg_index[1], 32, 32))
 
-                    _rot, seg = p[2]   
+                    seg_rot, seg = p[2]   
 
                     self.w_Cells_Single[p[1]][p[0]].cell_midTex = (tex_data['name'], 
-                                                                   _rot, 
+                                                                   seg_rot, 
                                                                    seg)
 
                     tex = self.tso_tex_modes[tex_data['set']][tex_data['name']][seg]
-                    rot = self.ed_transform.rotate(tex, _rot * 90)     
+                    rot = self.ed_transform.rotate(tex, seg_rot * 90)     
                     self.w_Cells_Layers[self.E_ID_WALL][cy][cx][-1].blit(rot, seg_index) 
             
             # Manual
@@ -1765,7 +1765,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
 
             if self.extra_options['auto_wall']:
                 # Implement delete of the wall texture in automode
-                pass
+                return 0
             
             else:
                 self.w_Cells_Single[index[1]][index[0]].cell_midTex = (None, 0, 0)

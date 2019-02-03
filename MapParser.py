@@ -226,14 +226,19 @@ class EpisodeParser(object):
 
             return -> None
         """     
-        for level in cls.all_valid_campaigns[episode_name]:
-            cls.__ref_functions['build'](level, surface)
-            surface = cls.__ref_functions['run']()
-            if isinstance(surface, tuple):
-                break
+        cls.__ref_functions['reset']()
+        num_of_levels = len(cls.all_valid_campaigns[episode_name])
 
-        if not isinstance(surface, tuple):
-            cls.__ref_functions['end'].run(surface)
+        for enum, level in enumerate(cls.all_valid_campaigns[episode_name], start=1):
+            cls.__ref_functions['build'](level, surface)
+
+            # key:
+            #   1: Player died (Skip straight through back to menu)
+            surface, key = cls.__ref_functions['run'](level_count=(enum, num_of_levels))
+            if key == 1: return None
+
+        # Player completed the game. Show the end background with total completion time
+        cls.__ref_functions['end'].run(surface)
         return None
 
     
