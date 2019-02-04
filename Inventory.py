@@ -53,7 +53,7 @@ class Inventory(Weapons, GadgetLoader):
 
         """
         cls.i_playerStats['weapon']  = cls.__default_weapon 
-        cls.i_playerStats['health']  = [100, 100]
+        cls.i_playerStats['health']  = [60000, 60000]
         cls.i_playerStats['armor']   = [100, 100]    
         cls.i_playerStats['credits'] = 10000
         cls.i_playerStats['alive']   = True

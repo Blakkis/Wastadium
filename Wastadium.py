@@ -691,8 +691,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             return -> None
 
         """
-        # Note: Some layers are passed down edited to next processing
-        #       That's why the order is, what it is
+        # Set to default weapon at the start of every level
         cls.hero.hero_load_animation(default_weapon=True)
 
         disk_data = cls.mp_load(map_name)
@@ -734,6 +733,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Set the entity boundaries
         cls.w_ent_cell_size = (cls.w_map_size[0] / cls.tk_entity_sector_s,
                                cls.w_map_size[1] / cls.tk_entity_sector_s)
+
+        # Note: Some layers are passed down edited to next processing
+        #       That's why the order is, what it is
         
         # Build the cells
         cls.w_micro_cells[:] = []
@@ -1593,8 +1595,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 
                 cls.i_playerStats['health'][0] = max(0, cls.i_playerStats['health'][0] - wpn_damage)
 
-                sound_id = cls.tk_choice(Enemies.get_default_enemy().enemy_pain_snd) 
-                cls.playSoundEffect(sound_id, env_damp=.5)
+                if cls.tk_randrange(0, 100) > 70:
+                    sound_id = cls.tk_choice(Enemies.get_default_enemy().enemy_pain_snd) 
+                    cls.playSoundEffect(sound_id, env_damp=.5)
                 if cls.i_playerStats['health'][0] == 0:
                     # Spawn corpse where player died
                     effect_id = cls.tk_choice(Enemies.get_default_enemy().enemy_dead_frames)

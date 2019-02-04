@@ -874,7 +874,7 @@ class TkinterResources(VisualResources):
         nm_geo_frame = ed_LabelFrame(nm_frame, 'Map Basics', False)
         nm_geo_frame.grid(row=0, column=0, sticky=self.ed_sticky_full)
 
-        ed_LabelEntry(nm_geo_frame, 'MapName:',  self.bf_mapname,   row=0)
+        ed_LabelEntry(nm_geo_frame, 'Level Name:',  self.bf_mapname,   row=0)
         
         ed_LabelEntry(nm_geo_frame, 'Width:',    self.bf_mapwidth,  row=1)
         tk.Label(nm_geo_frame, text='Mult of 8!').grid(row=1, column=2, padx=5)
@@ -1719,35 +1719,7 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
             
             # Auto
             if self.extra_options['auto_wall']:
-                # Gathex 5x5 cell sample around the target cell
-                kernel = []
-                for ny in xrange(index[1] - 2, index[1] + 3):
-                    row = []
-                    if not -1 < ny < self.w_Size[5]: continue
-                    
-                    for nx in xrange(index[0] - 2, index[0] + 3):
-                        if not -1 < nx < self.w_Size[4]: continue
-                        
-                        row.append((nx, ny, self.w_Cells_Single[ny][nx].cell_midTex[1:]))
-                    
-                    kernel.append(row)
-
-                for p in ed_AutoWallSolver.aw_autoWallSolve(kernel, index, self.w_Size[4:6]):
-                    cx, cy = p[0] >> 3, p[1] >> 3
-
-                    seg_index = self.pf_chunkSpatialPos(p[0], p[1], cx, cy)
-
-                    self.pf_chunkClearArea(2, (cx, cy), (seg_index[0], seg_index[1], 32, 32))
-
-                    seg_rot, seg = p[2]   
-
-                    self.w_Cells_Single[p[1]][p[0]].cell_midTex = (tex_data['name'], 
-                                                                   seg_rot, 
-                                                                   seg)
-
-                    tex = self.tso_tex_modes[tex_data['set']][tex_data['name']][seg]
-                    rot = self.ed_transform.rotate(tex, seg_rot * 90)     
-                    self.w_Cells_Layers[self.E_ID_WALL][cy][cx][-1].blit(rot, seg_index) 
+                self.__pf_solveMatrix(base_index, index, tex_data)     
             
             # Manual
             else:
@@ -1764,14 +1736,68 @@ class PygameFrame(TkinterResources, World, DeltaTimer):
         if action_key == 2 and self.w_Cells_Single[index[1]][index[0]].cell_midTex[0] is not None:
 
             if self.extra_options['auto_wall']:
-                # Implement delete of the wall texture in automode
-                return 0
+                self.w_Cells_Single[index[1]][index[0]].cell_midTex = (None, 0, 0)
+                self.pf_chunkClearArea(2, (cx, cy), (base_index[0], base_index[1], 32, 32))
+                
+                self.__pf_solveMatrix(base_index, index, tex_data, inv=True)
             
             else:
                 self.w_Cells_Single[index[1]][index[0]].cell_midTex = (None, 0, 0)
                 self.pf_chunkClearArea(2, (cx, cy), (base_index[0], base_index[1], 32, 32))
 
             return -1
+
+
+    # Helper function for the floodfill
+    def __pf_solveMatrix(self, base_index, index, tex_data, inv=False):
+        """
+            TBD
+
+            return -> None
+
+        """
+        for p in ed_AutoWallSolver.aw_autoWallSolve(self.__pf_fetchKernel(index), index, self.w_Size[4:6], delete=inv):
+            cx, cy = p[0] >> 3, p[1] >> 3
+
+            seg_index = self.pf_chunkSpatialPos(p[0], p[1], cx, cy)
+
+            self.pf_chunkClearArea(2, (cx, cy), (seg_index[0], seg_index[1], 32, 32))
+
+            seg_rot, seg = p[2]   
+
+            self.w_Cells_Single[p[1]][p[0]].cell_midTex = (tex_data['name'], 
+                                                           seg_rot, 
+                                                           seg)
+
+            tex = self.tso_tex_modes[tex_data['set']][tex_data['name']][seg]
+            rot = self.ed_transform.rotate(tex, seg_rot * 90)     
+            self.w_Cells_Layers[self.E_ID_WALL][cy][cx][-1].blit(rot, seg_index)        
+
+
+    # Helper function for the floofill
+    def __pf_fetchKernel(self, index):
+        """
+            Fetch a 5x5 sample around the selected cell
+
+            index -> Map index
+
+            return -> List of all nearby cells
+
+        """
+        # Gathex 5x5 cell sample around the target cell
+        kernel = []
+        for ny in xrange(index[1] - 2, index[1] + 3):
+            row = []
+            if not -1 < ny < self.w_Size[5]: continue
+            
+            for nx in xrange(index[0] - 2, index[0] + 3):
+                if not -1 < nx < self.w_Size[4]: continue
+                
+                row.append((nx, ny, self.w_Cells_Single[ny][nx].cell_midTex[1:]))
+            
+            kernel.append(row) 
+
+        return kernel   
 
         
     @EditorStatistics.es_update_decorator(_id='id_decal_cnt')

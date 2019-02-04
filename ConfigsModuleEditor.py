@@ -70,6 +70,10 @@ class ed_AutoWallSolver(object):
         """
             Find the correct segment and orientation based on surrounding walls
 
+            center ->
+            grid ->
+            w_size ->
+
             return -> orient, segment
 
         """
@@ -181,9 +185,10 @@ class ed_AutoWallSolver(object):
         i = cls.__aw_getGridCenter(grid, center)
 
         # Solve the center wall first
-        cseg = (center[0], center[1], cls.__aw_segmentOrient(i, grid, wsize)) 
-        c_grid[i[1]][i[0]] = cseg
-        cell_layout.append(cseg)
+        if not delete:
+            cseg = (center[0], center[1], cls.__aw_segmentOrient(i, grid, wsize)) 
+            c_grid[i[1]][i[0]] = cseg
+            cell_layout.append(cseg)
 
         # Solve the surrounding segments
         for ofx, ofy in ((0, -1), (-1, 0), (0, 1), (1, 0)):
