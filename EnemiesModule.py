@@ -39,6 +39,7 @@ class Enemies(TextureLoader, Inventory, Weapons, DeltaTimer, SoundMusic, TkWorld
         self.enemy_speed  = kws['e_speed']
         self.enemy_health = kws['e_health']
         self.enemy_name   = kws['name']
+        self.enemy_price  = 0 if 'e_price' not in kws else kws['e_price']
 
         # Distance, Awareness cone, alarmed cone
         self.enemy_fov = kws['e_fovdist'][0], self.tk_radians(kws['e_fovdist'][1]) / 2, self.tk_radians(340) / 2
@@ -54,9 +55,9 @@ class Enemies(TextureLoader, Inventory, Weapons, DeltaTimer, SoundMusic, TkWorld
         self.enemy_gore_profile = kws['gore_profile']    # What gibs to spawn based on gore profile
         
         # Sound
-        self.enemy_pain_snd = kws['snd_pain']            # Pain sound id's 
-        self.enemy_death_snd = kws['snd_death']          # Death sound id's
-        self.enemy_hit_snd = kws['snd_hit']              # Getting hit
+        self.enemy_pain_snd  = kws['snd_pain']   # Pain sound id's 
+        self.enemy_death_snd = kws['snd_death']  # Death sound id's
+        self.enemy_hit_snd   = kws['snd_hit']    # Getting hit
         
         # 0: Guarding/Idling; 1: Agitated (Looking to murder the player)
         self.enemy_state  = 0
@@ -96,7 +97,9 @@ class Enemies(TextureLoader, Inventory, Weapons, DeltaTimer, SoundMusic, TkWorld
     #    return repr('(pos:{}, id:{})'.format(self.enemy_pos, self.enemy_id))
 
     
-    def __del__(self): self.enemyKilled(self.enemy_name)  
+    def __del__(self): 
+        # Report the death of enemy
+        self.enemyKilled(self.enemy_price)  
 
 
     @classmethod
@@ -564,7 +567,7 @@ class Enemies(TextureLoader, Inventory, Weapons, DeltaTimer, SoundMusic, TkWorld
                         self.enemy_state else self.tk_enemy_safe_distance  
         
         # Check if waypoint/player is in range
-        if dist_to_target > hunt_distance - self.tk_randrange(0, 8):
+        if dist_to_target > hunt_distance:
             
             # Index 9 is the idling/guarding animation
             dir_frames = 9 if not self.enemy_state else 1

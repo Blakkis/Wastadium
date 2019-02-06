@@ -20,7 +20,8 @@ class BookKeeping(object):
     level_report = {'time': None,     # Completion time
                     'name': None,     # Name of the level
                     'kill': [0, 0],   # Kills   (Value, Max)
-                    'pcup': [0, 0]}   # Pickups (Value, Max)
+                    'pcup': [0, 0],   # Pickups (Value, Max)
+                    'credits': 0}
 
     end_report = {'time': 0}
 
@@ -54,11 +55,11 @@ class BookKeeping(object):
 
     
     @classmethod
-    def enemyKilled(cls, enemy_name=None):
+    def enemyKilled(cls, enemy_head_price=None):
         """
             Call me, when enemy is killed
 
-            enemy_name -> Name(id) of the enemy killed
+            enemy_head_price -> Price for the enemy type's head
 
             return -> None
 
@@ -66,8 +67,7 @@ class BookKeeping(object):
         cls.task_record['condition_kill_all'] -= 1
         cls.level_report['kill'][0] += 1
         
-        if enemy_name is not None:
-            pass
+        cls.level_report['credits'] += enemy_head_price
 
     
     @classmethod
@@ -101,6 +101,7 @@ class BookKeeping(object):
         cls.task_record['condition_waypoint'] = endpoint
 
         cls.level_report['time'] = None
+        cls.level_report['credits'] = 0
 
 
 class VictoryCondition(GlobalGameData, DeltaTimer, TkWorldDataShared, BookKeeping):

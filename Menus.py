@@ -1801,7 +1801,7 @@ class MenuOptions(PagesHelp):
             self.tk_ParseDefaultConfigs(force_rewrite=1)
 
 
-class MenuReport(PagesHelp, BookKeeping):
+class MenuReport(PagesHelp, BookKeeping, Inventory):
 
     __rating_ranks = {'rank': '- Rank -',
                       20:  "Polygon",
@@ -1809,6 +1809,9 @@ class MenuReport(PagesHelp, BookKeeping):
                       60:  "Experienced",
                       80:  "Veteran",
                       100: "Agent 47"}
+
+    # Base credits earned completing the level
+    __level_bonus = 2500
    
     # Build all the report decorations during the first __call__
     __report_initialized = False
@@ -1869,17 +1872,46 @@ class MenuReport(PagesHelp, BookKeeping):
         """
         self.r_tags.clear()
 
-        key, value = self.getSetRecord('name')
-        self.r_tags[key] = self.two_color_text(self.font_0, "Level Report: \"{}\"".format(value))
+        key, time = self.getSetRecord('name')
+        self.r_tags[key] = self.two_color_text(self.font_0, "Level Report: \"{}\"".format(time))
 
-        key, value = self.getSetRecord('time')
-        self.r_tags[key] = self.two_color_text(self.font_0, "Time: {}".format(self.tk_seconds_to_hms(value, to_string=True))) 
+        key, time = self.getSetRecord('time')
+        self.r_tags[key] = self.two_color_text(self.font_0, "Time: {}".format(self.tk_seconds_to_hms(time, to_string=True))) 
 
-        key, value = self.getSetRecord('kill')
-        self.r_tags[key] = self.two_color_text(self.font_0, "Kills: {} / {}".format(*value))
+        key, kill = self.getSetRecord('kill')
+        self.r_tags[key] = self.two_color_text(self.font_0, "Kills: {} / {}".format(*kill))
 
-        key, value = self.getSetRecord('pcup')
-        self.r_tags[key] = self.two_color_text(self.font_0, "Pickups: {} / {}".format(*value))
+        key, pickups = self.getSetRecord('pcup')
+        self.r_tags[key] = self.two_color_text(self.font_0, "Pickups: {} / {}".format(*pickups))
+
+        key, credits = self.getSetRecord('credits') 
+        credits += self.__level_bonus
+        self.r_tags[key] = self.two_color_text(self.font_0, "Credits Earned: {}".format(credits))
+        self.i_playerStats['credits'] += credits
+
+        # Calculate the final score
+        score_per = 100.0 / 3.0    # Give each category percentage (Currently 3 categories)
+
+        # Estimated around 4 minutes per level
+        time_estimate = 60 * 4
+        time_score = (score_per / time_estimate) * max(0, (time_estimate - time))
+
+        try:
+            kill_score = (score_per / kill[1]) * kill[0]
+        except ZeroDivisionError:
+            # No kills, give the max score
+            kill_score = score_per
+
+        try:
+            pickup_score = (score_per / pickups[1]) * pickups[0]
+        except ZeroDivisionError:
+            # No pickups, give the max score
+            pickup_score = score_per
+
+        score = time_score + kill_score + pickup_score
+        score = min([i for i in self.__rating_ranks.iterkeys() if isinstance(i, int)], key=lambda i: abs(i - score))
+        
+        self.r_tags['final_score'] = score
 
         # (Left over from old idea)
         # Current day in DD/MM/YY format (As it should be) wink wink
@@ -1917,7 +1949,7 @@ class MenuReport(PagesHelp, BookKeeping):
         
         self.playMusic(0, -1)
         while 1:
-            surface.fill(self.tk_bg_color)
+            #surface.fill(self.tk_bg_color)
             surface.blit(self.render_background('JaaBabe_Report'), (0, 0))
 
             for event in self.tk_eventDispatch():
@@ -1931,7 +1963,8 @@ class MenuReport(PagesHelp, BookKeeping):
 
             row = self.background.rs_getPos('top')
             for key, surf in self.r_tags.iteritems():
-                if key == 'date': continue
+                if key in ('date', 'final_score', 'credits') : 
+                    continue
                 surface.blit(surf, (self.tk_res_half[0] - surf.get_width() / 2, row)) 
                 row += surf.get_height()  
 
@@ -1939,8 +1972,11 @@ class MenuReport(PagesHelp, BookKeeping):
             date = self.r_tags['date'] 
             surface.blit(date, (self.tk_res_half[0] - date.get_width() / 2, y - date.get_height()))
 
+            credits = self.r_tags['credits']
+            surface.blit(credits, (self.tk_res_half[0] - credits.get_width() / 2, y - date.get_height() * 2))
+
             # What rank did the player get
-            rank = self.__rating_ranks[20]
+            rank = self.__rating_ranks[self.r_tags['final_score']]
             cx, cy = self.background.rs_getPos('center')
             x, y = (cx - rank.get_width() / 2, cy - rank.get_height() / 2)
             rank_f, xf, yf = self.ph_flash_effect(rank, (x, y))

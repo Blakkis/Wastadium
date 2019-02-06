@@ -1598,6 +1598,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
                 if cls.tk_randrange(0, 100) > 70:
                     sound_id = cls.tk_choice(Enemies.get_default_enemy().enemy_pain_snd) 
                     cls.playSoundEffect(sound_id, env_damp=.5)
+                
                 if cls.i_playerStats['health'][0] == 0:
                     # Spawn corpse where player died
                     effect_id = cls.tk_choice(Enemies.get_default_enemy().enemy_dead_frames)
@@ -1798,7 +1799,7 @@ class Main(World, DeltaTimer):
                                             default: enumeration over number of levels
             
         """
-        self.playMusic(tracklist_play=True)
+        self.playMusic(tracklist_play=True, loops=-1)
 
         escape = 0          # Pause/Escape 
         ignore_delta = 0    # Delta calculation goes wild after pause

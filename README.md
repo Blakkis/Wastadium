@@ -12,7 +12,5 @@ inspiration comes from an old game call'd "TapanKaikki" by ErrorFree
 
 TODO:
   - Add more textures
-  - Finetune the enemies, weapons
-  - Fix the rating system
   - Fix the AoE
   - Build a campaign

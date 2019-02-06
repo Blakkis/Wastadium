@@ -161,6 +161,25 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         #self.playerDeath = self.font_2.render("You Are Dead", True, (0xff, 0x0, ))
         self.playerDeath = self.tk_renderText(self.font_2, "You Are Dead", True, (0xff, 0x0, 0x0), shadow=1)
 
+        # Weapon slots available
+        base_surf = self.tk_draw_rounded_rect(32, 32, 4, (0xcc, 0x0, 0x0), 0x90)
+        bw, bh = base_surf.get_size()
+        bw /= 2; bh /= 2
+
+        self.avai_wpn_slots = {}
+        for key in xrange(1, len(self.tk_slots_available) + 1):
+            # Weapon in the wheel
+            base_copy = base_surf.copy()
+            key_slot = self.tk_renderText(self.font_0, str(key), True, (0xff, 0x0, 0x80), shadow=1)
+            base_copy.blit(key_slot, (bw - key_slot.get_width() / 2, bh - key_slot.get_height() / 2))
+            self.avai_wpn_slots[key] = base_copy
+
+            # No weapon in the wheel
+            base_copy = base_surf.copy()
+            key_slot = self.tk_renderText(self.font_0, str(key), True, (0x80, 0x0, 0x0), shadow=1)
+            base_copy.blit(key_slot, (bw - key_slot.get_width() / 2, bh - key_slot.get_height() / 2))
+            self.avai_wpn_slots[-key] = base_copy
+
         # Ui Events
         EventManager.__init__(self)
         self.Event_newEvent(1000, self.tick_timer)
@@ -211,16 +230,6 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         self.healthBar.scroll(-1, 0)
 
 
-    def player_death(self, surface):
-        """
-            TBD
-
-            return -> None
-
-        """ 
-        pass
-
-
     def drawOverlay(self, surface, **kw):
         """
             Draw the overlay during gameplay
@@ -241,7 +250,9 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         surface.blit(self.all_weapons_data[self.i_playerStats['weapon']][1], self.olWeaponElem[2])
 
         # Health/Armor bars
-        surface.blit(*self.olHpArmsElem[:2])
+        bar_bg, bar_bg_pos = self.olHpArmsElem[:2] 
+        surface.blit(bar_bg, bar_bg_pos)
+        
         pos = self.olHpArmsElem[2]
         surface.blit(self.ElementTextures[0], pos)                          
         surface.blit(self.healthBarCritical, (pos[0] + 40, pos[1] + 3))     
@@ -269,6 +280,22 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         # Weapons with infinite ammo, do not need the ammo gui element
         ammo_id = self.all_weapons_data[self.i_playerStats['weapon']][0]
         if ammo_id != -1: self.drawOverlayAmmo(surface, ammo_id)
+
+        # Draw available weapon slots
+        base_y = self.tk_resolution[1] - 2 
+        base_x = bar_bg_pos[0] + bar_bg.get_width() - 6 
+        base_x_def = bar_bg_pos[0] + bar_bg.get_width() - 6 
+
+        for key in xrange(1, len(self.tk_slots_available) + 1):
+            wpn_wheel = 'w_{}'.format(key)
+
+            surf = self.avai_wpn_slots[key if len(self.i_playerStats[wpn_wheel]) > 0 else -key] 
+            surface.blit(surf, (base_x, base_y - surf.get_height()))
+            
+            base_x += surf.get_width() + 2
+            if key == 3: 
+                base_y -= surf.get_height() + 2
+                base_x = base_x_def 
              
         surface.blit(*self.tk_drawCursor(self.ElementCursors[0]))
 
