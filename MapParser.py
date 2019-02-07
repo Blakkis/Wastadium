@@ -92,6 +92,7 @@ for key in locals().keys():
 
 #
 # ---- Exceptions (Note: Move these in to their own module)
+# Note: These errors don't provide enough data fix it!
 
 class WastadiumEditorException(Exception):
     pass 
@@ -102,7 +103,6 @@ def W_errorHandler(e, error_id=''):
     else: mp_error.showerror(error_id, e)
 
 
-# Note: Since users can edit the files, i tried to provide as much context for errors as possible
 def W_errorToken(section_tag):
     """
         Use this decorator to mark setup/init functions
@@ -721,11 +721,14 @@ class Packer(object):
 
         else:
             # Check that the number of cells is within valid map ranges
-            valid_cube = len(data.getchildren())
-            if valid_cube not in MAX_VALID_CUBE_RANGE:
-                raise WastadiumEditorException(XML_PARSING_ERROR)
+            #valid_cube = len(data.getchildren())
+            #if valid_cube not in MAX_VALID_CUBE_RANGE:
+            #    raise WastadiumEditorException(XML_PARSING_ERROR)
+            
+            d = data.getchildren()[-1].get('name').split('_')[-1].split('.')
+            row_length = int(d[0])
 
-            row_length = int(sqrt(valid_cube)) - 1
+            #print row_length
             final_matrix = []
 
             row = []

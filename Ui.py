@@ -225,6 +225,8 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         if self.i_playerStats['health'][0] <= self.__healthCriticalThreshhold:
             critical = self.healthBarCriticalCycle.next()
             self.healthBarCritical.fill((0xaa, 0x0, critical, critical))
+        else:
+            self.healthBarCritical.fill((0xaa, 0x0, 0x0, 0x0))
 
         self.tk_draw_circle(self.healthBar, (0xff, 0x0, 0x0), (93, 14 + beat), 2)
         self.healthBar.scroll(-1, 0)

@@ -11,6 +11,4 @@ inspiration comes from an old game call'd "TapanKaikki" by ErrorFree
 
 
 TODO:
-  - Add more textures
-  - Fix the AoE
   - Build a campaign

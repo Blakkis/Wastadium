@@ -1676,15 +1676,20 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         wx, wy = cls.get_spatial_pos(ex, ey, 0)                  # Get the World position for the effect 
         max_dist = cls.all_weapons[weapon]['w_aoe_range'] / 2    # Area-of-effect range
 
-        # Check if any enemy got hit by aoe damage
-        for check in cls.get_ent_col(gx, gy, get_ids=1):
+        nearby = cls.get_ent_col(gx, gy, get_ids=1)
+
+        # Add player rect (Center of the screen) for AoE check
+        px, py = cls.tk_res_half
+        nearby.append((cls.tk_rect(px - 16, py - 16, 32, 32), -2))
+        
+        # Check if any enemy/(player) got hit by aoe damage
+        for check in nearby:
             x, y = check[0].center
             dist = cls.tk_hypot(ex - x, ey - y)
             angle = cls.tk_atan2(ey - y, ex - x)
             
-            if dist < max_dist:
-                if not cls.get_ray_env_collisions_poor(wx, wy, angle, int(dist)):
-                    cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)      
+            if dist < max_dist and not cls.get_ray_env_collisions_poor(wx, wy, angle, int(dist)):
+                cls.calc_dmg_taken(x, y, ex, ey, weapon, check[1], ignore_after=1)      
 
     
     @classmethod

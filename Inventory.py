@@ -18,9 +18,11 @@ class Inventory(Weapons, GadgetLoader):
     # Default weapon for the player (Using anything else than 'fist' might break the game)
     __default_weapon = 'fist'
 
+    
     @classmethod
     def set_def_active_wpn(cls): cls.i_playerStats['weapon'] = cls.__default_weapon
     
+
     @classmethod
     def inv_changeWeapon(cls, key):
         """
@@ -43,6 +45,7 @@ class Inventory(Weapons, GadgetLoader):
         cls.i_playerStats[wheel].rotate(1)
 
         return weapon_tag
+    
     
     @classmethod
     def setup_inventory(cls, **kw):

@@ -1,4 +1,6 @@
 import Tkinter as tk
+import tkMessageBox as mp_error
+
 import ttk as tk_adv
 from os import path
 
@@ -242,11 +244,17 @@ class Launcher_Main(tk.Frame, object):
             return -> None
             
         """
-        if game_or_editor == 'game':
-            Popen(["python", "wastadium.py"])
+        try:
+            if game_or_editor == 'game':
+                name = 'Wastadium.exe' 
+                Popen([name, ''])
 
-        elif game_or_editor == 'editor':
-            Popen(["python", "mapeditor.py"])
+            elif game_or_editor == 'editor':
+                name = 'MapEditor.exe' 
+                Popen([name, ''])
+        
+        except Exception:
+            mp_error.showerror("Where Did They Go?", "Unable to locate: \"{}\"".format(name))
 
 
 

@@ -283,8 +283,13 @@ class World(VisualResources, MapParser, Packer):
                 for y, column in enumerate(disk_data[cls.MAP_CELL_XML]) if disk_data else enumerate(xrange(height)):
                     r = []
                     for x, row in enumerate(column) if disk_data else enumerate(xrange(width)):
-                        f_id = row.low[0] if disk_data else floor_id 
-                        full_world.blit(cls.low_textures[f_id]['tex_main'], (x * 32, y * 32))
+                        if disk_data:
+                            f_id, orient = row.low
+                        else:
+                            orient = 0
+                            f_id = floor_id
+ 
+                        full_world.blit(cls.ed_transform.rotate(cls.low_textures[f_id]['tex_main'], orient * 90), (x * 32, y * 32))
                         r.append(World(x, y, f_id))
                     cls.w_Cells_Single.append(r)
 

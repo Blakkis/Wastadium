@@ -91,7 +91,7 @@ class DefaultConfigParser(object):
                     ('max_fps',             60),
                     ('resolution',  (1280, 720)),
                     ('fullscreen',            0),
-                    ('control_scheme',        1),
+                    ('control_scheme',        0),
                     ('world_shadows',         1),
                     ('world_char_shadows',    1),
                     ('world_shadows_quality', 1),

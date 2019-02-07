@@ -1,5 +1,6 @@
 #PROJECT_NAME = 'Wastadium.py'
-PROJECT_NAME = 'MapEditor.py'
+#PROJECT_NAME = 'MapEditor.py'
+PROJECT_NAME = 'Wastadium_Launcher.py'
  
 try:
     from distutils.core import setup

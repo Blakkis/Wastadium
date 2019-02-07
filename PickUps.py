@@ -189,22 +189,16 @@ class Pickups(Inventory, BookKeeping):
         if token.id in ('body_armor', 'health_pack', 'hot_meal'):
             # Both health_pack and hot_meal gives health
             stat = 'armor' if token.id == 'body_armor' else 'health'
-            if cls.i_playerStats[stat][0] == cls.i_playerStats[stat][1]:
-                # Health or armor is full, no need to pickup the item
-                return False
-            else: 
-                v = min(cls.i_playerStats[stat][1], cls.i_playerStats[stat][0] + token.value) 
-                cls.i_playerStats[stat][0] = v
-                return True
+            
+            v = min(cls.i_playerStats[stat][1], cls.i_playerStats[stat][0] + token.value) 
+            cls.i_playerStats[stat][0] = v
 
         elif token.id == 'cash_suitcase':
             cls.i_playerStats['credits'] += token.value
-            return True
 
         elif token.id == 'ammo_cache':
             ammo_id = [k for k, v in cls.all_ammo_data.items() if v[0] == token.content][0]
             cls.i_playerAmmo[ammo_id] += token.value 
-            return True
 
         elif token.id == 'weapon_cache':
             # Copy-pasted from Menu shop
@@ -221,11 +215,10 @@ class Pickups(Inventory, BookKeeping):
                     weapon_choice = weapon
 
             if weapon_choice is not None:
-                cls.i_playerStats[w_cat].append(weapon_choice)
-                return True    
+                cls.i_playerStats[w_cat].append(weapon_choice)   
 
-        # Unknown item. Dont pick it up
-        return False
+        # Pickup
+        return True
 
     
 
@@ -243,7 +236,8 @@ class Pickups(Inventory, BookKeeping):
 
         c_keys = cls.pu_all_world_pickups.keys() 
         for _id in c_keys:
-            if _id in cls.pu_all_pickup_msg: continue
+            if _id in cls.pu_all_pickup_msg: 
+                continue
 
             x, y, pick = cls.pu_all_world_pickups[_id][:-1] 
             tex = cls.pu_pickups[pick.id]['p_tex']
@@ -276,7 +270,9 @@ class Pickups(Inventory, BookKeeping):
         if cls.pu_all_pickup_msg: 
             for _id in cls.pu_all_pickup_msg:
                 msg = cls.pu_all_world_pickups[_id][-1].render_msg()
-                if not msg: _del.add(_id); continue
+                if not msg: 
+                    _del.add(_id) 
+                    continue
 
                 surface.blit(*msg)  
 

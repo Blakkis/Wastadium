@@ -197,8 +197,9 @@ class MenuEnd(PagesHelp, BookKeeping):
     def run(self, surface):
         time_b = self.tk_seconds_to_hms(self.getSetRecord('time', end=True), to_string=True)
         time_b = self.tk_renderText(self.font_1, time_b, True, (0xff, 0x0, 0x80), shadow=1) 
+        
         while 1:
-            surface.fill(self.tk_bg_color)
+            #surface.fill(self.tk_bg_color)
 
             surface.blit(self.render_background('end'), (0, 0))
 
@@ -420,8 +421,7 @@ class MenuMain(PagesHelp, EventManager):
         self.playMusic(0, -1)
         
         while 1:
-            surface.fill(self.tk_bg_color)
-            
+            #surface.fill(self.tk_bg_color)
             surface.blit(self.render_background('JaaBabe_Main'), (0, 0))
 
             click = 0; tick = 0
@@ -537,8 +537,7 @@ class MenuCampaign(PagesHelp, EpisodeParser):
     
     def run(self, surface):
         while 1:
-            surface.fill(self.tk_bg_color)
-            
+            #surface.fill(self.tk_bg_color)
             #surface.blit(self.menu_background, (0, 0))
 
             surface.blit(self.render_background('JaaBabe_Main'), (0, 0))
@@ -780,7 +779,7 @@ class MenuShop(PagesHelp, Inventory):
             return surface
 
         while 1:
-            surface.fill(self.tk_bg_color)
+            #surface.fill(self.tk_bg_color)
             #surface.blit(self.menu_background, (0, 0))
 
             surface.blit(self.render_background('JaaBabe_Shop'), (0, 0))
@@ -1811,7 +1810,7 @@ class MenuReport(PagesHelp, BookKeeping, Inventory):
                       100: "Agent 47"}
 
     # Base credits earned completing the level
-    __level_bonus = 2500
+    __level_bonus = 1500
    
     # Build all the report decorations during the first __call__
     __report_initialized = False
@@ -1872,8 +1871,9 @@ class MenuReport(PagesHelp, BookKeeping, Inventory):
         """
         self.r_tags.clear()
 
-        key, time = self.getSetRecord('name')
-        self.r_tags[key] = self.two_color_text(self.font_0, "Level Report: \"{}\"".format(time))
+        key, name = self.getSetRecord('name')
+        name = name.split('/')[-1]    # Disgard the folder name if there is one
+        self.r_tags[key] = self.two_color_text(self.font_0, "Level Report: \"{}\"".format(name))
 
         key, time = self.getSetRecord('time')
         self.r_tags[key] = self.two_color_text(self.font_0, "Time: {}".format(self.tk_seconds_to_hms(time, to_string=True))) 
