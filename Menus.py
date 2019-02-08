@@ -1505,7 +1505,7 @@ class MenuOptions(PagesHelp):
 
         # ---- Sound variables 
         # Note: Move all this in to its own class
-        self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
+        self.mo_music_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0, self.def_values['audio_music_level'])}
         self.mo_music_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_music_volume['radial'].rs_mask, 1), 
                                                    snd_click=181, _id=0) 
         
@@ -1516,7 +1516,7 @@ class MenuOptions(PagesHelp):
                                          self.mo_music_volume['radial'].rs_color, shadow=True)
 
 
-        self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0)}
+        self.mo_effect_volume = {'radial': RadialSlider(64, (0xff, 0x0, 0x0), 96 * self.menu_scale, 1.0, self.def_values['audio_effect_level'])}
         self.mo_effect_volume['mask'] = RectSurface(self.tk_distortSurface(self.mo_effect_volume['radial'].rs_mask, 1), 
                                                     snd_click=181, _id=1)
         
@@ -1635,6 +1635,10 @@ class MenuOptions(PagesHelp):
                             if self.mo_display_func == 1: 
                                 self.mo_uk_editme = ''
                             
+                            if self.mo_display_func == 0:
+                                # Save audio settings when exiting the audio menu
+                                self.tk_ParseDefaultConfigs(force_rewrite=1)
+
                             # Go back to root
                             self.mo_display_func = -1
 
@@ -1719,7 +1723,6 @@ class MenuOptions(PagesHelp):
                 if vol['mask'].rs_id == self.mo_snd_delta_id[2]:
                     vol['radial'].rs_slide(mx, my, vol['mask'].rs_getPos('center'))
                     self.editVolume(enum, value, True, play_sound_cue=enum)  
-
 
     
     def mo_userkeys_settings(self, surface, mx, my, click, **kw):

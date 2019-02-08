@@ -65,6 +65,7 @@ class Inventory(Weapons, GadgetLoader):
         for key in cls.gl_gadgets: 
             cls.i_playerStats[key] = 0
 
+        # Ammo
         for key, value in cls.all_ammo_data.iteritems():
             # Id = Count
             cls.i_playerAmmo[key] = 0

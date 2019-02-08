@@ -58,7 +58,7 @@ class TextureLoader(GlobalGameData):
 
         # NOTE: Allow walls and objects be loaded from spritesheets too?
 
-        linedata = ('tex_main', 'tex_effect_id', 'tex_walk_sound_id', 'tex_collision', 'tex_hit_sound_id')
+        linedata = ('tex_main', 'tex_effect_id', 'tex_walk_sound_id', 'tex_collision', 'tex_hit_sound_id', 'tex_cast_shadow')
 
         for level, loc in enumerate(('floors', 'walls', 'objects'), start=1):
             for cfg in cls.tk_iglob(cls.tk_path.join(cls.tk_path.join(src_world_path_cfg, loc, '*.cfg'))):
@@ -96,7 +96,8 @@ class TextureLoader(GlobalGameData):
 
                         elif line[0] == linedata[1]: tex_data[line[0]] = tuple(v) if v[0] else None                                 # Hit Effects
                         elif line[0] == linedata[3]: tex_data[line[0]] = cls.tk_literal_eval(v[0])                                  # Collision
-                        elif line[0] == linedata[4]: tex_data[line[0]] = tuple([int(snd) for snd in v if snd]) if v[0] else None    # Hit sound  
+                        elif line[0] == linedata[4]: tex_data[line[0]] = tuple([int(snd) for snd in v if snd]) if v[0] else None    # Hit sound
+                        elif line[0] == linedata[5]: tex_data[line[0]] = cls.tk_literal_eval(v[0])                                  # Cast static shadows?  
 
                         else:
                             # Rest are subtextures (Which should be from 1 to 6)

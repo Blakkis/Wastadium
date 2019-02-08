@@ -872,6 +872,8 @@ class MapParser(Packer):
             remove(filename)
             filename = filename.split('.')[0]
 
+        cls.bf_mapname.set(filename.split('/')[-1])
+
         try:
             # Create directory for the map in the target base path
             map_path = path.join(getcwd(), MAP_PATH_BASE, filename)

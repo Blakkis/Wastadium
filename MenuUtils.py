@@ -61,7 +61,7 @@ class RectSurface(SoundMusic):
 
 
 class RadialSlider(GlobalGameData):
-    def __init__(self, steps, color, radius, map_value):
+    def __init__(self, steps, color, radius, map_value, default_value=1.0):
         # Note: Need to rework how the circle is builded to support all ranges of values
         # Currently 64 is your best bet
         self._rs_steps = steps    # 64 Currently works nicely  
@@ -75,25 +75,19 @@ class RadialSlider(GlobalGameData):
         self._rs_value = {'map': map_value}
 
         # Create the slider mask and steps
-        self._rs_create_radial()
+        self._rs_create_radial(default_value)
 
     
     @property
-    def rs_size(self):
-        return self._rs_size
-    
+    def rs_size(self): return self._rs_size
     
     @property
-    def rs_mask(self):
-        return self._rs_mask
+    def rs_mask(self): return self._rs_mask
 
-    
     @property
-    def rs_color(self):
-        return self._rs_color
+    def rs_color(self): return self._rs_color
     
-    
-    def _rs_create_radial(self):
+    def _rs_create_radial(self, default_value):
         """
             Create the radial slider
 
@@ -126,16 +120,19 @@ class RadialSlider(GlobalGameData):
         self._rs_mask = self.tk_blur_surface(self._rs_mask)    # Blur the mask a little bit(shitty one)
         
         # Value for controlling the slider input/output
-        self._rs_value['max'] = len(self._rs_ring_points[0])                    # Max steps on the slider
-        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max']))        # Set initial value to center
-        self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']   # Get the range multiplier
-        self._rs_value['adi'] = float(270) / self._rs_value['max']              # Angle value per step
-        self._rs_value['dva'] = self._rs_value['mul'] * self._rs_value['val']   # Default value  
+        self._rs_value['max'] = len(self._rs_ring_points[0])                             # 
+        self._rs_value['val'] = int(self.tk_ceil(self._rs_value['max']) * default_value) # 
+        self._rs_value['mul'] = self._rs_value['map'] / self._rs_value['max']            # 
+        self._rs_value['adi'] = float(270) / self._rs_value['max']                       # 
+        self._rs_value['dva'] = default_value                                            #  
 
     
     def rs_slide(self, sx, sy, pos):
         """
-            TBD
+            Handle the radial slider
+
+            sx, sy -> Position of the handler relative to the slider center (Mouse position most likely)
+            pos -> Position of the radial slider (For sx, sy)
 
             return -> None
 
@@ -148,13 +145,11 @@ class RadialSlider(GlobalGameData):
 
     
     def rs_render_slider(self, surface, pos=None):
-        # Note: Pack the mask drawing here too.
-        # Even ifSlider it used the RectSurface as it's base
         """
             Render the radial slider
 
             surface -> Active screen surface
-            pos -> (x, y) position
+            pos -> (x, y) position (Screen coordinates)
 
             return -> Current slider value mapped within-range
 

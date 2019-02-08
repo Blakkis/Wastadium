@@ -13,8 +13,8 @@ class SoundMusic(GlobalGameData):
     all_music = {}
 
     # Default volumes for sound and music
-    sm_volumes = {0: 1.0,   # Music
-                  1: 1.0}   # Effects
+    sm_volumes = {0: GlobalGameData.def_values['audio_music_level'],   # Music
+                  1: GlobalGameData.def_values['audio_effect_level']}  # Effects
 
     # Volume range for falloff of the sound
     sm_max_hearing_range = 350.0
@@ -69,11 +69,13 @@ class SoundMusic(GlobalGameData):
         if edit:
             if volume_id == 0 and volume != cls.sm_volumes[volume_id]:
                 cls.sm_volumes[volume_id] = volume
+                cls.def_values['audio_music_level'] = volume
                 cls.tk_mixer_music.set_volume(volume)
 
             # Effects
             elif volume_id == 1 and volume != cls.sm_volumes[volume_id]:
                 cls.sm_volumes[volume_id] = volume
+                cls.def_values['audio_effect_level'] = volume
                 if play_sound_cue: cls.playSoundEffect(188)     
 
 

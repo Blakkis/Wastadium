@@ -434,6 +434,9 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         # Sound effect when bullets interact with this cell
         self.w_sound_hit  = self.mid_textures[mid_id]['tex_hit_sound_id'] if mid_id else \
                             self.low_textures[low_id]['tex_hit_sound_id']
+
+        # Can this wall cast static world shadows?
+        self.w_cast_shadow = False if not mid_id else self.mid_textures[mid_id]['tex_cast_shadow'] 
         
         # Wall collision(Cast shadows and blocks projectiles)
         self.w_collision = self.tk_rect(self.pos[0], self.pos[1], 32, 32) if collision else False
@@ -969,7 +972,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
         walls = cls.get_env_col(pos[0] >> 5, pos[1] >> 5, 
                                 min_x=spatial_len, max_x=spatial_len + 1, 
                                 min_y=spatial_len, max_y=spatial_len + 1,
-                                ignore_objects=True)
+                                ignore_objects=True, static_shadows=1)
 
         # Topleft spatial pos
         topleftPos = (pos[0] >> 5) - spatial_len, (pos[1] >> 5) - spatial_len
@@ -1035,7 +1038,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             for enum2, row in enumerate(column):
                 # Which layer this wall is part of
                 pos = 32 * enum2, 32 * enum1
-                if row.w_collision:
+                if row.w_cast_shadow and row.w_collision:
                     # Build a quadrilateral stretching from each block to topleft 
                     # (Possible allow direction customization?)
                     cls.tk_draw_polygon(static_shadow_map, cls.tk_static_shadow_color, 
@@ -1693,7 +1696,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
     
     @classmethod
-    def get_env_col(cls, x, y, min_x=1, max_x=2, min_y=1, max_y=2, surface=None, ignore_objects=0):
+    def get_env_col(cls, x, y, min_x=1, max_x=2, min_y=1, max_y=2, surface=None, ignore_objects=0, static_shadows=0):
         """
             Get all the collisions around the x, y position from the cells
             
@@ -1701,6 +1704,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
             min, max -> Boundaries around the source (x, y)
             ignore_objects -> Ignore object collisions?
+            static_shadows -> Ignore walls with cast_static_shadow = False
             
             return -> A list of all near cells collisions near the origin cell
             
@@ -1716,10 +1720,13 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
 
                 # Walls
                 if cls.w_micro_cells[cy][cx].w_collision:
-                    rect = cls.w_micro_cells[cy][cx].w_collision
-                    near_collisions.append(cls.tk_rect(rect.x + cls.cell_x,
-                                                       rect.y + cls.cell_y,
-                                                       32, 32))
+                    if static_shadows and not cls.w_micro_cells[cy][cx].w_cast_shadow:
+                        pass
+                    else:
+                        rect = cls.w_micro_cells[cy][cx].w_collision
+                        near_collisions.append(cls.tk_rect(rect.x + cls.cell_x,
+                                                           rect.y + cls.cell_y,
+                                                           32, 32))
 
                 # Objects
                 elif not ignore_objects and cls.w_micro_cells[cy][cx].w_collision_obj:
@@ -1777,7 +1784,7 @@ class Main(World, DeltaTimer):
         self.tk_init()  
         self.set_basic_window_elements(mouse_visibility=False)    
 
-        self.screen = self.tk_display.set_mode(self.tk_resolution) 
+        self.screen = self.tk_display.set_mode(self.tk_resolution, self.tk_fullscreen, 32) 
 
         # Investigate further:
         # Keyboards mods are set at random values(Not talking about numlock or caps)

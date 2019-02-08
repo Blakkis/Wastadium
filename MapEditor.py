@@ -83,7 +83,7 @@ class VisualResources(TextureLoader, uiElements, DecalGibsHandler, EditorStatist
 
 class World(VisualResources, MapParser, Packer):
 
-    w_Pos = [0, 0]          # World position
+    w_Pos = [0, 0]    # World position
     
     # World additional read/write data dict
     w_Data = {'mouseIndex': (0, 0)}
@@ -111,10 +111,10 @@ class World(VisualResources, MapParser, Packer):
     w_Display_Layer = {key: [1, None] for key in w_enum.itervalues()}
     w_Display_Layer[-1] = [0, None]     # Display sectors (Special)
 
-    def __init__(self, x, y, low_id):
+    def __init__(self, x, y, low_id, low_id_orient):
         self.cell_pos = 32 * x, 32 * y
         # Texture, Orientation(0-3), *(wall segment id)
-        self.cell_lowTex =  low_id, 0
+        self.cell_lowTex =  low_id, low_id_orient
         self._cell_midTex = None,   0, 0
         self._cell_objTex = None,   0
         
@@ -242,6 +242,7 @@ class World(VisualResources, MapParser, Packer):
         disk_data = load_from_disk
         
         if load_from_disk:
+            print cls.bf_mapname
             cls.mp_load(editor_loader=load_from_disk)
             disk_data = cls.decompressAndParse(editor_loader=load_from_disk)
             
@@ -276,6 +277,7 @@ class World(VisualResources, MapParser, Packer):
 
         cls.w_Cells_Single[:] = []
         chunk = 32 * cls.ed_chunk_size 
+        
         for buildstep in (cls.E_ID_GROUND, cls.E_ID_OBJECT, cls.E_ID_WALL):
             full_world = cls.ed_surface((32 * width, 32 * height), pygame.SRCALPHA)
             
@@ -286,11 +288,10 @@ class World(VisualResources, MapParser, Packer):
                         if disk_data:
                             f_id, orient = row.low
                         else:
-                            orient = 0
-                            f_id = floor_id
- 
+                            f_id, orient = floor_id, 0
+                        
                         full_world.blit(cls.ed_transform.rotate(cls.low_textures[f_id]['tex_main'], orient * 90), (x * 32, y * 32))
-                        r.append(World(x, y, f_id))
+                        r.append(World(x, y, f_id, orient))
                     cls.w_Cells_Single.append(r)
 
             
@@ -428,7 +429,7 @@ class World(VisualResources, MapParser, Packer):
 
         # From Topright -> down
         yield 1, 270, w - 1, 0  
-        for y in xrange(1, h - 1): yield 2, 90,  w - 1, y
+        for y in xrange(1, h - 1): yield 2, 270,  w - 1, y
 
         # Bottomright -> left
         yield 1, 180, w - 1, h - 1 
@@ -436,7 +437,7 @@ class World(VisualResources, MapParser, Packer):
 
         # Bottomleft -> up
         yield 1, 90, 0, h - 1 
-        for y in xrange(h - 2, 0, -1): yield 2, 270, 0, y   
+        for y in xrange(h - 2, 0, -1): yield 2, 90, 0, y   
 
 
 

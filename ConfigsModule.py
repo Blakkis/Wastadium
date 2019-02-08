@@ -119,7 +119,9 @@ class DefaultConfigParser(object):
                     ('audio_max_channels',  256),
                     ('audio_buffer_size',   512),
                     ('audio_frequency',   22050),
-                    ('audio_mono_or_stereo',  2)]) 
+                    ('audio_mono_or_stereo',  2),
+                    ('audio_music_level',   1.0),
+                    ('audio_effect_level',  1.0)]) 
 
     @classmethod
     def tk_readFile(cls, _file, mode='r', comment='#', keyValue_delimiter='='):
@@ -188,7 +190,7 @@ class GlobalGameData(DefaultConfigParser):
     tk_name     = 'Wastadium'
     tk_dev_name = 'JaaTeam'
     tk_version  = '1.0'
-    tk_fullscreen = 0
+    tk_fullscreen = pygame.FULLSCREEN if DefaultConfigParser.def_values['fullscreen'] else 0 
     tk_fps        = DefaultConfigParser.def_values['max_fps']
     tk_resolution = DefaultConfigParser.def_values['resolution']
     tk_resolution_scale = max(float(tk_resolution[0]) / float(1280), 
