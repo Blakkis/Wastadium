@@ -470,7 +470,9 @@ class MenuMain(PagesHelp, EventManager):
 
                     if click: 
                         self.options[key][0].rs_click()     # Just to make the sound when clicked
-                        self.options[key][1](surface)       
+                        result = self.options[key][1](surface)
+                        # Player died. Restart the menu music
+                        if result == -1: self.playMusic(0, -1)       
 
                 if key == self.last_select:
                     surf, x, y = self.ph_flash_effect(surf, (x, y))
@@ -1016,7 +1018,7 @@ class MenuShop(PagesHelp, Inventory):
             for w in ('w_price', 'w_damage', 'w_range', 'w_firerate'):
                 value = self.all_weapons[kw['key']][w]
                 # Calculate the Rounds-per-minute
-                if w == 'w_firerate': value = 1.0 / value * 60.0
+                if w == 'w_firerate': value = int(1.0 / value * 60.0)
 
                 child = self.font_0.render('{} {} '.format(value, 'cr.' if w == 'w_price' else ''), 1, (0xff, 0x0, 0x80))
 
@@ -1150,7 +1152,7 @@ class MenuShop(PagesHelp, Inventory):
 
             ammo_count = self.i_playerAmmo[key]
             color_indication = (0xff if ammo_count else 0x80, 0x0, 0x80 if ammo_count else 0x0) 
-            ammo_count = self.font_0.render('x{}'.format(ammo_count), 1, color_indication)
+            ammo_count = self.font_0.render('x{}'.format(int(ammo_count)), 1, color_indication)
             surface.blit(ammo_count, (rsurf.rs_getPos('left'), rsurf.rs_getPos('bottom')))
 
             if hl_ammo is not None and key == hl_ammo:

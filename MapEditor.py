@@ -227,7 +227,7 @@ class World(VisualResources, MapParser, Packer):
 
     @classmethod
     def w_createMap(cls, width=0, height=0, floor_id='debug_floor', 
-                    wall_set_id='concrete_wall_01', load_from_disk=False):
+                    wall_set_id='concrete_wall_01', load_from_disk=False, update_map_name=None):
         """
             Worldbuild
 
@@ -242,12 +242,14 @@ class World(VisualResources, MapParser, Packer):
         disk_data = load_from_disk
         
         if load_from_disk:
-            print cls.bf_mapname
-            cls.mp_load(editor_loader=load_from_disk)
+            map_name = cls.mp_load(editor_loader=load_from_disk)
             disk_data = cls.decompressAndParse(editor_loader=load_from_disk)
             
             if disk_data is None:
                 return
+            
+            if update_map_name is not None:
+                update_map_name.set(map_name)
             
             width, height = disk_data[cls.MAP_GENERAL_XML][cls.MAP_DIMENSION_XML]   
 
@@ -857,7 +859,7 @@ class TkinterResources(VisualResources):
     # Note: Remove the killMe decorator as grab_set() makes sure that only one toplevel instance can be active
     @ed_killMe
     def bf_newMap(self, root=None):
-        """
+        """b
             Create New Map
 
             Provide all the context and options for creating/customizating the new map
@@ -1003,7 +1005,8 @@ class BaseFrame(tk.Tk, TkinterResources):
 
         self.menuMap = tk.Menu(self.menuBar, tearoff=0)
         self.menuMap.add_command(label='New',     command=lambda: self.bf_newMap(self))
-        self.menuMap.add_command(label='Open...', command=lambda: World.w_createMap(load_from_disk=True))
+        self.menuMap.add_command(label='Open...', command=lambda: World.w_createMap(load_from_disk=True, 
+                                                                                    update_map_name=self.bf_mapname))
         self.menuMap.add_command(label='Save...', command=lambda: self.mp_save(World.w_getWorldData))
         self.menuMap.add_separator()
         self.menuMap.add_command(label='Exit',    command=lambda: self.destroy())

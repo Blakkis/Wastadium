@@ -77,6 +77,8 @@ class Inventory(Weapons, GadgetLoader):
             # Each key slot has wheel on it
             if wheel not in cls.i_playerStats:
                 cls.i_playerStats[wheel] = cls.tk_deque()
+            else:
+                cls.i_playerStats[wheel].clear()
             
             # Give player the default weapon
             if key == cls.__default_weapon:

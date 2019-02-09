@@ -235,7 +235,8 @@ class EpisodeParser(object):
             # key:
             #   1: Player died (Skip straight through back to menu)
             surface, key = cls.__ref_functions['run'](level_count=(enum, num_of_levels))
-            if key == 1: return None
+            if key == 1: 
+                return -1
 
         # Player completed the game. Show the end background with total completion time
         cls.__ref_functions['end'].run(surface)
@@ -283,9 +284,9 @@ class Packer(object):
         """
         if path.exists(filepath) and zipfile.is_zipfile(filepath):
             cls.__filepath = filepath
-            return True
+            return filepath.split('/')[-1].split('.')[0]
         else:
-            return -1
+            return -1   # Error
     
     
     @classmethod
@@ -969,6 +970,8 @@ class MapParser(Packer):
                                                                  filetypes=(MAP_FORMAT_EXT_FULL, )))
             if valid == -1:
                 return None
+            else:
+                return valid
             #cls.decompressAndParse(editor_loader=1)
 
         else:

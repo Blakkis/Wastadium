@@ -263,19 +263,20 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         armor_pos = pos[0] + 40, pos[1] + 35
         surface.blit(self.armorBar, armor_pos) 
         armor_bar_length = self.armorBar.get_width() 
-        armor_left = self.i_playerStats['armor'][1] / armor_bar_length * self.i_playerStats['armor'][0]
+        armor_left = (self.i_playerStats['armor'][1] / armor_bar_length) * self.i_playerStats['armor'][0]
         armor_bar = (armor_pos[0], armor_pos[1],
                      min(armor_bar_length, armor_left),
                      self.armorBar.get_height()) 
+        
         self.tk_draw_gfx_rect(surface, armor_bar, (0x10, 0x10, 0xaa, 0x80))
         
         # Health text (Separated from the blit to get the size of the string, so it can be anchored by the right side)
-        text_surf = self.tk_renderText(self.font_0, str(self.i_playerStats['health'][0]), 
+        text_surf = self.tk_renderText(self.font_0, str(int(self.i_playerStats['health'][0])), 
                     1, (0xff, 0x0, 0x0), shadow=1) 
         surface.blit(text_surf, (pos[0] + 134 - text_surf.get_width(), pos[1] + 16))
         
         # Armor text
-        text_surf = self.tk_renderText(self.font_0, str(self.i_playerStats['armor'][0]), 
+        text_surf = self.tk_renderText(self.font_0, str(int(self.i_playerStats['armor'][0])), 
                     1, (0xff, 0x0, 0x0), shadow=1)
         surface.blit(text_surf, (pos[0] + 134 - text_surf.get_width(), pos[1] + 48))  
 
@@ -327,7 +328,7 @@ class uiOverlay(uiElements, EventManager, Inventory, uiGameTimer, VictoryConditi
         surface.blit(self.AmmoBar, (pos[0] + 48, pos[1] + 2))   # Ammo Count bg
 
         # Ammo count text (Limit the bullet count rendering to 99999)
-        ammo_count_surf = self.tk_renderText(self.font_1, str(min(self.i_playerAmmo[ammo_id], 99999)), 
+        ammo_count_surf = self.tk_renderText(self.font_1, str(min(int(self.i_playerAmmo[ammo_id]), 99999)), 
                                              1, (0xff, 0x0, 0x0), shadow=1) 
         
         surface.blit(ammo_count_surf, ((pos[0] + 48) + self.AmmoBar.get_width() / 2 - ammo_count_surf.get_width() / 2, 

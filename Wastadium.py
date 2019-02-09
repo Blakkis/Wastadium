@@ -588,6 +588,7 @@ class World(TextureLoader, EffectsLoader, Pickups, Inventory, Weapons,
             if clean_error:
                 error = "The Following Modules Failed To Setup/Initialize\n\n" + ''.join(clean_error)
                 error += "\nMake sure the names match between configs and files!\n"
+                error += "See possible log files\n"
             else:
                 error = e.message + '\n' 
                 error += "\nMost likely programming error, See log.\n"
