@@ -32,7 +32,7 @@ from MapParser import (MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, WastadiumEditorExc
 
 
 # Notes to MYSELF when reading this in the future:
-#   Stay consistent with the naming scheme you dumbfuck
+#   Stay consistent with the naming scheme 
 #   Re-read the doc 10 times before applying
 #   Don't accumulate too much stuff in to same function
 #   Stop with the indexing

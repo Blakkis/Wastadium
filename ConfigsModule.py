@@ -94,7 +94,7 @@ class DefaultConfigParser(object):
                     ('control_scheme',        0),
                     ('world_shadows',         1),
                     ('world_char_shadows',    1),
-                    ('world_shadows_quality', 1),
+                    ('world_shadows_quality', 0),
                     ('world_footsteps',       1),
                     ('world_effects',         1),
                     ('key_up',              K_w),
