@@ -31,17 +31,6 @@ from MapParser import (MapParser, MAP_ALL_TAGS, MAP_DATA_EXT, WastadiumEditorExc
 #   Replace the current framerate to consumer based framerate ( Need to separate login/render )
 
 
-# Notes to MYSELF when reading this in the future:
-#   Stay consistent with the naming scheme 
-#   Re-read the doc 10 times before applying
-#   Don't accumulate too much stuff in to same function
-#   Stop with the indexing
-#   Too many dumb comments
-#   Apply Unittests seriously
-#   Use more Enums
-#   Don't use int's as asset names
-
-
 # Note: Move this in to separate module
 class Hero(TextureLoader, FootSteps, SoundMusic, Inventory, 
            CharacterShadows, DeltaTimer, TkWorldDataShared):
