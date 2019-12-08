@@ -1,5 +1,7 @@
 # Wastadium
 Topdown shooter with high moddability and in-built mapeditor
+I did all the models in Blender which were then rendered using ortho camera
+(Models are included in the blend directory)
 
 inspiration comes from an old game called "TapanKaikki" by ErrorFree
 
