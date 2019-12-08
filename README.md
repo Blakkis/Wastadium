@@ -5,7 +5,7 @@ I did all the models in Blender which were then rendered using ortho camera
 
 inspiration comes from an old game called "TapanKaikki" by ErrorFree
 
-# Gameplay demo
+# Gameplay demo (video)
 [![Wastadium](https://img.youtube.com/vi/NBjwIhancS8/0.jpg)](https://www.youtube.com/watch?v=NBjwIhancS8)
 # Game 
 ![alt text](https://i.imgur.com/DMmw1Jo.png)
