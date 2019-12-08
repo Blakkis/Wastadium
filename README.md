@@ -6,9 +6,9 @@ I did all the models in Blender which were then rendered using ortho camera
 inspiration comes from an old game called "TapanKaikki" by ErrorFree
 This is was really great project to work on.
 I only did one campaign for game which is fairly challenging
-took me about 1 and half to write the game + editor and do all the models + mapping
-overall, happy with the result
+took me about 1 and half to write the game + editor and do all the models + mapping.
 
+Overall, happy with the result.
 The game is free from : https://blakkis.itch.io/wastadium
 
 # Gameplay demo (video)
