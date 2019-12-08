@@ -4,7 +4,7 @@ I did all the models in Blender which were then rendered using ortho camera
 (Models are included in the blend directory)
 
 inspiration comes from an old game called "TapanKaikki" by ErrorFree
-This is was really great project to work on
+This is was really great project to work on.
 I only did one campaign for game which is fairly challenging
 
 # Gameplay demo (video)
