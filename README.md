@@ -16,4 +16,4 @@ The game is free from : https://blakkis.itch.io/wastadium
 # Game (Alpha) (Need to update more recent images)
 ![alt text](https://i.imgur.com/DMmw1Jo.png)
 # Editor (final)
-![alt text](https://i.imgur.com/99b4sjq.png)
+![alt text](https://i.imgur.com/2NXXXkM.png)
