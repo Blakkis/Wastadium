@@ -13,7 +13,8 @@ The game is free from : https://blakkis.itch.io/wastadium
 
 # Gameplay demo (video)
 [![Wastadium](https://img.youtube.com/vi/NBjwIhancS8/0.jpg)](https://www.youtube.com/watch?v=NBjwIhancS8)
-# Game (Alpha) (Need to update more recent images)
-![alt text](https://i.imgur.com/DMmw1Jo.png)
-# Editor (final)
+# Game
+![alt text](https://i.imgur.com/iqNY8VJ.png)
+![alt text](https://i.imgur.com/HgQMKX8.png)
+# Editor 
 ![alt text](https://i.imgur.com/2NXXXkM.png)
